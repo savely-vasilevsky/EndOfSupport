@@ -29,6 +29,22 @@ pip install -e .
 
 ## Usage
 
+### GUI Mode
+
+```bash
+# Launch the graphical interface
+python -m src.gui
+```
+
+The GUI provides:
+- File browser for input CSV
+- Output format selection (text, csv, json, excel)
+- Status filters (checkboxes)
+- Days threshold configuration
+- Live preview of results
+
+### CLI Mode
+
 ```bash
 # Basic usage - outputs to console
 python -m src.main inventory.csv

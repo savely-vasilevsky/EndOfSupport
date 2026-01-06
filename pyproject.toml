@@ -21,6 +21,7 @@ dev = [
 
 [project.scripts]
 eos-tool = "src.main:main"
+eos-tool-gui = "src.gui:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
