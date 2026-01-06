@@ -42,6 +42,7 @@ class EndOfSupportGUI:
         # Excel options
         self.include_pivot = tk.BooleanVar(value=True)
         self.pivot_method = tk.StringVar(value="auto")
+        self.pivot_per_account = tk.BooleanVar(value=False)
         
         # Build UI
         self._create_widgets()
@@ -105,6 +106,14 @@ class EndOfSupportGUI:
         self.pivot_method_info = ttk.Label(self.excel_options_frame, text="", foreground="gray")
         self.pivot_method_info.grid(row=1, column=2, sticky="w", padx=(5, 0), pady=(5, 0))
         self._update_pivot_method_info()
+        
+        # Pivot per account checkbox
+        self.pivot_per_account_checkbox = ttk.Checkbutton(
+            self.excel_options_frame,
+            text="Create Pivot per Account",
+            variable=self.pivot_per_account
+        )
+        self.pivot_per_account_checkbox.grid(row=2, column=0, columnspan=2, sticky="w", pady=(5, 0))
         
         # Initially hide Excel options
         self.excel_options_frame.grid_remove()
@@ -215,8 +224,10 @@ class EndOfSupportGUI:
         """Handle pivot checkbox toggle."""
         if self.include_pivot.get():
             self.pivot_method_combo.configure(state="readonly")
+            self.pivot_per_account_checkbox.configure(state="normal")
         else:
             self.pivot_method_combo.configure(state="disabled")
+            self.pivot_per_account_checkbox.configure(state="disabled")
     
     def _on_pivot_method_change(self, event=None):
         """Handle pivot method selection change."""
@@ -271,7 +282,9 @@ class EndOfSupportGUI:
         self.filter_oos.set(False)
         self.include_pivot.set(True)
         self.pivot_method.set("auto")
+        self.pivot_per_account.set(False)
         self.pivot_method_combo.configure(state="readonly")
+        self.pivot_per_account_checkbox.configure(state="normal")
         self._update_pivot_method_info()
         self.results_text.delete("1.0", tk.END)
         self.status_var.set("Ready")
@@ -347,10 +360,17 @@ class EndOfSupportGUI:
                 formatter = ExcelFormatter()
                 include_pivot = self.include_pivot.get()
                 pivot_method = self.pivot_method.get() if include_pivot else None
-                formatter.format_to_file(report, output_path, include_pivot=include_pivot, pivot_method=pivot_method)
+                pivot_per_account = self.pivot_per_account.get() if include_pivot else False
+                formatter.format_to_file(
+                    report, 
+                    output_path, 
+                    include_pivot=include_pivot, 
+                    pivot_method=pivot_method,
+                    pivot_per_account=pivot_per_account
+                )
                 output_text = f"Excel report saved to: {output_path}\n\n"
                 if include_pivot:
-                    output_text += self._get_pivot_status(pivot_method) + "\n\n"
+                    output_text += self._get_pivot_status(pivot_method, pivot_per_account) + "\n\n"
                 output_text += self._get_summary(report)
             else:
                 formatters = {
@@ -392,19 +412,21 @@ class EndOfSupportGUI:
         lines.append("=" * 50)
         return "\n".join(lines)
     
-    def _get_pivot_status(self, pivot_method: str = "auto") -> str:
+    def _get_pivot_status(self, pivot_method: str = "auto", pivot_per_account: bool = False) -> str:
         """Get status message about pivot table creation."""
+        mode_suffix = " (per account)" if pivot_per_account else ""
+        
         if pivot_method == "windows" or (pivot_method == "auto" and WIN32COM_AVAILABLE):
             if WIN32COM_AVAILABLE:
-                return "Pivot Table: Created using Excel COM automation (Windows)"
+                return f"Pivot Table: Created using Excel COM automation (Windows){mode_suffix}"
             else:
                 return "Pivot Table: Windows method not available (Excel not installed)"
         else:
             template_path = os.path.join(TEMPLATE_DIR, "pivot_template.xlsx")
             if os.path.exists(template_path):
-                return "Pivot Table: Created from template (will refresh when opened in Excel)"
+                return f"Pivot Table: Created from template (will refresh when opened in Excel){mode_suffix}"
             else:
-                return "Pivot Table: Styled summary (template not found for real pivot)"
+                return f"Pivot Table: Styled summary (template not found for real pivot){mode_suffix}"
         
     def _update_status(self, message: str):
         """Update status bar from background thread."""

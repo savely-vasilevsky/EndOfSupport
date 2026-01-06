@@ -586,7 +586,7 @@ class ExcelFormatter(BaseFormatter):
             "ExcelFormatter requires format_to_file() for binary output"
         )
     
-    def format_to_file(self, report: Report, filepath: str, include_pivot: bool = True, pivot_method: str = "auto") -> None:
+    def format_to_file(self, report: Report, filepath: str, include_pivot: bool = True, pivot_method: str = "auto", pivot_per_account: bool = False) -> None:
         """Format report and save directly to Excel file.
         
         Args:
@@ -597,10 +597,16 @@ class ExcelFormatter(BaseFormatter):
                 - "auto": Use Windows COM if available, otherwise template/summary
                 - "windows": Force Windows COM (requires Excel installed)
                 - "cross-platform": Force template-based or summary approach
+            pivot_per_account: If True, create a separate pivot tab for each account.
         """
         wb = Workbook()
-        ws = wb.active
-        ws.title = "Support Status Report"
+        
+        # Create Table of Contents as first sheet
+        toc_sheet = wb.active
+        toc_sheet.title = "Table of Contents"
+        
+        # Create data sheet as second sheet
+        ws = wb.create_sheet("Support Status Report")
         
         # Style definitions
         header_font = Font(bold=True, color="FFFFFF")
@@ -651,29 +657,70 @@ class ExcelFormatter(BaseFormatter):
             ws.auto_filter.ref = f"A1:{get_column_letter(len(self.HEADERS))}{data_row_count}"
         
         # Create pivot table/summary
+        # Track sheet names for TOC
+        sheet_info = [
+            ("Table of Contents", "Index of all worksheets with navigation links"),
+            ("Support Status Report", "Raw data with all resources and their support status"),
+        ]
+        
+        if include_pivot:
+            use_windows = (pivot_method == "windows") or (pivot_method == "auto" and WIN32COM_AVAILABLE)
+            
+            # For cross-platform with template, we need to handle pivot creation differently
+            # to maintain correct sheet order
+            if use_windows and WIN32COM_AVAILABLE:
+                # Will be created via win32com after save - just add to TOC
+                sheet_info.append(("Pivot", "Pivot table summary of all resources by Service/Engine/Version"))
+                
+                # Per-account pivots will also be created via win32com
+                if pivot_per_account:
+                    for account_name in sorted(report.accounts.keys()):
+                        safe_account_name = account_name[:20].replace("/", "-").replace("\\", "-").replace(":", "-")
+                        sheet_name = f"Pivot_{safe_account_name}"
+                        if len(sheet_name) > 31:
+                            sheet_name = sheet_name[:31]
+                        sheet_info.append((sheet_name, f"Pivot table for account: {account_name}"))
+            else:
+                # Cross-platform: check if template exists for real pivot
+                template_path = os.path.join(TEMPLATE_DIR, "pivot_template.xlsx")
+                use_template = os.path.exists(template_path)
+                
+                if use_template:
+                    # Template will be applied after save - just add to TOC
+                    sheet_info.append(("Pivot", "Pivot table (refreshes when opened in Excel)"))
+                else:
+                    # No template - create styled summary
+                    self._create_pivot_summary_sheet(wb, report)
+                    sheet_info.append(("Pivot", "Summary of all resources by Service/Engine/Version"))
+                
+                # Per-account pivots - always styled summaries in cross-platform mode
+                if pivot_per_account:
+                    self._create_pivot_summary_per_account(wb, report)
+                    for account_name in sorted(report.accounts.keys()):
+                        safe_account_name = account_name[:20].replace("/", "-").replace("\\", "-").replace(":", "-")
+                        sheet_name = f"Pivot_{safe_account_name}"
+                        if len(sheet_name) > 31:
+                            sheet_name = sheet_name[:31]
+                        sheet_info.append((sheet_name, f"Summary for account: {account_name}"))
+        
+        # Populate Table of Contents
+        self._create_table_of_contents(toc_sheet, sheet_info)
+        
+        # Save workbook first
+        wb.save(filepath)
+        
+        # Now handle pivot creation that requires post-save processing
         if include_pivot:
             use_windows = (pivot_method == "windows") or (pivot_method == "auto" and WIN32COM_AVAILABLE)
             
             if use_windows and WIN32COM_AVAILABLE:
-                # Save first, then add real pivot with win32com (Windows only)
-                wb.save(filepath)
-                self._create_real_pivot_table(filepath, data_row_count)
-                return
+                # Create real pivot tables with win32com
+                self._create_real_pivot_table_with_per_account(filepath, report, data_row_count, pivot_per_account)
             else:
-                # Cross-platform: use template with pre-configured pivot table
+                # Cross-platform: use template for real pivot if available
                 template_path = os.path.join(TEMPLATE_DIR, "pivot_template.xlsx")
                 if os.path.exists(template_path):
-                    # Save data workbook first
-                    wb.save(filepath)
-                    # Then add pivot from template
                     self._create_pivot_from_template(filepath, data_row_count, template_path)
-                    return
-                else:
-                    # Fallback: create styled pivot-like summary sheet
-                    self._create_pivot_summary_sheet(wb, report)
-        
-        # Save workbook
-        wb.save(filepath)
     
     def _create_pivot_summary_sheet(self, wb: Workbook, report: Report) -> None:
         """Create a styled pivot-like summary sheet (cross-platform).
@@ -685,7 +732,8 @@ class ExcelFormatter(BaseFormatter):
             wb: Workbook to add the sheet to.
             report: Report object with hierarchical data.
         """
-        ws = wb.create_sheet("Pivot")
+        # Insert Pivot sheet right after Support Status Report (index 1, since TOC is 0)
+        ws = wb.create_sheet("Pivot", 2)
         
         # Style definitions
         filter_font = Font(bold=False)
@@ -791,6 +839,379 @@ class ExcelFormatter(BaseFormatter):
         # Freeze after header row
         ws.freeze_panes = "A5"
     
+    def _create_table_of_contents(self, ws, sheet_info: List[tuple]) -> None:
+        """Create a Table of Contents sheet with links to all other sheets.
+        
+        Args:
+            ws: Worksheet to populate with TOC.
+            sheet_info: List of tuples (sheet_name, description).
+        """
+        # Style definitions
+        title_font = Font(bold=True, size=16, color="4472C4")
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        link_font = Font(color="0563C1", underline="single")
+        thin_border = Border(
+            left=Side(style="thin"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
+        )
+        
+        # Title
+        ws.cell(row=1, column=1, value="AWS End-of-Support Report").font = title_font
+        ws.merge_cells("A1:C1")
+        
+        # Subtitle with generation info
+        ws.cell(row=2, column=1, value="Table of Contents")
+        ws.cell(row=2, column=1).font = Font(bold=True, size=12)
+        
+        # Empty row
+        # Header row
+        ws.cell(row=4, column=1, value="Sheet Name").font = header_font
+        ws.cell(row=4, column=1).fill = header_fill
+        ws.cell(row=4, column=1).border = thin_border
+        
+        ws.cell(row=4, column=2, value="Description").font = header_font
+        ws.cell(row=4, column=2).fill = header_fill
+        ws.cell(row=4, column=2).border = thin_border
+        
+        # Sheet entries
+        row_idx = 5
+        for sheet_name, description in sheet_info:
+            # Sheet name with hyperlink
+            cell = ws.cell(row=row_idx, column=1, value=sheet_name)
+            cell.hyperlink = f"#'{sheet_name}'!A1"
+            cell.font = link_font
+            cell.border = thin_border
+            
+            # Description
+            desc_cell = ws.cell(row=row_idx, column=2, value=description)
+            desc_cell.border = thin_border
+            
+            row_idx += 1
+        
+        # Adjust column widths
+        ws.column_dimensions["A"].width = 30
+        ws.column_dimensions["B"].width = 60
+        
+        # Freeze header row
+        ws.freeze_panes = "A5"
+    
+    def _create_pivot_summary_per_account(self, wb: Workbook, report: Report) -> None:
+        """Create a styled pivot-like summary sheet for each account.
+        
+        Args:
+            wb: Workbook to add the sheets to.
+            report: Report object with hierarchical data.
+        """
+        # Style definitions
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        service_font = Font(bold=True)
+        service_fill = PatternFill(start_color="D9E2F3", end_color="D9E2F3", fill_type="solid")
+        engine_font = Font(bold=False)
+        engine_fill = PatternFill(start_color="E9EDF4", end_color="E9EDF4", fill_type="solid")
+        total_font_white = Font(bold=True, color="FFFFFF")
+        total_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        
+        for account_name, account_group in sorted(report.accounts.items()):
+            # Create sheet name (Excel limits to 31 chars)
+            safe_account_name = account_name[:20].replace("/", "-").replace("\\", "-").replace(":", "-")
+            sheet_name = f"Pivot_{safe_account_name}"
+            if len(sheet_name) > 31:
+                sheet_name = sheet_name[:31]
+            
+            ws = wb.create_sheet(sheet_name)
+            
+            # Header row
+            ws.cell(row=1, column=1, value="Row Labels").font = header_font
+            ws.cell(row=1, column=1).fill = header_fill
+            ws.cell(row=1, column=2, value="Resources").font = header_font
+            ws.cell(row=1, column=2).fill = header_fill
+            
+            # Aggregate data by Service → Engine → Version for this account
+            service_data: Dict[str, Dict[str, Dict[str, int]]] = {}
+            
+            for service_name, service_group in account_group.services.items():
+                if service_name not in service_data:
+                    service_data[service_name] = {}
+                
+                for engine_name, engine_group in service_group.engines.items():
+                    display_engine = engine_name if engine_name and engine_name != "Unknown" else "(blank)"
+                    
+                    if display_engine not in service_data[service_name]:
+                        service_data[service_name][display_engine] = {}
+                    
+                    for version_name, version_group in engine_group.versions.items():
+                        resource_count = len(version_group.resources)
+                        if version_name in service_data[service_name][display_engine]:
+                            service_data[service_name][display_engine][version_name] += resource_count
+                        else:
+                            service_data[service_name][display_engine][version_name] = resource_count
+            
+            # Write pivot data
+            row_idx = 2
+            grand_total = 0
+            
+            for service_name in sorted(service_data.keys()):
+                engines = service_data[service_name]
+                service_total = sum(sum(versions.values()) for versions in engines.values())
+                grand_total += service_total
+                
+                # Service row
+                cell = ws.cell(row=row_idx, column=1, value=service_name)
+                cell.font = service_font
+                cell.fill = service_fill
+                cell = ws.cell(row=row_idx, column=2, value=service_total)
+                cell.font = service_font
+                cell.fill = service_fill
+                row_idx += 1
+                
+                for engine_name in sorted(engines.keys()):
+                    versions = engines[engine_name]
+                    engine_total = sum(versions.values())
+                    
+                    # Engine row (indented)
+                    cell = ws.cell(row=row_idx, column=1, value=f"    {engine_name}")
+                    cell.font = engine_font
+                    cell.fill = engine_fill
+                    cell = ws.cell(row=row_idx, column=2, value=engine_total)
+                    cell.font = engine_font
+                    cell.fill = engine_fill
+                    row_idx += 1
+                    
+                    for version_name in sorted(versions.keys()):
+                        count = versions[version_name]
+                        ws.cell(row=row_idx, column=1, value=f"        {version_name}")
+                        ws.cell(row=row_idx, column=2, value=count)
+                        row_idx += 1
+            
+            # Grand Total row
+            cell = ws.cell(row=row_idx, column=1, value="Grand Total")
+            cell.font = total_font_white
+            cell.fill = total_fill
+            cell = ws.cell(row=row_idx, column=2, value=grand_total)
+            cell.font = total_font_white
+            cell.fill = total_fill
+            
+            # Adjust column widths
+            ws.column_dimensions["A"].width = 40
+            ws.column_dimensions["B"].width = 12
+            
+            # Freeze header row
+            ws.freeze_panes = "A2"
+    
+    def _create_pivot_tables_per_account_win32(self, filepath: str, report: Report, data_row_count: int) -> None:
+        """Create real Excel PivotTables for each account using win32com.
+        
+        Args:
+            filepath: Path to the Excel file.
+            report: Report object with hierarchical data.
+            data_row_count: Number of data rows in the source sheet.
+        """
+        import pythoncom
+        pythoncom.CoInitialize()
+        
+        try:
+            excel = win32com.client.Dispatch("Excel.Application")
+            excel.Visible = False
+            excel.DisplayAlerts = False
+            
+            abs_path = os.path.abspath(filepath)
+            wb = excel.Workbooks.Open(abs_path)
+            
+            data_sheet = wb.Sheets("Support Status Report")
+            last_col = get_column_letter(len(self.HEADERS))
+            source_range = f"'Support Status Report'!A1:{last_col}{data_row_count}"
+            
+            # Create pivot cache once
+            pivot_cache = wb.PivotCaches().Create(
+                SourceType=1,  # xlDatabase
+                SourceData=source_range
+            )
+            
+            for account_name in sorted(report.accounts.keys()):
+                # Create sheet name (Excel limits to 31 chars)
+                safe_account_name = account_name[:20].replace("/", "-").replace("\\", "-").replace(":", "-")
+                sheet_name = f"Pivot_{safe_account_name}"
+                if len(sheet_name) > 31:
+                    sheet_name = sheet_name[:31]
+                
+                # Create a new sheet for this account's pivot
+                pivot_sheet = wb.Sheets.Add(After=wb.Sheets(wb.Sheets.Count))
+                pivot_sheet.Name = sheet_name
+                
+                # Create pivot table
+                pivot_table = pivot_cache.CreatePivotTable(
+                    TableDestination=pivot_sheet.Range("A4"),
+                    TableName=f"Pivot_{safe_account_name}"
+                )
+                
+                # Add row fields (Service -> Engine -> Version hierarchy)
+                pivot_table.PivotFields("Service").Orientation = 1  # xlRowField
+                pivot_table.PivotFields("Service").Position = 1
+                
+                pivot_table.PivotFields("Engine").Orientation = 1  # xlRowField
+                pivot_table.PivotFields("Engine").Position = 2
+                
+                pivot_table.PivotFields("Version").Orientation = 1  # xlRowField
+                pivot_table.PivotFields("Version").Position = 3
+                
+                # Add data field (count of resources)
+                data_field = pivot_table.PivotFields("Resource Name")
+                data_field.Orientation = 4  # xlDataField
+                data_field.Function = -4112  # xlCount
+                data_field.Name = "Resources"
+                
+                # Add page filter for Account and set to this account
+                account_field = pivot_table.PivotFields("Account")
+                account_field.Orientation = 3  # xlPageField
+                account_field.CurrentPage = account_name
+                
+                # Add Days to EOS as page filter
+                pivot_table.PivotFields("Days to EOS").Orientation = 3  # xlPageField
+                
+                # Apply pivot table style
+                pivot_table.TableStyle2 = "PivotStyleMedium2"
+            
+            wb.Save()
+            wb.Close()
+            excel.Quit()
+            
+        except Exception as e:
+            try:
+                wb.Close(SaveChanges=False)
+                excel.Quit()
+            except:
+                pass
+            raise e
+        finally:
+            pythoncom.CoUninitialize()
+    
+    def _create_real_pivot_table_with_per_account(self, filepath: str, report: Report, data_row_count: int, pivot_per_account: bool) -> None:
+        """Create real Excel PivotTables using win32com - main pivot and optionally per-account.
+        
+        Args:
+            filepath: Path to the Excel file.
+            report: Report object with hierarchical data.
+            data_row_count: Number of data rows in the source sheet.
+            pivot_per_account: Whether to also create per-account pivot tables.
+        """
+        import pythoncom
+        pythoncom.CoInitialize()
+        
+        try:
+            excel = win32com.client.Dispatch("Excel.Application")
+            excel.Visible = False
+            excel.DisplayAlerts = False
+            
+            abs_path = os.path.abspath(filepath)
+            wb = excel.Workbooks.Open(abs_path)
+            
+            last_col = get_column_letter(len(self.HEADERS))
+            source_range = f"'Support Status Report'!A1:{last_col}{data_row_count}"
+            
+            # Create pivot cache once
+            pivot_cache = wb.PivotCaches().Create(
+                SourceType=1,  # xlDatabase
+                SourceData=source_range
+            )
+            
+            # Create main Pivot sheet (insert after Support Status Report)
+            data_sheet = wb.Sheets("Support Status Report")
+            pivot_sheet = wb.Sheets.Add(After=data_sheet)
+            pivot_sheet.Name = "Pivot"
+            
+            # Create main pivot table
+            pivot_table = pivot_cache.CreatePivotTable(
+                TableDestination=pivot_sheet.Range("A4"),
+                TableName="SupportStatusPivot"
+            )
+            
+            # Add row fields (Service -> Engine -> Version hierarchy)
+            pivot_table.PivotFields("Service").Orientation = 1  # xlRowField
+            pivot_table.PivotFields("Service").Position = 1
+            
+            pivot_table.PivotFields("Engine").Orientation = 1  # xlRowField
+            pivot_table.PivotFields("Engine").Position = 2
+            
+            pivot_table.PivotFields("Version").Orientation = 1  # xlRowField
+            pivot_table.PivotFields("Version").Position = 3
+            
+            # Add data field (count of resources)
+            data_field = pivot_table.PivotFields("Resource Name")
+            data_field.Orientation = 4  # xlDataField
+            data_field.Function = -4112  # xlCount
+            data_field.Name = "Resources"
+            
+            # Add page filters (report filters)
+            pivot_table.PivotFields("Days to EOS").Orientation = 3  # xlPageField
+            pivot_table.PivotFields("Account").Orientation = 3  # xlPageField
+            
+            # Apply pivot table style
+            pivot_table.TableStyle2 = "PivotStyleMedium2"
+            
+            # Create per-account pivot tables if requested
+            if pivot_per_account:
+                for account_name in sorted(report.accounts.keys()):
+                    # Create sheet name (Excel limits to 31 chars)
+                    safe_account_name = account_name[:20].replace("/", "-").replace("\\", "-").replace(":", "-")
+                    sheet_name = f"Pivot_{safe_account_name}"
+                    if len(sheet_name) > 31:
+                        sheet_name = sheet_name[:31]
+                    
+                    # Create a new sheet for this account's pivot
+                    account_pivot_sheet = wb.Sheets.Add(After=wb.Sheets(wb.Sheets.Count))
+                    account_pivot_sheet.Name = sheet_name
+                    
+                    # Create pivot table
+                    account_pivot_table = pivot_cache.CreatePivotTable(
+                        TableDestination=account_pivot_sheet.Range("A4"),
+                        TableName=f"Pivot_{safe_account_name}"
+                    )
+                    
+                    # Add row fields (Service -> Engine -> Version hierarchy)
+                    account_pivot_table.PivotFields("Service").Orientation = 1  # xlRowField
+                    account_pivot_table.PivotFields("Service").Position = 1
+                    
+                    account_pivot_table.PivotFields("Engine").Orientation = 1  # xlRowField
+                    account_pivot_table.PivotFields("Engine").Position = 2
+                    
+                    account_pivot_table.PivotFields("Version").Orientation = 1  # xlRowField
+                    account_pivot_table.PivotFields("Version").Position = 3
+                    
+                    # Add data field (count of resources)
+                    account_data_field = account_pivot_table.PivotFields("Resource Name")
+                    account_data_field.Orientation = 4  # xlDataField
+                    account_data_field.Function = -4112  # xlCount
+                    account_data_field.Name = "Resources"
+                    
+                    # Add page filter for Account and set to this account
+                    account_field = account_pivot_table.PivotFields("Account")
+                    account_field.Orientation = 3  # xlPageField
+                    account_field.CurrentPage = account_name
+                    
+                    # Add Days to EOS as page filter
+                    account_pivot_table.PivotFields("Days to EOS").Orientation = 3  # xlPageField
+                    
+                    # Apply pivot table style
+                    account_pivot_table.TableStyle2 = "PivotStyleMedium2"
+            
+            wb.Save()
+            wb.Close()
+            excel.Quit()
+            
+        except Exception as e:
+            try:
+                wb.Close(SaveChanges=False)
+                excel.Quit()
+            except:
+                pass
+            raise e
+        finally:
+            pythoncom.CoUninitialize()
+    
     def _create_pivot_from_template(self, filepath: str, data_row_count: int, template_path: str) -> None:
         """Create a real pivot table by copying from a template file.
         
@@ -821,8 +1242,8 @@ class ExcelFormatter(BaseFormatter):
             
             template_pivot_sheet = template_wb["Pivot"]
             
-            # Create a new Pivot sheet in output workbook
-            output_pivot_sheet = output_wb.create_sheet("Pivot")
+            # Create a new Pivot sheet in output workbook at position 2 (after TOC and Support Status Report)
+            output_pivot_sheet = output_wb.create_sheet("Pivot", 2)
             
             # Copy cell values and styles from template
             for row in template_pivot_sheet.iter_rows():

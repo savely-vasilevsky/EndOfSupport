@@ -104,6 +104,13 @@ def create_parser() -> argparse.ArgumentParser:
         help="Number of days to consider as 'approaching' end-of-support (default: 90)",
     )
     
+    # Excel-specific options
+    parser.add_argument(
+        "--pivot-per-account",
+        action="store_true",
+        help="Create a separate pivot table tab for each account (Excel format only)",
+    )
+    
     return parser
 
 
@@ -274,7 +281,11 @@ def main(args: Optional[List[str]] = None) -> int:
                 print("Error: Excel format requires --output-file to be specified", file=sys.stderr)
                 return 1
             try:
-                formatter.format_to_file(report, parsed_args.output_file)
+                formatter.format_to_file(
+                    report, 
+                    parsed_args.output_file,
+                    pivot_per_account=parsed_args.pivot_per_account
+                )
                 print_status(f"Report written to: {parsed_args.output_file}")
             except IOError as e:
                 print(f"Error: Cannot write to output file: {parsed_args.output_file}", file=sys.stderr)
