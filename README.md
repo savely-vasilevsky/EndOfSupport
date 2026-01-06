@@ -1,22 +1,23 @@
 # AWS End-of-Support Tool
 
-A CLI tool to analyze AWS resource inventory CSV files and generate support status reports.
+A CLI and GUI tool to analyze AWS resource inventory CSV files and generate support status reports with real Excel PivotTables.
 
 ## Features
 
 - **Support Status Classification**: Classifies resources as Supported, Approaching End-of-Support, Extended Support, or Out of Support
 - **Hierarchical Grouping**: Groups resources by Account → Service → Engine → Version
 - **Multiple Output Formats**: Text, CSV, JSON, and Excel
-- **Excel with PivotTable**: Excel output includes a real interactive PivotTable (Windows only)
+- **Cross-Platform PivotTable**: Real Excel PivotTables on Windows, Mac, and Linux
 - **Flexible Filtering**: Filter by status, account, or service
 - **Configurable Threshold**: Set custom days threshold for "approaching" status
+- **GUI Interface**: Cross-platform graphical interface using tkinter
 
 ## Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/EndOfSupportTool.git
-cd EndOfSupportTool
+git clone https://github.com/savelyvas/EndOfSupport.git
+cd EndOfSupport
 
 # Create virtual environment
 python -m venv .venv
@@ -39,6 +40,7 @@ python -m src.gui
 The GUI provides:
 - File browser for input CSV
 - Output format selection (text, csv, json, excel)
+- Excel options with pivot method selection
 - Status filters (checkboxes)
 - Days threshold configuration
 - Live preview of results
@@ -64,6 +66,30 @@ python -m src.main inventory.csv --account prod-account --service Lambda
 # Custom days threshold (default: 90)
 python -m src.main inventory.csv --days-threshold 60
 ```
+
+## Excel PivotTable Support
+
+The tool creates real, interactive Excel PivotTables with the following hierarchy:
+- **Rows**: Service → Engine → Version
+- **Values**: Count of Resources
+- **Filters**: Account, Days to EOS
+
+### Pivot Generation Methods
+
+| Method | Platform | Description |
+|--------|----------|-------------|
+| **Windows** | Windows only | Uses Excel COM automation (requires Excel installed) |
+| **Cross-platform** | All platforms | Uses template-based approach (works on Mac/Linux) |
+| **Auto** | All platforms | Automatically selects the best method for your platform |
+
+In the GUI, select "excel" format to see the Excel Options panel where you can choose the pivot method.
+
+### How Cross-Platform Pivot Works
+
+1. A minimal template file (`src/templates/pivot_template.xlsx`) contains pre-configured pivot metadata
+2. When generating a report, the tool copies the pivot structure to your output file
+3. The pivot is set to refresh automatically when opened in Excel
+4. **First time opening**: Click "Refresh" on the pivot or enable "Refresh data when opening file" in pivot options
 
 ## Input CSV Format
 
@@ -98,9 +124,13 @@ Nested hierarchical structure preserving the grouping.
 
 ### Excel
 Professional spreadsheet with:
-- Color-coded status rows (green=supported, yellow=approaching, blue=extended, red=out-of-support)
+- Color-coded status rows:
+  - 🟢 Green: Supported
+  - 🟡 Yellow: Approaching End-of-Support
+  - 🔵 Blue: Extended Support
+  - 🔴 Red: Out of Support
 - Auto-filters on data sheet
-- Real PivotTable with Service → Engine → Version hierarchy (Windows only)
+- Real PivotTable with Service → Engine → Version hierarchy
 
 ## Development
 
@@ -117,9 +147,31 @@ pytest --cov=src
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.9+
 - openpyxl (for Excel output)
-- pywin32 (optional, for real PivotTable on Windows)
+- pywin32 (optional, for native Windows pivot - auto-detected)
+
+## Project Structure
+
+```
+EndOfSupportTool/
+├── src/
+│   ├── __init__.py
+│   ├── main.py          # CLI entry point
+│   ├── gui.py           # GUI application
+│   ├── parser.py        # CSV parser
+│   ├── classifier.py    # Support status classifier
+│   ├── generator.py     # Report generator
+│   ├── models.py        # Data models
+│   ├── formatters.py    # Output formatters (Text, CSV, JSON, Excel)
+│   └── templates/
+│       └── pivot_template.xlsx  # Pivot table template
+├── tests/
+│   ├── test_csv_parser.py
+│   └── test_classifier.py
+├── pyproject.toml
+└── README.md
+```
 
 ## License
 
