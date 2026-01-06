@@ -11,7 +11,7 @@ from tkinter import ttk, filedialog, messagebox
 from typing import Optional, List
 
 from .classifier import ResourceClassifier
-from .formatters import TextFormatter, CSVFormatter, JSONFormatter, ExcelFormatter, EXCEL_AVAILABLE
+from .formatters import TextFormatter, CSVFormatter, JSONFormatter, ExcelFormatter, EXCEL_AVAILABLE, WIN32COM_AVAILABLE, TEMPLATE_DIR
 from .generator import ReportGenerator
 from .models import ReportFilters, SupportStatus
 from .parser import CSVParser, CSVParseError
@@ -38,6 +38,10 @@ class EndOfSupportGUI:
         self.filter_approaching = tk.BooleanVar(value=False)
         self.filter_extended = tk.BooleanVar(value=False)
         self.filter_oos = tk.BooleanVar(value=False)
+        
+        # Excel options
+        self.include_pivot = tk.BooleanVar(value=True)
+        self.pivot_method = tk.StringVar(value="auto")
         
         # Build UI
         self._create_widgets()
@@ -71,9 +75,43 @@ class EndOfSupportGUI:
         ttk.Entry(output_frame, textvariable=self.output_file, width=60).grid(row=1, column=1, padx=5, pady=(5, 0))
         ttk.Button(output_frame, text="Browse...", command=self._browse_output).grid(row=1, column=2, pady=(5, 0))
         
+        # Excel options (shown only when Excel format is selected)
+        self.excel_options_frame = ttk.LabelFrame(main_frame, text="Excel Options", padding="5")
+        self.excel_options_frame.grid(row=2, column=0, sticky="ew", pady=(0, 10))
+        
+        # Include pivot checkbox
+        self.pivot_checkbox = ttk.Checkbutton(
+            self.excel_options_frame, 
+            text="Include Pivot Table", 
+            variable=self.include_pivot,
+            command=self._on_pivot_toggle
+        )
+        self.pivot_checkbox.grid(row=0, column=0, sticky="w")
+        
+        # Pivot method selection
+        ttk.Label(self.excel_options_frame, text="Pivot Method:").grid(row=1, column=0, sticky="w", pady=(5, 0))
+        
+        self.pivot_method_combo = ttk.Combobox(
+            self.excel_options_frame, 
+            textvariable=self.pivot_method,
+            values=["auto", "windows", "cross-platform"],
+            state="readonly",
+            width=15
+        )
+        self.pivot_method_combo.grid(row=1, column=1, sticky="w", padx=5, pady=(5, 0))
+        self.pivot_method_combo.bind("<<ComboboxSelected>>", self._on_pivot_method_change)
+        
+        # Pivot method info label
+        self.pivot_method_info = ttk.Label(self.excel_options_frame, text="", foreground="gray")
+        self.pivot_method_info.grid(row=1, column=2, sticky="w", padx=(5, 0), pady=(5, 0))
+        self._update_pivot_method_info()
+        
+        # Initially hide Excel options
+        self.excel_options_frame.grid_remove()
+        
         # Filters section
         filter_frame = ttk.LabelFrame(main_frame, text="Filters", padding="5")
-        filter_frame.grid(row=2, column=0, sticky="ew", pady=(0, 10))
+        filter_frame.grid(row=3, column=0, sticky="ew", pady=(0, 10))
         
         ttk.Label(filter_frame, text="Status Filters (leave unchecked for all):").grid(row=0, column=0, columnspan=4, sticky="w")
         
@@ -88,7 +126,7 @@ class EndOfSupportGUI:
         
         # Action buttons
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=3, column=0, pady=10)
+        button_frame.grid(row=4, column=0, pady=10)
         
         self.generate_btn = ttk.Button(button_frame, text="Generate Report", command=self._generate_report)
         self.generate_btn.grid(row=0, column=0, padx=5)
@@ -97,11 +135,11 @@ class EndOfSupportGUI:
         
         # Progress bar
         self.progress = ttk.Progressbar(main_frame, mode="indeterminate")
-        self.progress.grid(row=4, column=0, sticky="ew", pady=(0, 10))
+        self.progress.grid(row=5, column=0, sticky="ew", pady=(0, 10))
         
         # Results section
         results_frame = ttk.LabelFrame(main_frame, text="Results / Preview", padding="5")
-        results_frame.grid(row=5, column=0, sticky="nsew", pady=(0, 10))
+        results_frame.grid(row=6, column=0, sticky="nsew", pady=(0, 10))
         
         # Text widget with scrollbar
         self.results_text = tk.Text(results_frame, wrap=tk.NONE, height=15)
@@ -119,11 +157,11 @@ class EndOfSupportGUI:
         # Status bar
         self.status_var = tk.StringVar(value="Ready")
         status_bar = ttk.Label(main_frame, textvariable=self.status_var, relief="sunken", anchor="w")
-        status_bar.grid(row=6, column=0, sticky="ew")
+        status_bar.grid(row=7, column=0, sticky="ew")
         
         # Configure main frame grid
         main_frame.columnconfigure(0, weight=1)
-        main_frame.rowconfigure(5, weight=1)
+        main_frame.rowconfigure(6, weight=1)
         
     def _configure_grid(self):
         """Configure root window grid."""
@@ -161,11 +199,65 @@ class EndOfSupportGUI:
     def _on_format_change(self, event=None):
         """Handle output format change."""
         fmt = self.output_format.get()
-        if fmt == "excel" and not EXCEL_AVAILABLE:
-            messagebox.showwarning(
-                "Excel Support",
-                "Excel output requires openpyxl. Install with: pip install openpyxl"
-            )
+        if fmt == "excel":
+            if not EXCEL_AVAILABLE:
+                messagebox.showwarning(
+                    "Excel Support",
+                    "Excel output requires openpyxl. Install with: pip install openpyxl"
+                )
+            # Show Excel options
+            self.excel_options_frame.grid()
+        else:
+            # Hide Excel options
+            self.excel_options_frame.grid_remove()
+    
+    def _on_pivot_toggle(self):
+        """Handle pivot checkbox toggle."""
+        if self.include_pivot.get():
+            self.pivot_method_combo.configure(state="readonly")
+        else:
+            self.pivot_method_combo.configure(state="disabled")
+    
+    def _on_pivot_method_change(self, event=None):
+        """Handle pivot method selection change."""
+        self._update_pivot_method_info()
+    
+    def _update_pivot_method_info(self):
+        """Update the pivot method info label based on selection."""
+        method = self.pivot_method.get()
+        if method == "auto":
+            if WIN32COM_AVAILABLE:
+                info = "(Will use Windows Excel COM)"
+            else:
+                template_path = os.path.join(TEMPLATE_DIR, "pivot_template.xlsx")
+                if os.path.exists(template_path):
+                    info = "(Will use template)"
+                else:
+                    info = "(Will use styled summary)"
+        elif method == "windows":
+            if WIN32COM_AVAILABLE:
+                info = "(Excel COM - real pivot)"
+            else:
+                info = "(Not available - Excel not installed)"
+        else:  # cross-platform
+            template_path = os.path.join(TEMPLATE_DIR, "pivot_template.xlsx")
+            if os.path.exists(template_path):
+                info = "(Template - refreshes on open)"
+            else:
+                info = "(Styled summary - no template)"
+        
+        self.pivot_method_info.configure(text=info)
+    
+    def _get_pivot_info(self) -> str:
+        """Get information about pivot table support on current platform."""
+        if WIN32COM_AVAILABLE:
+            return "(Real pivot table - Windows with Excel)"
+        else:
+            template_path = os.path.join(TEMPLATE_DIR, "pivot_template.xlsx")
+            if os.path.exists(template_path):
+                return "(Real pivot table from template - refreshes on open)"
+            else:
+                return "(Styled summary - no template found)"
             
     def _clear_form(self):
         """Clear all form fields."""
@@ -177,8 +269,14 @@ class EndOfSupportGUI:
         self.filter_approaching.set(False)
         self.filter_extended.set(False)
         self.filter_oos.set(False)
+        self.include_pivot.set(True)
+        self.pivot_method.set("auto")
+        self.pivot_method_combo.configure(state="readonly")
+        self._update_pivot_method_info()
         self.results_text.delete("1.0", tk.END)
         self.status_var.set("Ready")
+        # Hide Excel options
+        self.excel_options_frame.grid_remove()
         
     def _get_status_filters(self) -> Optional[List[SupportStatus]]:
         """Get selected status filters."""
@@ -247,8 +345,12 @@ class EndOfSupportGUI:
             self._update_status("Formatting report...")
             if fmt == "excel":
                 formatter = ExcelFormatter()
-                formatter.format_to_file(report, output_path)
+                include_pivot = self.include_pivot.get()
+                pivot_method = self.pivot_method.get() if include_pivot else None
+                formatter.format_to_file(report, output_path, include_pivot=include_pivot, pivot_method=pivot_method)
                 output_text = f"Excel report saved to: {output_path}\n\n"
+                if include_pivot:
+                    output_text += self._get_pivot_status(pivot_method) + "\n\n"
                 output_text += self._get_summary(report)
             else:
                 formatters = {
@@ -289,6 +391,20 @@ class EndOfSupportGUI:
                 lines.append(f"  {status.value}: {count}")
         lines.append("=" * 50)
         return "\n".join(lines)
+    
+    def _get_pivot_status(self, pivot_method: str = "auto") -> str:
+        """Get status message about pivot table creation."""
+        if pivot_method == "windows" or (pivot_method == "auto" and WIN32COM_AVAILABLE):
+            if WIN32COM_AVAILABLE:
+                return "Pivot Table: Created using Excel COM automation (Windows)"
+            else:
+                return "Pivot Table: Windows method not available (Excel not installed)"
+        else:
+            template_path = os.path.join(TEMPLATE_DIR, "pivot_template.xlsx")
+            if os.path.exists(template_path):
+                return "Pivot Table: Created from template (will refresh when opened in Excel)"
+            else:
+                return "Pivot Table: Styled summary (template not found for real pivot)"
         
     def _update_status(self, message: str):
         """Update status bar from background thread."""

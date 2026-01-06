@@ -26,6 +26,9 @@ eos-tool-gui = "src.gui:main"
 [tool.setuptools.packages.find]
 where = ["."]
 
+[tool.setuptools.package-data]
+"src.templates" = ["*.xlsx"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]

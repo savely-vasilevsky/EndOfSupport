@@ -24,7 +24,7 @@ from .models import (
 
 # Optional Excel support
 try:
-    from openpyxl import Workbook
+    from openpyxl import Workbook, load_workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
     EXCEL_AVAILABLE = True
@@ -37,6 +37,10 @@ try:
     WIN32COM_AVAILABLE = True
 except ImportError:
     WIN32COM_AVAILABLE = False
+
+# Path to pivot table template (for cross-platform support)
+import sys
+TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
 
 
 class BaseFormatter(ABC):
@@ -582,13 +586,17 @@ class ExcelFormatter(BaseFormatter):
             "ExcelFormatter requires format_to_file() for binary output"
         )
     
-    def format_to_file(self, report: Report, filepath: str, include_pivot: bool = True) -> None:
+    def format_to_file(self, report: Report, filepath: str, include_pivot: bool = True, pivot_method: str = "auto") -> None:
         """Format report and save directly to Excel file.
         
         Args:
             report: Report object to format.
             filepath: Path to save the Excel file.
             include_pivot: Whether to include a pivot table/summary sheet.
+            pivot_method: Method for creating pivot table:
+                - "auto": Use Windows COM if available, otherwise template/summary
+                - "windows": Force Windows COM (requires Excel installed)
+                - "cross-platform": Force template-based or summary approach
         """
         wb = Workbook()
         ws = wb.active
@@ -644,14 +652,25 @@ class ExcelFormatter(BaseFormatter):
         
         # Create pivot table/summary
         if include_pivot:
-            if WIN32COM_AVAILABLE:
+            use_windows = (pivot_method == "windows") or (pivot_method == "auto" and WIN32COM_AVAILABLE)
+            
+            if use_windows and WIN32COM_AVAILABLE:
                 # Save first, then add real pivot with win32com (Windows only)
                 wb.save(filepath)
                 self._create_real_pivot_table(filepath, data_row_count)
                 return
             else:
-                # Cross-platform fallback: create styled pivot-like summary sheet
-                self._create_pivot_summary_sheet(wb, report)
+                # Cross-platform: use template with pre-configured pivot table
+                template_path = os.path.join(TEMPLATE_DIR, "pivot_template.xlsx")
+                if os.path.exists(template_path):
+                    # Save data workbook first
+                    wb.save(filepath)
+                    # Then add pivot from template
+                    self._create_pivot_from_template(filepath, data_row_count, template_path)
+                    return
+                else:
+                    # Fallback: create styled pivot-like summary sheet
+                    self._create_pivot_summary_sheet(wb, report)
         
         # Save workbook
         wb.save(filepath)
@@ -771,6 +790,85 @@ class ExcelFormatter(BaseFormatter):
         
         # Freeze after header row
         ws.freeze_panes = "A5"
+    
+    def _create_pivot_from_template(self, filepath: str, data_row_count: int, template_path: str) -> None:
+        """Create a real pivot table by copying from a template file.
+        
+        This method loads a template Excel file that contains a pre-configured
+        pivot table, copies the pivot sheet to the output file, and updates
+        the pivot cache to reference the new data. The pivot will refresh
+        when the file is opened in Excel.
+        
+        Args:
+            filepath: Path to the output Excel file (already contains data).
+            data_row_count: Number of data rows in the source sheet.
+            template_path: Path to the template file with pre-configured pivot.
+        """
+        from copy import copy
+        
+        try:
+            # Load the output workbook (with data)
+            output_wb = load_workbook(filepath)
+            
+            # Load the template workbook
+            template_wb = load_workbook(template_path)
+            
+            # Get the pivot sheet from template
+            if "Pivot" not in template_wb.sheetnames:
+                # Fallback if template doesn't have Pivot sheet
+                output_wb.save(filepath)
+                return
+            
+            template_pivot_sheet = template_wb["Pivot"]
+            
+            # Create a new Pivot sheet in output workbook
+            output_pivot_sheet = output_wb.create_sheet("Pivot")
+            
+            # Copy cell values and styles from template
+            for row in template_pivot_sheet.iter_rows():
+                for cell in row:
+                    new_cell = output_pivot_sheet.cell(row=cell.row, column=cell.column, value=cell.value)
+                    if cell.has_style:
+                        new_cell.font = copy(cell.font)
+                        new_cell.fill = copy(cell.fill)
+                        new_cell.border = copy(cell.border)
+                        new_cell.alignment = copy(cell.alignment)
+                        new_cell.number_format = cell.number_format
+            
+            # Copy column dimensions
+            for col_letter, col_dim in template_pivot_sheet.column_dimensions.items():
+                output_pivot_sheet.column_dimensions[col_letter].width = col_dim.width
+            
+            # Copy row dimensions
+            for row_num, row_dim in template_pivot_sheet.row_dimensions.items():
+                output_pivot_sheet.row_dimensions[row_num].height = row_dim.height
+            
+            # Copy pivot tables from template
+            if hasattr(template_pivot_sheet, '_pivots') and template_pivot_sheet._pivots:
+                for pivot in template_pivot_sheet._pivots:
+                    # Update the pivot cache source range to match our data
+                    if pivot.cache and pivot.cache.cacheSource:
+                        # Update source range to match our data
+                        last_col = get_column_letter(len(self.HEADERS))
+                        
+                        if pivot.cache.cacheSource.worksheetSource:
+                            pivot.cache.cacheSource.worksheetSource.ref = f"A1:{last_col}{data_row_count}"
+                            pivot.cache.cacheSource.worksheetSource.sheet = "Support Status Report"
+                    
+                    # Set pivot to refresh when file is opened
+                    pivot.cache.refreshOnLoad = True
+                    
+                    # Add pivot to output sheet
+                    output_pivot_sheet._pivots.append(pivot)
+            
+            # Save the output workbook
+            output_wb.save(filepath)
+            
+        except Exception as e:
+            # If template approach fails, the file still has the data sheet
+            # Just save without pivot
+            print(f"Warning: Could not create pivot from template: {e}")
+            pass
     
     def _create_real_pivot_table(self, filepath: str, data_row_count: int) -> None:
         """Create a real Excel PivotTable using win32com.
