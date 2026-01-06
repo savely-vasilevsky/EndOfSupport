@@ -8,9 +8,12 @@ A CLI and GUI tool to analyze AWS resource inventory CSV files and generate supp
 - **Hierarchical Grouping**: Groups resources by Account → Service → Engine → Version
 - **Multiple Output Formats**: Text, CSV, JSON, and Excel
 - **Cross-Platform PivotTable**: Real Excel PivotTables on Windows, Mac, and Linux
+- **Pivot Per Account**: Optional separate pivot tables for each AWS account
+- **Table of Contents**: Excel reports include a TOC sheet with hyperlinks to all tabs
 - **Flexible Filtering**: Filter by status, account, or service
 - **Configurable Threshold**: Set custom days threshold for "approaching" status
 - **GUI Interface**: Cross-platform graphical interface using tkinter
+- **Multiple Date Formats**: Supports various date formats (DD-MMM-YY, DD MMM YYYY, MMM-YY, MMM YYYY)
 
 ## Installation
 
@@ -56,6 +59,9 @@ python -m src.main inventory.csv --output-format json --output-file report.json
 
 # Generate Excel report with PivotTable
 python -m src.main inventory.csv --output-format excel --output-file report.xlsx
+
+# Generate Excel report with per-account pivot tables
+python -m src.main inventory.csv --output-format excel --output-file report.xlsx --pivot-per-account
 
 # Filter by status
 python -m src.main inventory.csv --status out-of-support --status approaching
@@ -124,13 +130,16 @@ Nested hierarchical structure preserving the grouping.
 
 ### Excel
 Professional spreadsheet with:
+- **Table of Contents**: First sheet with hyperlinks to all other sheets
+- **Support Status Report**: Data sheet with all resources
+- **Pivot Table**: Interactive pivot with Service → Engine → Version hierarchy
+- **Per-Account Pivots**: Optional separate pivot for each AWS account
 - Color-coded status rows:
   - 🟢 Green: Supported
   - 🟡 Yellow: Approaching End-of-Support
   - 🔵 Blue: Extended Support
   - 🔴 Red: Out of Support
 - Auto-filters on data sheet
-- Real PivotTable with Service → Engine → Version hierarchy
 
 ## Development
 

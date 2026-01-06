@@ -201,7 +201,9 @@ class CSVParser:
         
         Handles formats:
         - DD-MMM-YY (e.g., "15-Dec-25", "31-Jan-27")
+        - DD MMM YYYY (e.g., "30 Jun 2026", "04 Dec 2023")
         - MMM-YY (e.g., "Dec-25")
+        - MMM YYYY (e.g., "Nov 2026", "May 2026")
         - Special values: "Deprecated", "Supported", "Not available", "-", ""
         
         Args:
@@ -229,9 +231,23 @@ class CSVParser:
         except ValueError:
             pass
         
+        # Try DD MMM YYYY format (e.g., "30 Jun 2026", "04 Dec 2023")
+        try:
+            parsed = datetime.strptime(date_str, '%d %b %Y')
+            return parsed.date()
+        except ValueError:
+            pass
+        
         # Try MMM-YY format (e.g., "Dec-25") - use first day of month
         try:
             parsed = datetime.strptime(date_str, '%b-%y')
+            return parsed.date()
+        except ValueError:
+            pass
+        
+        # Try MMM YYYY format (e.g., "Nov 2026", "May 2026") - use first day of month
+        try:
+            parsed = datetime.strptime(date_str, '%b %Y')
             return parsed.date()
         except ValueError:
             pass
