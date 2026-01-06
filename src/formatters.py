@@ -582,12 +582,13 @@ class ExcelFormatter(BaseFormatter):
             "ExcelFormatter requires format_to_file() for binary output"
         )
     
-    def format_to_file(self, report: Report, filepath: str) -> None:
+    def format_to_file(self, report: Report, filepath: str, include_pivot: bool = True) -> None:
         """Format report and save directly to Excel file.
         
         Args:
             report: Report object to format.
             filepath: Path to save the Excel file.
+            include_pivot: Whether to include a pivot table/summary sheet.
         """
         wb = Workbook()
         ws = wb.active
@@ -641,12 +642,135 @@ class ExcelFormatter(BaseFormatter):
         if data_row_count > 1:
             ws.auto_filter.ref = f"A1:{get_column_letter(len(self.HEADERS))}{data_row_count}"
         
-        # Save workbook first (without pivot)
-        wb.save(filepath)
+        # Create pivot table/summary
+        if include_pivot:
+            if WIN32COM_AVAILABLE:
+                # Save first, then add real pivot with win32com (Windows only)
+                wb.save(filepath)
+                self._create_real_pivot_table(filepath, data_row_count)
+                return
+            else:
+                # Cross-platform fallback: create styled pivot-like summary sheet
+                self._create_pivot_summary_sheet(wb, report)
         
-        # Create real pivot table using win32com (Windows only)
-        if WIN32COM_AVAILABLE:
-            self._create_real_pivot_table(filepath, data_row_count)
+        # Save workbook
+        wb.save(filepath)
+    
+    def _create_pivot_summary_sheet(self, wb: Workbook, report: Report) -> None:
+        """Create a styled pivot-like summary sheet (cross-platform).
+        
+        This creates a formatted summary that looks like a pivot table
+        but works on all platforms without requiring Excel/win32com.
+        
+        Args:
+            wb: Workbook to add the sheet to.
+            report: Report object with hierarchical data.
+        """
+        ws = wb.create_sheet("Pivot")
+        
+        # Style definitions
+        filter_font = Font(bold=False)
+        filter_fill = PatternFill(start_color="DDEBF7", end_color="DDEBF7", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        service_font = Font(bold=True)
+        service_fill = PatternFill(start_color="D9E2F3", end_color="D9E2F3", fill_type="solid")
+        engine_font = Font(bold=False)
+        engine_fill = PatternFill(start_color="E9EDF4", end_color="E9EDF4", fill_type="solid")
+        total_font_white = Font(bold=True, color="FFFFFF")
+        total_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        
+        # Write filter rows (like Excel pivot table filters)
+        ws.cell(row=1, column=1, value="Account").font = filter_font
+        ws.cell(row=1, column=1).fill = filter_fill
+        ws.cell(row=1, column=2, value="(All)").font = filter_font
+        ws.cell(row=1, column=2).fill = filter_fill
+        
+        ws.cell(row=2, column=1, value="Days to EOS").font = filter_font
+        ws.cell(row=2, column=1).fill = filter_fill
+        ws.cell(row=2, column=2, value="(All)").font = filter_font
+        ws.cell(row=2, column=2).fill = filter_fill
+        
+        # Row 3: Empty row
+        # Row 4: Header row
+        ws.cell(row=4, column=1, value="Row Labels").font = header_font
+        ws.cell(row=4, column=1).fill = header_fill
+        ws.cell(row=4, column=2, value="Resources").font = header_font
+        ws.cell(row=4, column=2).fill = header_fill
+        
+        # Aggregate data by Service → Engine → Version
+        service_data: Dict[str, Dict[str, Dict[str, int]]] = {}
+        
+        for account_name, account_group in report.accounts.items():
+            for service_name, service_group in account_group.services.items():
+                if service_name not in service_data:
+                    service_data[service_name] = {}
+                
+                for engine_name, engine_group in service_group.engines.items():
+                    display_engine = engine_name if engine_name and engine_name != "Unknown" else "(blank)"
+                    
+                    if display_engine not in service_data[service_name]:
+                        service_data[service_name][display_engine] = {}
+                    
+                    for version_name, version_group in engine_group.versions.items():
+                        resource_count = len(version_group.resources)
+                        if version_name in service_data[service_name][display_engine]:
+                            service_data[service_name][display_engine][version_name] += resource_count
+                        else:
+                            service_data[service_name][display_engine][version_name] = resource_count
+        
+        # Write pivot data (starting at row 5)
+        row_idx = 5
+        grand_total = 0
+        
+        for service_name in sorted(service_data.keys()):
+            engines = service_data[service_name]
+            service_total = sum(sum(versions.values()) for versions in engines.values())
+            grand_total += service_total
+            
+            # Service row
+            cell = ws.cell(row=row_idx, column=1, value=service_name)
+            cell.font = service_font
+            cell.fill = service_fill
+            cell = ws.cell(row=row_idx, column=2, value=service_total)
+            cell.font = service_font
+            cell.fill = service_fill
+            row_idx += 1
+            
+            for engine_name in sorted(engines.keys()):
+                versions = engines[engine_name]
+                engine_total = sum(versions.values())
+                
+                # Engine row (indented)
+                cell = ws.cell(row=row_idx, column=1, value=f"    {engine_name}")
+                cell.font = engine_font
+                cell.fill = engine_fill
+                cell = ws.cell(row=row_idx, column=2, value=engine_total)
+                cell.font = engine_font
+                cell.fill = engine_fill
+                row_idx += 1
+                
+                for version_name in sorted(versions.keys()):
+                    count = versions[version_name]
+                    # Version row (more indented)
+                    ws.cell(row=row_idx, column=1, value=f"        {version_name}")
+                    ws.cell(row=row_idx, column=2, value=count)
+                    row_idx += 1
+        
+        # Grand Total row
+        cell = ws.cell(row=row_idx, column=1, value="Grand Total")
+        cell.font = total_font_white
+        cell.fill = total_fill
+        cell = ws.cell(row=row_idx, column=2, value=grand_total)
+        cell.font = total_font_white
+        cell.fill = total_fill
+        
+        # Adjust column widths
+        ws.column_dimensions["A"].width = 40
+        ws.column_dimensions["B"].width = 12
+        
+        # Freeze after header row
+        ws.freeze_panes = "A5"
     
     def _create_real_pivot_table(self, filepath: str, data_row_count: int) -> None:
         """Create a real Excel PivotTable using win32com.
