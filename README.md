@@ -154,6 +154,23 @@ pytest
 pytest --cov=src
 ```
 
+## Building Windows Executable
+
+To create a standalone Windows executable:
+
+```bash
+# Install PyInstaller
+pip install pyinstaller
+
+# Build the executable
+pyinstaller EndOfSupportTool.spec --clean
+
+# Or use the build script
+build.bat
+```
+
+The executable will be created at `dist/EndOfSupportTool.exe` (~30 MB). It includes all dependencies and can be distributed without requiring Python installation.
+
 ## Requirements
 
 - Python 3.9+
