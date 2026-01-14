@@ -8,17 +8,31 @@ from collections import defaultdict
 from datetime import date
 from typing import Dict, List, Optional
 
-from .models import (
-    Resource,
-    ReportFilters,
-    SupportStatus,
-    VersionGroup,
-    EngineGroup,
-    ServiceGroup,
-    AccountGroup,
-    Report,
-)
-from .classifier import ResourceClassifier
+# Handle imports for both package and frozen executable modes
+try:
+    from .models import (
+        Resource,
+        ReportFilters,
+        SupportStatus,
+        VersionGroup,
+        EngineGroup,
+        ServiceGroup,
+        AccountGroup,
+        Report,
+    )
+    from .classifier import ResourceClassifier
+except ImportError:
+    from models import (
+        Resource,
+        ReportFilters,
+        SupportStatus,
+        VersionGroup,
+        EngineGroup,
+        ServiceGroup,
+        AccountGroup,
+        Report,
+    )
+    from classifier import ResourceClassifier
 
 
 class ReportGenerator:

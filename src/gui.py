@@ -5,16 +5,27 @@ and generating support status reports.
 """
 
 import os
+import sys
 import threading
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from typing import Optional, List
 
-from .classifier import ResourceClassifier
-from .formatters import TextFormatter, CSVFormatter, JSONFormatter, ExcelFormatter, EXCEL_AVAILABLE, WIN32COM_AVAILABLE, TEMPLATE_DIR
-from .generator import ReportGenerator
-from .models import ReportFilters, SupportStatus
-from .parser import CSVParser, CSVParseError
+# Handle imports for both package and frozen executable modes
+try:
+    # Try relative imports first (when running as package)
+    from .classifier import ResourceClassifier
+    from .formatters import TextFormatter, CSVFormatter, JSONFormatter, ExcelFormatter, EXCEL_AVAILABLE, WIN32COM_AVAILABLE, TEMPLATE_DIR
+    from .generator import ReportGenerator
+    from .models import ReportFilters, SupportStatus
+    from .parser import CSVParser, CSVParseError
+except ImportError:
+    # Fall back to absolute imports (when running as frozen executable or standalone)
+    from classifier import ResourceClassifier
+    from formatters import TextFormatter, CSVFormatter, JSONFormatter, ExcelFormatter, EXCEL_AVAILABLE, WIN32COM_AVAILABLE, TEMPLATE_DIR
+    from generator import ReportGenerator
+    from models import ReportFilters, SupportStatus
+    from parser import CSVParser, CSVParseError
 
 
 class EndOfSupportGUI:

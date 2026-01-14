@@ -9,7 +9,11 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import List, Optional
 
-from .models import Resource
+# Handle imports for both package and frozen executable modes
+try:
+    from .models import Resource
+except ImportError:
+    from models import Resource
 
 
 logger = logging.getLogger(__name__)

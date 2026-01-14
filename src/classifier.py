@@ -7,7 +7,11 @@ and insight text analysis.
 from datetime import date
 from typing import Optional
 
-from .models import Resource, SupportStatus
+# Handle imports for both package and frozen executable modes
+try:
+    from .models import Resource, SupportStatus
+except ImportError:
+    from models import Resource, SupportStatus
 
 
 class ResourceClassifier:

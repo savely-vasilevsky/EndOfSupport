@@ -21,9 +21,9 @@ wheels/
 *.egg
 
 # PyInstaller
-*.spec
 *.manifest
-*.exe
+# Keep spec file for reproducible builds
+!EndOfSupportTool.spec
 
 # Virtual environments
 .venv/

@@ -12,15 +12,27 @@ from datetime import date
 from io import StringIO
 from typing import Any, Dict, List, Optional
 
-from .models import (
-    Report,
-    Resource,
-    SupportStatus,
-    AccountGroup,
-    ServiceGroup,
-    EngineGroup,
-    VersionGroup,
-)
+# Handle imports for both package and frozen executable modes
+try:
+    from .models import (
+        Report,
+        Resource,
+        SupportStatus,
+        AccountGroup,
+        ServiceGroup,
+        EngineGroup,
+        VersionGroup,
+    )
+except ImportError:
+    from models import (
+        Report,
+        Resource,
+        SupportStatus,
+        AccountGroup,
+        ServiceGroup,
+        EngineGroup,
+        VersionGroup,
+    )
 
 # Optional Excel support
 try:
