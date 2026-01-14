@@ -6,9 +6,11 @@ and generating support status reports.
 
 import os
 import sys
+import subprocess
 import threading
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+import webbrowser
 from typing import Optional, List
 
 # Handle imports for both package and frozen executable modes
@@ -58,6 +60,9 @@ class EndOfSupportGUI:
         # Build UI
         self._create_widgets()
         self._configure_grid()
+        
+        # Bind keyboard shortcuts
+        self.root.bind("<F1>", lambda e: self._show_help())
         
     def _create_widgets(self):
         """Create all GUI widgets."""
@@ -152,6 +157,8 @@ class EndOfSupportGUI:
         self.generate_btn.grid(row=0, column=0, padx=5)
         
         ttk.Button(button_frame, text="Clear", command=self._clear_form).grid(row=0, column=1, padx=5)
+        
+        ttk.Button(button_frame, text="Help", command=self._show_help).grid(row=0, column=2, padx=5)
         
         # Progress bar
         self.progress = ttk.Progressbar(main_frame, mode="indeterminate")
@@ -473,6 +480,113 @@ class EndOfSupportGUI:
             self.progress.stop()
             self.generate_btn.configure(state="normal")
         self.root.after(0, update)
+    
+    def _show_help(self):
+        """Open the user guide in the default application."""
+        # Determine the path to USERGUIDE.md
+        if getattr(sys, 'frozen', False):
+            # Running as frozen executable
+            base_path = os.path.dirname(sys.executable)
+        else:
+            # Running as script
+            base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        
+        userguide_path = os.path.join(base_path, "USERGUIDE.md")
+        
+        # Check if file exists
+        if not os.path.exists(userguide_path):
+            # Try alternate locations
+            alt_paths = [
+                os.path.join(os.path.dirname(__file__), "..", "USERGUIDE.md"),
+                os.path.join(os.getcwd(), "USERGUIDE.md"),
+            ]
+            for alt_path in alt_paths:
+                if os.path.exists(alt_path):
+                    userguide_path = os.path.abspath(alt_path)
+                    break
+            else:
+                # Show built-in quick help if file not found
+                self._show_quick_help()
+                return
+        
+        # Open the file with the default application
+        try:
+            if sys.platform == "win32":
+                os.startfile(userguide_path)
+            elif sys.platform == "darwin":
+                subprocess.run(["open", userguide_path], check=True)
+            else:
+                subprocess.run(["xdg-open", userguide_path], check=True)
+        except Exception as e:
+            # Fall back to showing quick help
+            self._show_quick_help()
+    
+    def _show_quick_help(self):
+        """Show a quick help dialog when user guide file is not available."""
+        help_text = """AWS End-of-Support Tool - Quick Help
+
+GETTING STARTED:
+1. Click 'Browse...' to select your AWS inventory CSV file
+2. Choose an output format (text, csv, json, or excel)
+3. For Excel: specify an output file path
+4. Click 'Generate Report'
+
+OUTPUT FORMATS:
+• Text: Human-readable console output
+• CSV: Flat table for spreadsheets
+• JSON: Structured data format
+• Excel: Professional report with pivot tables
+
+EXCEL OPTIONS:
+• Include Pivot Table: Creates interactive pivot
+• Pivot Method: auto/windows/cross-platform
+• Pivot per Account: Separate pivot for each account
+
+FILTERS:
+• Status Filters: Show only specific statuses
+• Days Threshold: Days before EOS to mark 'Approaching'
+
+SUPPORT STATUS:
+🟢 Supported - No action needed
+🟡 Approaching EOS - Plan upgrades
+🔵 Extended Support - May incur costs
+🔴 Out of Support - Immediate action needed
+
+For full documentation, see USERGUIDE.md in the project folder.
+"""
+        # Create a help dialog
+        help_window = tk.Toplevel(self.root)
+        help_window.title("Help - AWS End-of-Support Tool")
+        help_window.geometry("500x450")
+        help_window.resizable(True, True)
+        
+        # Make it modal
+        help_window.transient(self.root)
+        help_window.grab_set()
+        
+        # Add text widget with scrollbar
+        frame = ttk.Frame(help_window, padding="10")
+        frame.pack(fill=tk.BOTH, expand=True)
+        
+        text_widget = tk.Text(frame, wrap=tk.WORD, font=("Consolas", 10))
+        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=text_widget.yview)
+        text_widget.configure(yscrollcommand=scrollbar.set)
+        
+        text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        text_widget.insert("1.0", help_text)
+        text_widget.configure(state="disabled")
+        
+        # Close button
+        close_btn = ttk.Button(help_window, text="Close", command=help_window.destroy)
+        close_btn.pack(pady=10)
+        
+        # Center the window
+        help_window.update_idletasks()
+        x = self.root.winfo_x() + (self.root.winfo_width() - help_window.winfo_width()) // 2
+        y = self.root.winfo_y() + (self.root.winfo_height() - help_window.winfo_height()) // 2
+        help_window.geometry(f"+{x}+{y}")
         
     def run(self):
         """Start the GUI application."""
