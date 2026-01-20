@@ -56,6 +56,7 @@ class EndOfSupportGUI:
         self.include_pivot = tk.BooleanVar(value=True)
         self.pivot_method = tk.StringVar(value="auto")
         self.pivot_per_account = tk.BooleanVar(value=False)
+        self.include_timeline = tk.BooleanVar(value=True)
         
         # Build UI
         self._create_widgets()
@@ -130,6 +131,14 @@ class EndOfSupportGUI:
             variable=self.pivot_per_account
         )
         self.pivot_per_account_checkbox.grid(row=2, column=0, columnspan=2, sticky="w", pady=(5, 0))
+        
+        # Timeline checkbox
+        self.timeline_checkbox = ttk.Checkbutton(
+            self.excel_options_frame,
+            text="Include Timeline View",
+            variable=self.include_timeline
+        )
+        self.timeline_checkbox.grid(row=3, column=0, columnspan=2, sticky="w", pady=(5, 0))
         
         # Initially hide Excel options
         self.excel_options_frame.grid_remove()
@@ -301,6 +310,7 @@ class EndOfSupportGUI:
         self.include_pivot.set(True)
         self.pivot_method.set("auto")
         self.pivot_per_account.set(False)
+        self.include_timeline.set(True)
         self.pivot_method_combo.configure(state="readonly")
         self.pivot_per_account_checkbox.configure(state="normal")
         self._update_pivot_method_info()
@@ -379,12 +389,14 @@ class EndOfSupportGUI:
                 include_pivot = self.include_pivot.get()
                 pivot_method = self.pivot_method.get() if include_pivot else None
                 pivot_per_account = self.pivot_per_account.get() if include_pivot else False
+                include_timeline = self.include_timeline.get()
                 formatter.format_to_file(
                     report, 
                     output_path, 
                     include_pivot=include_pivot, 
                     pivot_method=pivot_method,
-                    pivot_per_account=pivot_per_account
+                    pivot_per_account=pivot_per_account,
+                    include_timeline=include_timeline
                 )
                 output_text = f"Excel report saved to: {output_path}\n\n"
                 if include_pivot:

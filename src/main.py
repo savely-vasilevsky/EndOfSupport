@@ -111,6 +111,21 @@ def create_parser() -> argparse.ArgumentParser:
         help="Create a separate pivot table tab for each account (Excel format only)",
     )
     
+    parser.add_argument(
+        "--include-timeline",
+        action="store_true",
+        default=True,
+        dest="include_timeline",
+        help="Include timeline visualization sheet in Excel output (default: enabled)",
+    )
+    
+    parser.add_argument(
+        "--no-timeline",
+        action="store_false",
+        dest="include_timeline",
+        help="Exclude timeline visualization sheet from Excel output",
+    )
+    
     return parser
 
 
@@ -284,7 +299,8 @@ def main(args: Optional[List[str]] = None) -> int:
                 formatter.format_to_file(
                     report, 
                     parsed_args.output_file,
-                    pivot_per_account=parsed_args.pivot_per_account
+                    pivot_per_account=parsed_args.pivot_per_account,
+                    include_timeline=parsed_args.include_timeline
                 )
                 print_status(f"Report written to: {parsed_args.output_file}")
             except IOError as e:

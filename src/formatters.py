@@ -8,9 +8,10 @@ import csv
 import json
 import os
 from abc import ABC, abstractmethod
-from datetime import date
+from dataclasses import dataclass
+from datetime import date, timedelta
 from io import StringIO
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 # Handle imports for both package and frozen executable modes
 try:
@@ -53,6 +54,551 @@ except ImportError:
 # Path to pivot table template (for cross-platform support)
 import sys
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
+
+
+@dataclass
+class EngineVersionData:
+    """Aggregated support dates for an engine-version combination."""
+    engine: str
+    version: str
+    end_of_support: Optional[date]
+    extended_support_start: Optional[date]
+    extended_support_end: Optional[date]
+    resource_count: int
+    
+    @property
+    def display_name(self) -> str:
+        """Get the display name for this engine-version.
+        
+        Returns "{engine} {version}" when engine is present and not "Unknown",
+        otherwise returns just the version.
+        """
+        if self.engine and self.engine != "Unknown":
+            return f"{self.engine} {self.version}"
+        return self.version
+
+
+class TimelineGenerator:
+    """Generates a timeline visualization sheet for support events.
+    
+    Creates a Gantt-chart style visualization of support lifecycle events
+    using daily columns with day-of-week indicators and weekend highlighting.
+    Each row represents a unique engine-version combination, and columns
+    represent individual days from the current date to the furthest future
+    support event.
+    """
+    
+    # Color constants for timeline visualization
+    COLOR_WEEKEND = "F0F0F0"           # Light gray for weekends
+    COLOR_TODAY = "FFD700"             # Gold border for today
+    COLOR_APPROACHING_EOS = "FFEB9C"   # Yellow - approaching end of support
+    COLOR_EXTENDED_SUPPORT = "BDD7EE"  # Light blue - in extended support
+    COLOR_OUT_OF_SUPPORT = "FFC7CE"    # Light red - out of support
+    COLOR_EOS_EVENT = "FF0000"         # Red - end of support event marker
+    COLOR_EXT_START_EVENT = "0070C0"   # Blue - extended support start marker
+    COLOR_EXT_END_EVENT = "C00000"     # Dark red - extended support end marker
+    
+    def __init__(self, report: Report, days_threshold: int = 90):
+        """Initialize the timeline generator.
+        
+        Args:
+            report: Report object containing resource data.
+            days_threshold: Days before EOS to mark as "approaching".
+        """
+        self.report = report
+        self.days_threshold = days_threshold
+    
+    def generate(self, ws) -> None:
+        """Generate the timeline sheet content.
+        
+        Orchestrates the creation of the timeline sheet by:
+        1. Collecting engine-version data from the report
+        2. Calculating the date range for the timeline
+        3. Creating header rows (month-year, day of week, day number)
+        4. Creating data rows for each engine-version combination
+        5. Creating a legend explaining the color coding
+        
+        Args:
+            ws: openpyxl Worksheet to populate.
+        """
+        # Step 1: Collect engine-version data
+        engine_versions = self._collect_engine_versions()
+        
+        # Step 2: Calculate date range
+        start_date, end_date = self._calculate_date_range()
+        
+        # Step 3: Create header rows (returns the row index where data should start)
+        data_start_row = self._create_header_rows(ws, start_date, end_date)
+        
+        # Step 4: Create data rows (or show message if no data)
+        if engine_versions:
+            next_row = self._create_data_rows(
+                ws, 
+                engine_versions, 
+                start_date, 
+                end_date, 
+                data_start_row
+            )
+        else:
+            # Handle empty data case - show a message
+            no_data_cell = ws.cell(row=data_start_row, column=1, value="No engine-version data available")
+            no_data_cell.font = Font(italic=True)
+            next_row = data_start_row + 1
+        
+        # Step 5: Create legend below the data rows
+        self._create_legend(ws, next_row)
+    
+    def _collect_engine_versions(self) -> List[EngineVersionData]:
+        """Collect unique engine-version combinations with their dates.
+        
+        Iterates through report.accounts → services → engines → versions
+        and aggregates dates for each unique engine-version combination.
+        Uses earliest EOS, earliest ext_start, and latest ext_end.
+        Results are sorted alphabetically by engine then version.
+        
+        Returns:
+            Sorted list of EngineVersionData objects.
+        """
+        # Dictionary to aggregate data by (engine, version) key
+        # Value: [earliest_eos, earliest_ext_start, latest_ext_end, resource_count]
+        aggregated: Dict[Tuple[str, str], Dict[str, Any]] = {}
+        
+        # Iterate through the report hierarchy
+        for account_name, account_group in self.report.accounts.items():
+            for service_name, service_group in account_group.services.items():
+                for engine_name, engine_group in service_group.engines.items():
+                    for version_name, version_group in engine_group.versions.items():
+                        # Create key from engine and version
+                        key = (engine_name or "", version_name)
+                        
+                        # Initialize entry if not exists
+                        if key not in aggregated:
+                            aggregated[key] = {
+                                "end_of_support": None,
+                                "extended_support_start": None,
+                                "extended_support_end": None,
+                                "resource_count": 0,
+                            }
+                        
+                        # Aggregate resource count
+                        aggregated[key]["resource_count"] += len(version_group.resources)
+                        
+                        # Aggregate dates from resources
+                        for resource in version_group.resources:
+                            # Earliest EOS
+                            if resource.end_of_support is not None:
+                                current_eos = aggregated[key]["end_of_support"]
+                                if current_eos is None or resource.end_of_support < current_eos:
+                                    aggregated[key]["end_of_support"] = resource.end_of_support
+                            
+                            # Earliest extended support start
+                            if resource.extended_support_start is not None:
+                                current_ext_start = aggregated[key]["extended_support_start"]
+                                if current_ext_start is None or resource.extended_support_start < current_ext_start:
+                                    aggregated[key]["extended_support_start"] = resource.extended_support_start
+                            
+                            # Latest extended support end
+                            if resource.extended_support_end is not None:
+                                current_ext_end = aggregated[key]["extended_support_end"]
+                                if current_ext_end is None or resource.extended_support_end > current_ext_end:
+                                    aggregated[key]["extended_support_end"] = resource.extended_support_end
+        
+        # Convert to list of EngineVersionData objects
+        result: List[EngineVersionData] = []
+        for (engine, version), data in aggregated.items():
+            result.append(EngineVersionData(
+                engine=engine,
+                version=version,
+                end_of_support=data["end_of_support"],
+                extended_support_start=data["extended_support_start"],
+                extended_support_end=data["extended_support_end"],
+                resource_count=data["resource_count"],
+            ))
+        
+        # Sort alphabetically by engine (case-insensitive), then by version (case-insensitive)
+        result.sort(key=lambda x: (x.engine.lower(), x.version.lower()))
+        
+        return result
+    
+    def _calculate_date_range(self) -> Tuple[date, date]:
+        """Calculate the start and end dates for the timeline.
+        
+        Finds the maximum future date across all engine-versions.
+        Returns (today, max_date) or (today, today + 90 days) if no future dates.
+        
+        Returns:
+            Tuple of (start_date, end_date).
+        """
+        today = date.today()
+        
+        # Collect all engine-version data
+        engine_versions = self._collect_engine_versions()
+        
+        # Find the maximum date across all support dates
+        max_date: Optional[date] = None
+        
+        for ev in engine_versions:
+            # Check end_of_support date
+            if ev.end_of_support is not None:
+                if max_date is None or ev.end_of_support > max_date:
+                    max_date = ev.end_of_support
+            
+            # Check extended_support_start date
+            if ev.extended_support_start is not None:
+                if max_date is None or ev.extended_support_start > max_date:
+                    max_date = ev.extended_support_start
+            
+            # Check extended_support_end date
+            if ev.extended_support_end is not None:
+                if max_date is None or ev.extended_support_end > max_date:
+                    max_date = ev.extended_support_end
+        
+        # If no future dates exist, use today + 90 days as the end date
+        if max_date is None or max_date <= today:
+            end_date = today + timedelta(days=90)
+        else:
+            end_date = max_date
+        
+        return (today, end_date)
+    
+    def _create_header_rows(self, ws, start_date: date, end_date: date) -> int:
+        """Create the header rows with day-of-week, day number, and month-year.
+        
+        Creates:
+        - Row 1: Month-year headers with merged cells spanning each month
+        - Row 2: Day of week abbreviations (Mon-Sun)
+        - Row 3: Day numbers (1-31)
+        
+        Applies weekend styling to Saturday/Sunday columns and
+        today marker styling to current date column.
+        
+        Args:
+            ws: Worksheet to populate.
+            start_date: First date in timeline.
+            end_date: Last date in timeline.
+            
+        Returns:
+            Row index where data rows should start.
+        """
+        # Day of week abbreviations
+        day_abbrevs = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        
+        # Style definitions
+        header_font = Font(bold=True)
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        dow_alignment = Alignment(horizontal="center", vertical="center", text_rotation=90)  # Vertical text for day of week
+        weekend_fill = PatternFill(start_color=self.COLOR_WEEKEND, end_color=self.COLOR_WEEKEND, fill_type="solid")
+        today_border = Border(
+            left=Side(style="medium", color=self.COLOR_TODAY),
+            right=Side(style="medium", color=self.COLOR_TODAY),
+            top=Side(style="medium", color=self.COLOR_TODAY),
+            bottom=Side(style="medium", color=self.COLOR_TODAY),
+        )
+        month_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        month_font = Font(bold=True, color="FFFFFF")
+        
+        # Column A is for Engine-Version labels
+        # Write label header in column A
+        ws.cell(row=1, column=1, value="").font = header_font
+        ws.cell(row=2, column=1, value="").font = header_font
+        ws.cell(row=3, column=1, value="Engine-Version").font = header_font
+        ws.cell(row=3, column=1).alignment = header_alignment
+        
+        # Set column A width for labels
+        ws.column_dimensions["A"].width = 25
+        
+        # Track month spans for merging
+        # Key: (year, month), Value: (start_col, end_col)
+        month_spans: Dict[Tuple[int, int], Tuple[int, int]] = {}
+        
+        # Get today's date for today marker
+        today = date.today()
+        
+        # Iterate through each day from start_date to end_date
+        current_date = start_date
+        col_idx = 2  # Start from column B (column 2)
+        
+        while current_date <= end_date:
+            # Get day of week (0=Monday, 6=Sunday)
+            day_of_week = current_date.weekday()
+            day_abbrev = day_abbrevs[day_of_week]
+            day_number = current_date.day
+            year_month = (current_date.year, current_date.month)
+            
+            # Check if weekend (Saturday=5, Sunday=6)
+            is_weekend = day_of_week >= 5
+            
+            # Check if today
+            is_today = current_date == today
+            
+            # Track month span
+            if year_month not in month_spans:
+                month_spans[year_month] = (col_idx, col_idx)
+            else:
+                month_spans[year_month] = (month_spans[year_month][0], col_idx)
+            
+            # Row 2: Day of week abbreviation (vertical text)
+            dow_cell = ws.cell(row=2, column=col_idx, value=day_abbrev)
+            dow_cell.font = header_font
+            dow_cell.alignment = dow_alignment
+            
+            # Row 3: Day number
+            day_cell = ws.cell(row=3, column=col_idx, value=day_number)
+            day_cell.font = header_font
+            day_cell.alignment = header_alignment
+            
+            # Apply weekend styling
+            if is_weekend:
+                dow_cell.fill = weekend_fill
+                day_cell.fill = weekend_fill
+            
+            # Apply today marker styling (gold border)
+            if is_today:
+                dow_cell.border = today_border
+                day_cell.border = today_border
+            
+            # Set narrow column width for date columns
+            col_letter = get_column_letter(col_idx)
+            ws.column_dimensions[col_letter].width = 4
+            
+            # Move to next day
+            current_date += timedelta(days=1)
+            col_idx += 1
+        
+        # Row 1: Month-year headers with merged cells
+        for (year, month), (start_col, end_col) in sorted(month_spans.items()):
+            # Format month-year as "MMM YYYY" (e.g., "Jan 2025")
+            month_date = date(year, month, 1)
+            month_year_str = month_date.strftime("%b %Y")
+            
+            # Write month-year header in the first column of the span
+            month_cell = ws.cell(row=1, column=start_col, value=month_year_str)
+            month_cell.font = month_font
+            month_cell.fill = month_fill
+            month_cell.alignment = header_alignment
+            
+            # Merge cells if span is more than one column
+            if end_col > start_col:
+                start_col_letter = get_column_letter(start_col)
+                end_col_letter = get_column_letter(end_col)
+                ws.merge_cells(f"{start_col_letter}1:{end_col_letter}1")
+        
+        # Set row height for day-of-week row to accommodate vertical text
+        ws.row_dimensions[2].height = 40
+        
+        # Return the row index where data rows should start (row 4 is separator, row 5 is first data row)
+        # According to design: Row 4 is empty separator row, Row 5+ are data rows
+        return 5
+    
+    def _create_data_rows(
+        self, 
+        ws, 
+        engine_versions: List[EngineVersionData],
+        start_date: date,
+        end_date: date,
+        start_row: int
+    ) -> int:
+        """Create the data rows for each engine-version combination.
+        
+        Creates one row per engine-version with label in column A.
+        Fills cells with appropriate colors based on _get_cell_color.
+        Freezes column A and header rows.
+        
+        Args:
+            ws: Worksheet to populate.
+            engine_versions: List of engine-version data.
+            start_date: First date in timeline.
+            end_date: Last date in timeline.
+            start_row: Row index to start data rows.
+            
+        Returns:
+            Row index after last data row.
+        """
+        # Style definitions
+        label_font = Font(bold=False)
+        label_alignment = Alignment(horizontal="left", vertical="center")
+        
+        current_row = start_row
+        
+        # Create one row per engine-version
+        for ev_data in engine_versions:
+            # Column A: Engine-Version label
+            label_cell = ws.cell(row=current_row, column=1, value=ev_data.display_name)
+            label_cell.font = label_font
+            label_cell.alignment = label_alignment
+            
+            # Fill cells for each date in the range
+            current_date = start_date
+            col_idx = 2  # Start from column B (column 2)
+            
+            while current_date <= end_date:
+                # Determine if this date is a weekend (Saturday=5, Sunday=6)
+                is_weekend = current_date.weekday() >= 5
+                
+                # Get the appropriate cell color based on support dates
+                cell_color = self._get_cell_color(
+                    current_date=current_date,
+                    eos_date=ev_data.end_of_support,
+                    ext_start=ev_data.extended_support_start,
+                    ext_end=ev_data.extended_support_end,
+                    is_weekend=is_weekend
+                )
+                
+                # Apply fill color if one was determined
+                if cell_color is not None:
+                    cell = ws.cell(row=current_row, column=col_idx)
+                    cell.fill = PatternFill(
+                        start_color=cell_color,
+                        end_color=cell_color,
+                        fill_type="solid"
+                    )
+                
+                # Move to next day
+                current_date += timedelta(days=1)
+                col_idx += 1
+            
+            # Move to next row
+            current_row += 1
+        
+        # Freeze column A and header rows
+        # Freeze panes at B5 (row 5 is first data row, column B is first date column)
+        # This freezes rows 1-4 (headers) and column A (labels)
+        ws.freeze_panes = "B5"
+        
+        # Return the row index after the last data row
+        return current_row
+    
+    def _create_legend(self, ws, start_row: int) -> None:
+        """Create the color legend below the timeline.
+        
+        Adds legend section below data rows with color samples
+        and descriptions for all states.
+        
+        Args:
+            ws: Worksheet to populate.
+            start_row: Row index to start legend.
+        """
+        # Style definitions
+        title_font = Font(bold=True, size=12)
+        label_font = Font(bold=False)
+        label_alignment = Alignment(horizontal="left", vertical="center")
+        
+        # Leave an empty row for spacing
+        current_row = start_row + 1
+        
+        # Legend title
+        title_cell = ws.cell(row=current_row, column=1, value="Legend")
+        title_cell.font = title_font
+        current_row += 1
+        
+        # Define legend entries: (color_code, description)
+        legend_entries = [
+            (self.COLOR_EOS_EVENT, "End of Support Event"),
+            (self.COLOR_EXT_START_EVENT, "Extended Support Start"),
+            (self.COLOR_EXT_END_EVENT, "Extended Support End"),
+            (self.COLOR_APPROACHING_EOS, "Approaching End of Support"),
+            (self.COLOR_EXTENDED_SUPPORT, "Extended Support Period"),
+            (self.COLOR_OUT_OF_SUPPORT, "Out of Support"),
+            (self.COLOR_WEEKEND, "Weekend"),
+            (self.COLOR_TODAY, "Today Marker"),
+        ]
+        
+        # Create legend entries
+        for color_code, description in legend_entries:
+            # Column A: Color sample cell
+            color_cell = ws.cell(row=current_row, column=1)
+            
+            # For the "Today Marker", use a border instead of fill
+            if color_code == self.COLOR_TODAY:
+                today_border = Border(
+                    left=Side(style="medium", color=self.COLOR_TODAY),
+                    right=Side(style="medium", color=self.COLOR_TODAY),
+                    top=Side(style="medium", color=self.COLOR_TODAY),
+                    bottom=Side(style="medium", color=self.COLOR_TODAY),
+                )
+                color_cell.border = today_border
+            else:
+                color_cell.fill = PatternFill(
+                    start_color=color_code,
+                    end_color=color_code,
+                    fill_type="solid"
+                )
+            
+            # Column B: Description
+            desc_cell = ws.cell(row=current_row, column=2, value=description)
+            desc_cell.font = label_font
+            desc_cell.alignment = label_alignment
+            
+            current_row += 1
+    
+    def _get_cell_color(
+        self, 
+        current_date: date,
+        eos_date: Optional[date],
+        ext_start: Optional[date],
+        ext_end: Optional[date],
+        is_weekend: bool
+    ) -> Optional[str]:
+        """Determine the fill color for a timeline cell.
+        
+        Calculates cell color based on date relationship to EOS, ext_start, ext_end.
+        Implements priority logic:
+        - EOS event > ext_end event > ext_start event > out of support > 
+          extended support > approaching EOS
+        
+        Args:
+            current_date: The date this cell represents.
+            eos_date: End of support date for this engine-version.
+            ext_start: Extended support start date.
+            ext_end: Extended support end date.
+            is_weekend: Whether this date is a weekend.
+            
+        Returns:
+            RGB hex color string or None.
+        """
+        # Priority 1: EOS event (exact date match)
+        if eos_date is not None and current_date == eos_date:
+            return self.COLOR_EOS_EVENT
+        
+        # Priority 2: Extended support end event (exact date match)
+        if ext_end is not None and current_date == ext_end:
+            return self.COLOR_EXT_END_EVENT
+        
+        # Priority 3: Extended support start event (exact date match)
+        if ext_start is not None and current_date == ext_start:
+            return self.COLOR_EXT_START_EVENT
+        
+        # Priority 4: Out of support (past EOS, no extended support covering this date)
+        # A date is "out of support" if:
+        # - It's after the EOS date, AND
+        # - Either there's no extended support, OR the date is after ext_end
+        if eos_date is not None and current_date > eos_date:
+            # Check if extended support covers this date
+            has_extended_support = (
+                ext_start is not None and 
+                ext_end is not None and 
+                ext_start <= current_date <= ext_end
+            )
+            if not has_extended_support:
+                return self.COLOR_OUT_OF_SUPPORT
+        
+        # Priority 5: Extended support period (between ext_start and ext_end)
+        if (ext_start is not None and ext_end is not None and 
+            ext_start <= current_date <= ext_end):
+            return self.COLOR_EXTENDED_SUPPORT
+        
+        # Priority 6: Approaching EOS (within days_threshold before EOS)
+        if eos_date is not None:
+            days_until_eos = (eos_date - current_date).days
+            if 0 < days_until_eos <= self.days_threshold:
+                return self.COLOR_APPROACHING_EOS
+        
+        # Priority 7: Weekend (only if no other state applies)
+        if is_weekend:
+            return self.COLOR_WEEKEND
+        
+        # No special coloring needed
+        return None
 
 
 class BaseFormatter(ABC):
@@ -598,7 +1144,16 @@ class ExcelFormatter(BaseFormatter):
             "ExcelFormatter requires format_to_file() for binary output"
         )
     
-    def format_to_file(self, report: Report, filepath: str, include_pivot: bool = True, pivot_method: str = "auto", pivot_per_account: bool = False) -> None:
+    def format_to_file(
+        self, 
+        report: Report, 
+        filepath: str, 
+        include_pivot: bool = True, 
+        pivot_method: str = "auto", 
+        pivot_per_account: bool = False,
+        include_timeline: bool = True,
+        days_threshold: int = 90
+    ) -> None:
         """Format report and save directly to Excel file.
         
         Args:
@@ -610,6 +1165,8 @@ class ExcelFormatter(BaseFormatter):
                 - "windows": Force Windows COM (requires Excel installed)
                 - "cross-platform": Force template-based or summary approach
             pivot_per_account: If True, create a separate pivot tab for each account.
+            include_timeline: Whether to include the timeline visualization sheet.
+            days_threshold: Days before EOS to mark as "approaching" in timeline.
         """
         wb = Workbook()
         
@@ -714,6 +1271,13 @@ class ExcelFormatter(BaseFormatter):
                         if len(sheet_name) > 31:
                             sheet_name = sheet_name[:31]
                         sheet_info.append((sheet_name, f"Summary for account: {account_name}"))
+        
+        # Create Timeline sheet if requested
+        if include_timeline:
+            timeline_ws = wb.create_sheet("Timeline")
+            timeline_generator = TimelineGenerator(report, days_threshold)
+            timeline_generator.generate(timeline_ws)
+            sheet_info.append(("Timeline", "Visual timeline of support events by engine-version"))
         
         # Populate Table of Contents
         self._create_table_of_contents(toc_sheet, sheet_info)

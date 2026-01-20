@@ -50,6 +50,7 @@ Defines the data structures used throughout the application:
 | `ServiceGroup` | Groups resources by AWS service |
 | `EngineGroup` | Groups resources by engine (e.g., MySQL, PostgreSQL) |
 | `VersionGroup` | Groups resources by version |
+| `EngineVersionData` | Aggregated support dates for timeline visualization |
 | `Report` | Top-level container for the complete report |
 | `ReportFilters` | Filter criteria for report generation |
 
@@ -96,15 +97,25 @@ Converts reports to various output formats:
 | `TextFormatter` | Console text | Hierarchical indentation, status abbreviations |
 | `CSVFormatter` | CSV file | Flat table, one row per resource |
 | `JSONFormatter` | JSON file | Nested hierarchical structure |
-| `ExcelFormatter` | XLSX file | Styled sheets, pivot tables, TOC |
+| `ExcelFormatter` | XLSX file | Styled sheets, pivot tables, timeline, TOC |
+| `TimelineGenerator` | Excel sheet | Gantt-chart style timeline visualization |
 
 **Excel Formatter Special Features:**
 - Table of Contents with hyperlinks
 - Color-coded rows by status
 - Real pivot tables (Windows COM or template-based)
+- Timeline view with daily granularity
 - Per-account pivot tables
 - Auto-adjusted column widths
 - Frozen header rows
+
+**Timeline Generator Features:**
+- Daily columns from today to furthest future event
+- Engine-version rows sorted alphabetically
+- Color-coded periods (approaching EOS, extended support, out of support)
+- Event markers for EOS, extended support start/end dates
+- Weekend highlighting
+- Color legend
 
 ### 6. CLI Interface (`main.py`)
 
@@ -118,6 +129,8 @@ Command-line interface using `argparse`.
 - `--account`: Filter by account (repeatable)
 - `--service`: Filter by service (repeatable)
 - `--days-threshold`: Days before EOS to mark as "approaching"
+- `--include-timeline`: Include timeline visualization (default: enabled)
+- `--no-timeline`: Exclude timeline from Excel output
 - `--pivot-per-account`: Create separate pivot per account
 
 ### 7. GUI Interface (`gui.py`)
@@ -129,6 +142,7 @@ Cross-platform graphical interface using tkinter.
 - Format selection dropdown
 - Excel options panel (pivot method, per-account)
 - Status filter checkboxes
+- Timeline view checkbox
 - Days threshold spinner
 - Progress bar
 - Results preview

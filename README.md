@@ -9,6 +9,7 @@ A CLI and GUI tool to analyze AWS resource inventory CSV files and generate supp
 - **Multiple Output Formats**: Text, CSV, JSON, and Excel
 - **Cross-Platform PivotTable**: Real Excel PivotTables on Windows, Mac, and Linux
 - **Pivot Per Account**: Optional separate pivot tables for each AWS account
+- **Timeline View**: Visual Gantt-chart style timeline showing support lifecycle events
 - **Table of Contents**: Excel reports include a TOC sheet with hyperlinks to all tabs
 - **Flexible Filtering**: Filter by status, account, or service
 - **Configurable Threshold**: Set custom days threshold for "approaching" status
@@ -62,6 +63,9 @@ python -m src.main inventory.csv --output-format excel --output-file report.xlsx
 
 # Generate Excel report with per-account pivot tables
 python -m src.main inventory.csv --output-format excel --output-file report.xlsx --pivot-per-account
+
+# Generate Excel report without timeline
+python -m src.main inventory.csv --output-format excel --output-file report.xlsx --no-timeline
 
 # Filter by status
 python -m src.main inventory.csv --status out-of-support --status approaching
@@ -133,6 +137,7 @@ Professional spreadsheet with:
 - **Table of Contents**: First sheet with hyperlinks to all other sheets
 - **Support Status Report**: Data sheet with all resources
 - **Pivot Table**: Interactive pivot with Service → Engine → Version hierarchy
+- **Timeline View**: Visual timeline showing support events by engine-version
 - **Per-Account Pivots**: Optional separate pivot for each AWS account
 - Color-coded status rows:
   - 🟢 Green: Supported

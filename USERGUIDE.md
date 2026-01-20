@@ -82,6 +82,7 @@ Export your AWS resource inventory as a CSV file. The tool expects these columns
 │  ☑ Include Pivot Table                                  │
 │  Pivot Method: [auto ▼] (Will use Windows Excel COM)    │
 │  ☐ Create Pivot per Account                             │
+│  ☑ Include Timeline View                                │
 ├─────────────────────────────────────────────────────────┤
 │  FILTERS                                                │
 │  Status Filters: ☐ Supported  ☐ Approaching EOS         │
@@ -128,6 +129,7 @@ When you select "excel" format, additional options appear:
   - `windows`: Force Windows Excel COM (requires Excel installed)
   - `cross-platform`: Template-based approach (works everywhere)
 - **Create Pivot per Account**: Generates separate pivot tabs for each AWS account
+- **Include Timeline View**: Adds a visual timeline sheet showing support events
 
 #### Step 5: Apply Filters (Optional)
 - **Status Filters**: Check boxes to include only specific statuses
@@ -184,6 +186,8 @@ python -m src.main inventory.csv --account "Production Account"
 | `--service` | Filter by service name | (all) |
 | `--days-threshold` | Days before EOS to mark "approaching" | 90 |
 | `--no-pivot` | Exclude pivot table from Excel | (include) |
+| `--include-timeline` | Include timeline visualization | (enabled) |
+| `--no-timeline` | Exclude timeline from Excel | (include) |
 | `--pivot-per-account` | Create pivot per account | (single) |
 
 ---
@@ -258,7 +262,8 @@ Professional spreadsheet with multiple sheets:
 1. **Table of Contents** - Clickable links to all sheets
 2. **Support Status Report** - All data with color coding
 3. **Pivot** - Interactive pivot table
-4. **Pivot_AccountName** - Per-account pivots (if enabled)
+4. **Timeline** - Visual timeline of support events
+5. **Pivot_AccountName** - Per-account pivots (if enabled)
 
 ---
 
@@ -281,6 +286,20 @@ Interactive summary showing:
 - **Rows**: Service → Engine → Version (expandable)
 - **Values**: Count of resources
 - **Filters**: Account, Days to EOS
+
+#### Timeline View
+Visual Gantt-chart style timeline showing support lifecycle events:
+- **Rows**: One row per engine-version combination (e.g., "python 3.9", "mysql 8.0")
+- **Columns**: Daily columns from today to the furthest future support event
+- **Color Coding**:
+  - 🟡 Yellow: Approaching End-of-Support (within threshold days)
+  - 🔵 Light Blue: Extended Support period
+  - 🔴 Light Red: Out of Support period
+  - 🔴 Red marker: End of Support event date
+  - 🔵 Blue marker: Extended Support Start date
+  - 🔴 Dark Red marker: Extended Support End date
+  - Gray: Weekend days (Saturday/Sunday)
+- **Legend**: Color key at the bottom of the timeline
 
 ### Working with Pivot Tables
 
