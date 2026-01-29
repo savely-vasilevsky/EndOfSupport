@@ -43,6 +43,7 @@ try:
     EXCEL_AVAILABLE = True
 except ImportError:
     EXCEL_AVAILABLE = False
+    Workbook = None  # For type hints when openpyxl not installed
 
 # Optional win32com support for real pivot tables (Windows only)
 try:
@@ -58,7 +59,8 @@ TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
 
 @dataclass
 class EngineVersionData:
-    """Aggregated support dates for an engine-version combination."""
+    """Aggregated support dates for a service-engine-version combination."""
+    service: str
     engine: str
     version: str
     end_of_support: Optional[date]
@@ -152,24 +154,24 @@ class TimelineGenerator:
         """Collect unique engine-version combinations with their dates.
         
         Iterates through report.accounts → services → engines → versions
-        and aggregates dates for each unique engine-version combination.
+        and aggregates dates for each unique service-engine-version combination.
         Uses earliest EOS, earliest ext_start, and latest ext_end.
-        Results are sorted alphabetically by engine then version.
+        Results are sorted alphabetically by service, then engine, then version.
         
         Returns:
             Sorted list of EngineVersionData objects.
         """
-        # Dictionary to aggregate data by (engine, version) key
+        # Dictionary to aggregate data by (service, engine, version) key
         # Value: [earliest_eos, earliest_ext_start, latest_ext_end, resource_count]
-        aggregated: Dict[Tuple[str, str], Dict[str, Any]] = {}
+        aggregated: Dict[Tuple[str, str, str], Dict[str, Any]] = {}
         
         # Iterate through the report hierarchy
         for account_name, account_group in self.report.accounts.items():
             for service_name, service_group in account_group.services.items():
                 for engine_name, engine_group in service_group.engines.items():
                     for version_name, version_group in engine_group.versions.items():
-                        # Create key from engine and version
-                        key = (engine_name or "", version_name)
+                        # Create key from service, engine and version
+                        key = (service_name, engine_name or "", version_name)
                         
                         # Initialize entry if not exists
                         if key not in aggregated:
@@ -205,8 +207,9 @@ class TimelineGenerator:
         
         # Convert to list of EngineVersionData objects
         result: List[EngineVersionData] = []
-        for (engine, version), data in aggregated.items():
+        for (service, engine, version), data in aggregated.items():
             result.append(EngineVersionData(
+                service=service,
                 engine=engine,
                 version=version,
                 end_of_support=data["end_of_support"],
@@ -215,8 +218,8 @@ class TimelineGenerator:
                 resource_count=data["resource_count"],
             ))
         
-        # Sort alphabetically by engine (case-insensitive), then by version (case-insensitive)
-        result.sort(key=lambda x: (x.engine.lower(), x.version.lower()))
+        # Sort alphabetically by service, then engine, then version (all case-insensitive)
+        result.sort(key=lambda x: (x.service.lower(), x.engine.lower(), x.version.lower()))
         
         return result
     
@@ -262,15 +265,22 @@ class TimelineGenerator:
         return (today, end_date)
     
     def _create_header_rows(self, ws, start_date: date, end_date: date) -> int:
-        """Create the header rows with day-of-week, day number, and month-year.
+        """Create the header rows with year, month, week, and day granularity with Excel grouping.
         
-        Creates:
-        - Row 1: Month-year headers with merged cells spanning each month
-        - Row 2: Day of week abbreviations (Mon-Sun)
-        - Row 3: Day numbers (1-31)
+        Creates a 6-row header structure with Excel column grouping for drill-down:
+        - Row 1: Year headers (always visible at top)
+        - Row 2: Month headers with vertical text (for months grouping view)
+        - Row 3: Week number headers (visible when expanded to weeks)
+        - Row 4: Day of week abbreviations (horizontal text)
+        - Row 5: Day numbers (1-31)
+        - Row 6: "Engine-Version" label row (separator before data)
         
-        Applies weekend styling to Saturday/Sunday columns and
-        today marker styling to current date column.
+        Column A contains labels: "Years", "Months", "Weeks", "Days", "", "Engine-Version"
+        
+        Excel grouping allows users to collapse/expand:
+        - Collapse all: Shows only months (with vertical month names) - DEFAULT VIEW
+        - Expand to weeks: Shows months and weeks
+        - Expand to days: Shows full detail
         
         Args:
             ws: Worksheet to populate.
@@ -278,7 +288,7 @@ class TimelineGenerator:
             end_date: Last date in timeline.
             
         Returns:
-            Row index where data rows should start.
+            Row index where data rows should start (7).
         """
         # Day of week abbreviations
         day_abbrevs = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -286,7 +296,8 @@ class TimelineGenerator:
         # Style definitions
         header_font = Font(bold=True)
         header_alignment = Alignment(horizontal="center", vertical="center")
-        dow_alignment = Alignment(horizontal="center", vertical="center", text_rotation=90)  # Vertical text for day of week
+        # Vertical text alignment (bottom to top, text_rotation=90) for month headers
+        vertical_alignment = Alignment(horizontal="center", vertical="center", text_rotation=90)
         weekend_fill = PatternFill(start_color=self.COLOR_WEEKEND, end_color=self.COLOR_WEEKEND, fill_type="solid")
         today_border = Border(
             left=Side(style="medium", color=self.COLOR_TODAY),
@@ -294,42 +305,74 @@ class TimelineGenerator:
             top=Side(style="medium", color=self.COLOR_TODAY),
             bottom=Side(style="medium", color=self.COLOR_TODAY),
         )
-        month_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-        month_font = Font(bold=True, color="FFFFFF")
+        # Alternating colors for banded appearance (same palette, different shades)
+        # Years use darker shades
+        year_fills = [
+            PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid"),  # Dark navy blue
+            PatternFill(start_color="2E75B6", end_color="2E75B6", fill_type="solid"),  # Dark blue
+        ]
+        # Months use medium shades
+        month_fills = [
+            PatternFill(start_color="5B9BD5", end_color="5B9BD5", fill_type="solid"),  # Medium blue
+            PatternFill(start_color="9DC3E6", end_color="9DC3E6", fill_type="solid"),  # Light blue
+        ]
+        year_month_font = Font(bold=True, color="FFFFFF")
+        month_font_dark = Font(bold=True, color="000000")  # Dark text for lighter month backgrounds
+        week_fill = PatternFill(start_color="BDD7EE", end_color="BDD7EE", fill_type="solid")
+        week_font = Font(bold=True, color="000000")
+        label_font = Font(bold=True)
+        label_alignment = Alignment(horizontal="left", vertical="center")
         
-        # Column A is for Engine-Version labels
-        # Write label header in column A
-        ws.cell(row=1, column=1, value="").font = header_font
-        ws.cell(row=2, column=1, value="").font = header_font
-        ws.cell(row=3, column=1, value="Engine-Version").font = header_font
-        ws.cell(row=3, column=1).alignment = header_alignment
+        # Column A and B labels for each row
+        # Column A: Service, Column B: Engine-Version
+        ws.cell(row=1, column=1, value="Years").font = label_font
+        ws.cell(row=1, column=1).alignment = label_alignment
+        ws.cell(row=2, column=1, value="Months").font = label_font
+        ws.cell(row=2, column=1).alignment = label_alignment
+        ws.cell(row=3, column=1, value="Weeks").font = label_font
+        ws.cell(row=3, column=1).alignment = label_alignment
+        ws.cell(row=4, column=1, value="Days").font = label_font
+        ws.cell(row=4, column=1).alignment = label_alignment
+        # Row 6 has Service and Engine-Version labels
+        ws.cell(row=6, column=1, value="Service").font = label_font
+        ws.cell(row=6, column=1).alignment = label_alignment
+        ws.cell(row=6, column=2, value="Engine-Version").font = label_font
+        ws.cell(row=6, column=2).alignment = label_alignment
+        ws.column_dimensions["A"].width = 20  # Service column
+        ws.column_dimensions["B"].width = 25  # Engine-Version column
         
-        # Set column A width for labels
-        ws.column_dimensions["A"].width = 25
-        
-        # Track month spans for merging
+        # Track spans for merging and grouping
+        # Key: year, Value: (start_col, end_col)
+        year_spans: Dict[int, Tuple[int, int]] = {}
         # Key: (year, month), Value: (start_col, end_col)
         month_spans: Dict[Tuple[int, int], Tuple[int, int]] = {}
+        # Key: (year, week), Value: (start_col, end_col)
+        week_spans: Dict[Tuple[int, int], Tuple[int, int]] = {}
+        # Track which columns belong to which week for grouping
+        week_columns: Dict[Tuple[int, int], List[int]] = {}
         
-        # Get today's date for today marker
         today = date.today()
-        
-        # Iterate through each day from start_date to end_date
         current_date = start_date
-        col_idx = 2  # Start from column B (column 2)
+        col_idx = 3  # Start from column C (A=Service, B=Engine-Version)
         
         while current_date <= end_date:
-            # Get day of week (0=Monday, 6=Sunday)
             day_of_week = current_date.weekday()
             day_abbrev = day_abbrevs[day_of_week]
             day_number = current_date.day
+            year = current_date.year
             year_month = (current_date.year, current_date.month)
+            # ISO week number (year, week)
+            iso_cal = current_date.isocalendar()
+            year_week = (iso_cal[0], iso_cal[1])
             
-            # Check if weekend (Saturday=5, Sunday=6)
             is_weekend = day_of_week >= 5
-            
-            # Check if today
             is_today = current_date == today
+            
+            # Track year span
+            if year not in year_spans:
+                year_spans[year] = (col_idx, col_idx)
+            else:
+                year_spans[year] = (year_spans[year][0], col_idx)
             
             # Track month span
             if year_month not in month_spans:
@@ -337,13 +380,21 @@ class TimelineGenerator:
             else:
                 month_spans[year_month] = (month_spans[year_month][0], col_idx)
             
-            # Row 2: Day of week abbreviation (vertical text)
-            dow_cell = ws.cell(row=2, column=col_idx, value=day_abbrev)
-            dow_cell.font = header_font
-            dow_cell.alignment = dow_alignment
+            # Track week span
+            if year_week not in week_spans:
+                week_spans[year_week] = (col_idx, col_idx)
+                week_columns[year_week] = [col_idx]
+            else:
+                week_spans[year_week] = (week_spans[year_week][0], col_idx)
+                week_columns[year_week].append(col_idx)
             
-            # Row 3: Day number
-            day_cell = ws.cell(row=3, column=col_idx, value=day_number)
+            # Row 4: Day of week abbreviation (horizontal text)
+            dow_cell = ws.cell(row=4, column=col_idx, value=day_abbrev)
+            dow_cell.font = header_font
+            dow_cell.alignment = header_alignment
+            
+            # Row 5: Day number
+            day_cell = ws.cell(row=5, column=col_idx, value=day_number)
             day_cell.font = header_font
             day_cell.alignment = header_alignment
             
@@ -352,7 +403,7 @@ class TimelineGenerator:
                 dow_cell.fill = weekend_fill
                 day_cell.fill = weekend_fill
             
-            # Apply today marker styling (gold border)
+            # Apply today marker styling
             if is_today:
                 dow_cell.border = today_border
                 day_cell.border = today_border
@@ -361,34 +412,97 @@ class TimelineGenerator:
             col_letter = get_column_letter(col_idx)
             ws.column_dimensions[col_letter].width = 4
             
-            # Move to next day
             current_date += timedelta(days=1)
             col_idx += 1
         
-        # Row 1: Month-year headers with merged cells
-        for (year, month), (start_col, end_col) in sorted(month_spans.items()):
-            # Format month-year as "MMM YYYY" (e.g., "Jan 2025")
-            month_date = date(year, month, 1)
-            month_year_str = month_date.strftime("%b %Y")
+        # Row 1: Year headers with merged cells (alternating colors)
+        sorted_years = sorted(year_spans.items())
+        for idx, (year, (start_col, end_col)) in enumerate(sorted_years):
+            year_cell = ws.cell(row=1, column=start_col, value=str(year))
+            year_cell.font = year_month_font
+            year_cell.fill = year_fills[idx % 2]  # Alternate between two shades
+            year_cell.alignment = header_alignment
             
-            # Write month-year header in the first column of the span
-            month_cell = ws.cell(row=1, column=start_col, value=month_year_str)
-            month_cell.font = month_font
-            month_cell.fill = month_fill
-            month_cell.alignment = header_alignment
-            
-            # Merge cells if span is more than one column
             if end_col > start_col:
                 start_col_letter = get_column_letter(start_col)
                 end_col_letter = get_column_letter(end_col)
                 ws.merge_cells(f"{start_col_letter}1:{end_col_letter}1")
         
-        # Set row height for day-of-week row to accommodate vertical text
-        ws.row_dimensions[2].height = 40
+        # Row 2: Month headers with merged cells (alternating colors, vertical text)
+        sorted_months = sorted(month_spans.items())
+        for idx, ((year, month), (start_col, end_col)) in enumerate(sorted_months):
+            month_date = date(year, month, 1)
+            month_str = month_date.strftime("%B")  # Full month name
+            
+            month_cell = ws.cell(row=2, column=start_col, value=month_str)
+            # Use dark text for lighter backgrounds (odd index = lighter shade)
+            month_cell.font = month_font_dark if idx % 2 == 1 else year_month_font
+            month_cell.fill = month_fills[idx % 2]  # Alternate between two shades
+            month_cell.alignment = vertical_alignment  # Vertical text (bottom to top)
+            
+            if end_col > start_col:
+                start_col_letter = get_column_letter(start_col)
+                end_col_letter = get_column_letter(end_col)
+                ws.merge_cells(f"{start_col_letter}2:{end_col_letter}2")
         
-        # Return the row index where data rows should start (row 4 is separator, row 5 is first data row)
-        # According to design: Row 4 is empty separator row, Row 5+ are data rows
-        return 5
+        # Row 3: Week headers with merged cells
+        for (year, week), (start_col, end_col) in sorted(week_spans.items()):
+            week_str = f"W{week}"
+            week_cell = ws.cell(row=3, column=start_col, value=week_str)
+            week_cell.font = week_font
+            week_cell.fill = week_fill
+            week_cell.alignment = header_alignment
+            
+            if end_col > start_col:
+                start_col_letter = get_column_letter(start_col)
+                end_col_letter = get_column_letter(end_col)
+                ws.merge_cells(f"{start_col_letter}3:{end_col_letter}3")
+        
+        # Apply Excel column grouping (outline levels)
+        # Grouping hierarchy:
+        # - Level 0: First day of each month (always visible - monthly summary)
+        # - Level 1: First day of each week (visible when expanded to weeks)
+        # - Level 2: Other days (visible when expanded to days)
+        
+        # Identify first column of each month
+        first_col_of_month = set()
+        for year_month, (start_col, end_col) in month_spans.items():
+            first_col_of_month.add(start_col)
+        
+        # Identify first column of each week
+        first_col_of_week = set()
+        for year_week, columns in week_columns.items():
+            if columns:
+                first_col_of_week.add(columns[0])
+        
+        # Apply outline levels to all date columns
+        total_days = (end_date - start_date).days + 1
+        for day_offset in range(total_days):
+            col_idx = 3 + day_offset  # Column C is index 3 (A=Service, B=Engine-Version)
+            col_letter = get_column_letter(col_idx)
+            
+            if col_idx in first_col_of_month:
+                # First day of month - always visible (level 0)
+                ws.column_dimensions[col_letter].outlineLevel = 0
+            elif col_idx in first_col_of_week:
+                # First day of week (but not first of month) - level 1
+                ws.column_dimensions[col_letter].outlineLevel = 1
+                ws.column_dimensions[col_letter].hidden = True  # Hidden by default (months view)
+            else:
+                # Other days - level 2
+                ws.column_dimensions[col_letter].outlineLevel = 2
+                ws.column_dimensions[col_letter].hidden = True  # Hidden by default (months view)
+        
+        # Configure outline settings - summary columns to the left (so collapse hides to the right)
+        ws.sheet_properties.outlinePr.summaryBelow = False
+        ws.sheet_properties.outlinePr.summaryRight = False
+        
+        # Set row heights
+        ws.row_dimensions[2].height = 70  # Month row (vertical text needs more height)
+        ws.row_dimensions[4].height = 20  # Day of week row (horizontal text)
+        
+        # Return the row index where data rows should start (row 6 is separator, row 7 is first data row)
+        return 7
     
     def _create_data_rows(
         self, 
@@ -400,9 +514,14 @@ class TimelineGenerator:
     ) -> int:
         """Create the data rows for each engine-version combination.
         
-        Creates one row per engine-version with label in column A.
+        Creates one row per engine-version with:
+        - Column A: Service name
+        - Column B: Engine-Version label
+        - Column C onwards: Date cells with color coding
+        
         Fills cells with appropriate colors based on _get_cell_color.
-        Freezes column A and header rows.
+        Freezes columns A-B and header rows.
+        Adds row grouping by service.
         
         Args:
             ws: Worksheet to populate.
@@ -417,19 +536,39 @@ class TimelineGenerator:
         # Style definitions
         label_font = Font(bold=False)
         label_alignment = Alignment(horizontal="left", vertical="center")
+        service_font = Font(bold=True)
         
         current_row = start_row
+        current_service = None
+        service_start_row = None
         
         # Create one row per engine-version
         for ev_data in engine_versions:
-            # Column A: Engine-Version label
-            label_cell = ws.cell(row=current_row, column=1, value=ev_data.display_name)
+            # Track service grouping
+            if ev_data.service != current_service:
+                # Close previous service group if exists
+                if current_service is not None and service_start_row is not None:
+                    # Apply row grouping for previous service (all rows except first)
+                    for row_idx in range(service_start_row + 1, current_row):
+                        ws.row_dimensions[row_idx].outlineLevel = 1
+                
+                # Start new service group
+                current_service = ev_data.service
+                service_start_row = current_row
+            
+            # Column A: Service name
+            service_cell = ws.cell(row=current_row, column=1, value=ev_data.service)
+            service_cell.font = service_font
+            service_cell.alignment = label_alignment
+            
+            # Column B: Engine-Version label
+            label_cell = ws.cell(row=current_row, column=2, value=ev_data.display_name)
             label_cell.font = label_font
             label_cell.alignment = label_alignment
             
             # Fill cells for each date in the range
             current_date = start_date
-            col_idx = 2  # Start from column B (column 2)
+            col_idx = 3  # Start from column C (A=Service, B=Engine-Version)
             
             while current_date <= end_date:
                 # Determine if this date is a weekend (Saturday=5, Sunday=6)
@@ -460,10 +599,15 @@ class TimelineGenerator:
             # Move to next row
             current_row += 1
         
-        # Freeze column A and header rows
-        # Freeze panes at B5 (row 5 is first data row, column B is first date column)
-        # This freezes rows 1-4 (headers) and column A (labels)
-        ws.freeze_panes = "B5"
+        # Close last service group
+        if current_service is not None and service_start_row is not None:
+            for row_idx in range(service_start_row + 1, current_row):
+                ws.row_dimensions[row_idx].outlineLevel = 1
+        
+        # Freeze columns A-B and header rows
+        # Freeze panes at C7 (row 7 is first data row, column C is first date column)
+        # This freezes rows 1-6 (headers) and columns A-B (Service, Engine-Version)
+        ws.freeze_panes = "C7"
         
         # Return the row index after the last data row
         return current_row
@@ -1291,7 +1435,7 @@ class ExcelFormatter(BaseFormatter):
             
             if use_windows and WIN32COM_AVAILABLE:
                 # Create real pivot tables with win32com
-                self._create_real_pivot_table_with_per_account(filepath, report, data_row_count, pivot_per_account)
+                self._create_real_pivot_table_with_per_account(filepath, report, data_row_count, pivot_per_account, days_threshold)
             else:
                 # Cross-platform: use template for real pivot if available
                 template_path = os.path.join(TEMPLATE_DIR, "pivot_template.xlsx")
@@ -1665,7 +1809,7 @@ class ExcelFormatter(BaseFormatter):
         finally:
             pythoncom.CoUninitialize()
     
-    def _create_real_pivot_table_with_per_account(self, filepath: str, report: Report, data_row_count: int, pivot_per_account: bool) -> None:
+    def _create_real_pivot_table_with_per_account(self, filepath: str, report: Report, data_row_count: int, pivot_per_account: bool, days_threshold: int = 90) -> None:
         """Create real Excel PivotTables using win32com - main pivot and optionally per-account.
         
         Args:
@@ -1673,6 +1817,7 @@ class ExcelFormatter(BaseFormatter):
             report: Report object with hierarchical data.
             data_row_count: Number of data rows in the source sheet.
             pivot_per_account: Whether to also create per-account pivot tables.
+            days_threshold: Days threshold for filtering "Days to EOS" (default 90).
         """
         import pythoncom
         pythoncom.CoInitialize()
@@ -1722,7 +1867,28 @@ class ExcelFormatter(BaseFormatter):
             data_field.Name = "Resources"
             
             # Add page filters (report filters)
-            pivot_table.PivotFields("Days to EOS").Orientation = 3  # xlPageField
+            days_to_eos_field = pivot_table.PivotFields("Days to EOS")
+            days_to_eos_field.Orientation = 3  # xlPageField
+            
+            # Apply filter: show only items <= days_threshold
+            try:
+                days_to_eos_field.EnableMultiplePageItems = True
+                for item in days_to_eos_field.PivotItems():
+                    try:
+                        item_value = item.Value
+                        if item_value == "(blank)" or item_value == "" or item_value is None:
+                            item.Visible = False
+                        else:
+                            try:
+                                num_value = int(float(str(item_value)))
+                                item.Visible = (num_value <= days_threshold)
+                            except (ValueError, TypeError):
+                                item.Visible = False
+                    except:
+                        pass
+            except:
+                pass
+            
             pivot_table.PivotFields("Account").Orientation = 3  # xlPageField
             
             # Apply pivot table style
@@ -1768,11 +1934,35 @@ class ExcelFormatter(BaseFormatter):
                     account_field.Orientation = 3  # xlPageField
                     account_field.CurrentPage = account_name
                     
-                    # Add Days to EOS as page filter
-                    account_pivot_table.PivotFields("Days to EOS").Orientation = 3  # xlPageField
+                    # Add Days to EOS as page filter with threshold filter
+                    account_days_field = account_pivot_table.PivotFields("Days to EOS")
+                    account_days_field.Orientation = 3  # xlPageField
+                    
+                    # Apply filter: show only items <= days_threshold
+                    try:
+                        account_days_field.EnableMultiplePageItems = True
+                        for item in account_days_field.PivotItems():
+                            try:
+                                item_value = item.Value
+                                if item_value == "(blank)" or item_value == "" or item_value is None:
+                                    item.Visible = False
+                                else:
+                                    try:
+                                        num_value = int(float(str(item_value)))
+                                        item.Visible = (num_value <= days_threshold)
+                                    except (ValueError, TypeError):
+                                        item.Visible = False
+                            except:
+                                pass
+                    except:
+                        pass
                     
                     # Apply pivot table style
                     account_pivot_table.TableStyle2 = "PivotStyleMedium2"
+            
+            # Ensure Table of Contents is the first (leftmost) tab
+            toc_sheet = wb.Sheets("Table of Contents")
+            toc_sheet.Move(Before=wb.Sheets(1))
             
             wb.Save()
             wb.Close()
@@ -1931,6 +2121,10 @@ class ExcelFormatter(BaseFormatter):
             
             # Apply pivot table style
             pivot_table.TableStyle2 = "PivotStyleMedium2"
+            
+            # Ensure Table of Contents is the first (leftmost) tab
+            toc_sheet = wb.Sheets("Table of Contents")
+            toc_sheet.Move(Before=wb.Sheets(1))
             
             # Save and close
             wb.Save()

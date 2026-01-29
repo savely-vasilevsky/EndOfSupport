@@ -50,7 +50,7 @@ Defines the data structures used throughout the application:
 | `ServiceGroup` | Groups resources by AWS service |
 | `EngineGroup` | Groups resources by engine (e.g., MySQL, PostgreSQL) |
 | `VersionGroup` | Groups resources by version |
-| `EngineVersionData` | Aggregated support dates for timeline visualization |
+| `EngineVersionData` | Aggregated support dates for timeline visualization (service, engine, version, dates, resource_count) |
 | `Report` | Top-level container for the complete report |
 | `ReportFilters` | Filter criteria for report generation |
 
@@ -98,7 +98,7 @@ Converts reports to various output formats:
 | `CSVFormatter` | CSV file | Flat table, one row per resource |
 | `JSONFormatter` | JSON file | Nested hierarchical structure |
 | `ExcelFormatter` | XLSX file | Styled sheets, pivot tables, timeline, TOC |
-| `TimelineGenerator` | Excel sheet | Gantt-chart style timeline visualization |
+| `TimelineGenerator` | Excel sheet | Gantt-chart style timeline with Service grouping |
 
 **Excel Formatter Special Features:**
 - Table of Contents with hyperlinks
@@ -110,12 +110,16 @@ Converts reports to various output formats:
 - Frozen header rows
 
 **Timeline Generator Features:**
-- Daily columns from today to furthest future event
-- Engine-version rows sorted alphabetically
+- Service column (Column A) with row grouping by service
+- Engine-Version column (Column B) showing engine and version combination
+- Daily columns (Column C onwards) from today to furthest future event
+- Column grouping with drill-down: Months → Weeks → Days (default: months view)
+- Row grouping by Service for easy navigation
 - Color-coded periods (approaching EOS, extended support, out of support)
 - Event markers for EOS, extended support start/end dates
-- Weekend highlighting
-- Color legend
+- Weekend highlighting and today marker (gold border)
+- Frozen panes (columns A-B and header rows 1-6)
+- Color legend at bottom
 
 ### 6. CLI Interface (`main.py`)
 

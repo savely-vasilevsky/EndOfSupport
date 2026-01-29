@@ -9,7 +9,7 @@ A CLI and GUI tool to analyze AWS resource inventory CSV files and generate supp
 - **Multiple Output Formats**: Text, CSV, JSON, and Excel
 - **Cross-Platform PivotTable**: Real Excel PivotTables on Windows, Mac, and Linux
 - **Pivot Per Account**: Optional separate pivot tables for each AWS account
-- **Timeline View**: Visual Gantt-chart style timeline showing support lifecycle events
+- **Timeline View**: Visual Gantt-chart style timeline showing support lifecycle events with Service grouping
 - **Table of Contents**: Excel reports include a TOC sheet with hyperlinks to all tabs
 - **Flexible Filtering**: Filter by status, account, or service
 - **Configurable Threshold**: Set custom days threshold for "approaching" status
@@ -101,6 +101,35 @@ In the GUI, select "excel" format to see the Excel Options panel where you can c
 3. The pivot is set to refresh automatically when opened in Excel
 4. **First time opening**: Click "Refresh" on the pivot or enable "Refresh data when opening file" in pivot options
 
+## Timeline View
+
+The Timeline sheet provides a visual Gantt-chart style view of support lifecycle events.
+
+### Structure
+- **Column A**: Service name (e.g., "Amazon RDS", "Amazon ElastiCache")
+- **Column B**: Engine-Version (e.g., "mysql 8.0", "redis 6.2")
+- **Column C onwards**: Daily date columns
+
+### Grouping Features
+- **Row Grouping**: Rows are grouped by Service - use Excel's +/- controls to expand/collapse
+- **Column Grouping**: Time drill-down from Months → Weeks → Days (default: months view)
+
+### Color Coding
+| Color | Meaning |
+|-------|---------|
+| Yellow | Approaching End-of-Support |
+| Light Blue | Extended Support period |
+| Light Red | Out of Support |
+| Red marker | End of Support event |
+| Blue marker | Extended Support Start |
+| Dark Red marker | Extended Support End |
+| Gray | Weekend |
+| Gold border | Today |
+
+### Navigation
+- Frozen panes keep Service/Engine-Version columns and header rows visible while scrolling
+- Legend at bottom explains all color codes
+
 ## Input CSV Format
 
 The tool expects a CSV file with the following columns:
@@ -137,7 +166,7 @@ Professional spreadsheet with:
 - **Table of Contents**: First sheet with hyperlinks to all other sheets
 - **Support Status Report**: Data sheet with all resources
 - **Pivot Table**: Interactive pivot with Service → Engine → Version hierarchy
-- **Timeline View**: Visual timeline showing support events by engine-version
+- **Timeline View**: Visual timeline showing support events grouped by Service → Engine-Version
 - **Per-Account Pivots**: Optional separate pivot for each AWS account
 - Color-coded status rows:
   - 🟢 Green: Supported

@@ -18,6 +18,7 @@ class TestEngineVersionDataDisplayName:
     def test_display_name_with_engine(self):
         """Test display_name returns '{engine} {version}' when engine is present."""
         data = EngineVersionData(
+            service="Lambda",
             engine="python",
             version="3.9",
             end_of_support=date(2025, 10, 1),
@@ -30,6 +31,7 @@ class TestEngineVersionDataDisplayName:
     def test_display_name_with_different_engine(self):
         """Test display_name with different engine values."""
         data = EngineVersionData(
+            service="ElastiCache",
             engine="redis",
             version="6.0",
             end_of_support=date(2024, 6, 15),
@@ -42,6 +44,7 @@ class TestEngineVersionDataDisplayName:
     def test_display_name_with_empty_engine(self):
         """Test display_name returns only version when engine is empty string."""
         data = EngineVersionData(
+            service="Lambda",
             engine="",
             version="18.x",
             end_of_support=None,
@@ -54,6 +57,7 @@ class TestEngineVersionDataDisplayName:
     def test_display_name_with_unknown_engine(self):
         """Test display_name returns only version when engine is 'Unknown'."""
         data = EngineVersionData(
+            service="Lambda",
             engine="Unknown",
             version="2.0.1",
             end_of_support=date(2024, 12, 31),
@@ -66,6 +70,7 @@ class TestEngineVersionDataDisplayName:
     def test_display_name_with_none_dates(self):
         """Test display_name works correctly when all dates are None."""
         data = EngineVersionData(
+            service="RDS",
             engine="mysql",
             version="8.0",
             end_of_support=None,
@@ -86,6 +91,7 @@ class TestEngineVersionDataFields:
         ext_end = date(2026, 1, 15)
         
         data = EngineVersionData(
+            service="RDS",
             engine="postgres",
             version="14.0",
             end_of_support=eos,
@@ -94,6 +100,7 @@ class TestEngineVersionDataFields:
             resource_count=10
         )
         
+        assert data.service == "RDS"
         assert data.engine == "postgres"
         assert data.version == "14.0"
         assert data.end_of_support == eos
@@ -104,6 +111,7 @@ class TestEngineVersionDataFields:
     def test_optional_dates_can_be_none(self):
         """Test that optional date fields can be None."""
         data = EngineVersionData(
+            service="Lambda",
             engine="nodejs",
             version="20.x",
             end_of_support=None,

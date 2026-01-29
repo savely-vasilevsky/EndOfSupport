@@ -1,0 +1,4 @@
+# file: C:\Users\savely\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\openpyxl\worksheet\dimensions.py
+# hypothesis_version: 6.151.4
+
+['A', 'bestFit', 'col', 'collapsed', 'cols', 'customFormat', 'customHeight', 'customWidth', 'dimension', 'hidden', 'ht', 'index', 'max', 'min', 'outlineLevel', 's', 'sheetFormatPr', 'style', 'style_id', 'thickBot', 'thickTop', 'width', 'worksheet']

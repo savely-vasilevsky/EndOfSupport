@@ -289,17 +289,49 @@ Interactive summary showing:
 
 #### Timeline View
 Visual Gantt-chart style timeline showing support lifecycle events:
-- **Rows**: One row per engine-version combination (e.g., "python 3.9", "mysql 8.0")
-- **Columns**: Daily columns from today to the furthest future support event
-- **Color Coding**:
-  - 🟡 Yellow: Approaching End-of-Support (within threshold days)
-  - 🔵 Light Blue: Extended Support period
-  - 🔴 Light Red: Out of Support period
-  - 🔴 Red marker: End of Support event date
-  - 🔵 Blue marker: Extended Support Start date
-  - 🔴 Dark Red marker: Extended Support End date
-  - Gray: Weekend days (Saturday/Sunday)
-- **Legend**: Color key at the bottom of the timeline
+
+**Structure**:
+- **Column A (Service)**: AWS service name (e.g., "Amazon RDS", "Amazon ElastiCache", "Amazon EKS")
+- **Column B (Engine-Version)**: Engine and version combination (e.g., "mysql 8.0", "redis 6.2")
+- **Column C onwards**: Daily columns from today to the furthest future support event
+
+**Row Grouping by Service**:
+- Rows are automatically grouped by Service for easy navigation
+- Use Excel's outline controls (+/-) on the left side to expand/collapse service groups
+- Data is sorted alphabetically by Service, then by Engine-Version within each service
+- First row of each service group is always visible; subsequent rows can be collapsed
+
+**Column Grouping (Time Drill-down)**:
+- **Months view (default)**: Shows only the first day of each month - collapsed view for high-level overview
+- **Weeks view**: Expand to see first day of each week for medium-level detail
+- **Days view**: Expand fully to see all individual days for detailed planning
+- Use Excel's outline controls (1, 2, 3 buttons at top-left) to expand/collapse time granularity
+
+**Header Rows**:
+- Row 1: Year headers (alternating dark blue shades) with merged cells spanning each year
+- Row 2: Month headers with vertical text (alternating medium blue shades) for compact display
+- Row 3: Week numbers (W1, W2, etc.) with light blue background
+- Row 4: Day of week abbreviations (Mon, Tue, Wed, Thu, Fri, Sat, Sun) - horizontal text
+- Row 5: Day numbers (1-31)
+- Row 6: Column labels ("Service" in A6, "Engine-Version" in B6)
+
+**Color Coding**:
+- 🟡 Yellow (`FFEB9C`): Approaching End-of-Support (within threshold days)
+- 🔵 Light Blue (`BDD7EE`): Extended Support period
+- 🔴 Light Red (`FFC7CE`): Out of Support period
+- 🔴 Red marker (`FF0000`): End of Support event date
+- 🔵 Blue marker (`0070C0`): Extended Support Start date
+- 🔴 Dark Red marker (`C00000`): Extended Support End date
+- Gray (`F0F0F0`): Weekend days (Saturday/Sunday)
+- Gold border (`FFD700`): Today's date marker
+
+**Frozen Panes**:
+- Columns A and B (Service and Engine-Version) are frozen - always visible when scrolling horizontally
+- Header rows 1-6 are frozen - always visible when scrolling vertically
+- Freeze point is at cell C7 (first data cell)
+- Scroll through dates while keeping service/engine labels and time headers visible
+
+**Legend**: Color key at the bottom of the timeline explains all color codes with sample cells
 
 ### Working with Pivot Tables
 

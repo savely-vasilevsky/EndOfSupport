@@ -783,7 +783,7 @@ class TestCreateHeaderRows:
         return Workbook()
     
     def test_returns_correct_start_row(self, workbook):
-        """Test that method returns row 5 as the data start row."""
+        """Test that method returns row 7 as the data start row (with year and week rows added)."""
         report = Report()
         generator = TimelineGenerator(report)
         ws = workbook.active
@@ -793,10 +793,10 @@ class TestCreateHeaderRows:
         
         result = generator._create_header_rows(ws, start_date, end_date)
         
-        assert result == 5  # Row 4 is separator, row 5 is first data row
+        assert result == 7  # Row 6 is separator, row 7 is first data row
     
     def test_day_of_week_abbreviations_correct(self, workbook):
-        """Test that day of week abbreviations are correct (Requirement 3.5)."""
+        """Test that day of week abbreviations are correct (now in row 4)."""
         report = Report()
         generator = TimelineGenerator(report)
         ws = workbook.active
@@ -807,18 +807,18 @@ class TestCreateHeaderRows:
         
         generator._create_header_rows(ws, start_date, end_date)
         
-        # Row 2 should have day of week abbreviations
-        # Column B = Monday, Column C = Tuesday, etc.
-        assert ws.cell(row=2, column=2).value == "Mon"
-        assert ws.cell(row=2, column=3).value == "Tue"
-        assert ws.cell(row=2, column=4).value == "Wed"
-        assert ws.cell(row=2, column=5).value == "Thu"
-        assert ws.cell(row=2, column=6).value == "Fri"
-        assert ws.cell(row=2, column=7).value == "Sat"
-        assert ws.cell(row=2, column=8).value == "Sun"
+        # Row 4 should have day of week abbreviations
+        # Column C = Monday, Column D = Tuesday, etc. (A=Service, B=Engine-Version)
+        assert ws.cell(row=4, column=3).value == "Mon"
+        assert ws.cell(row=4, column=4).value == "Tue"
+        assert ws.cell(row=4, column=5).value == "Wed"
+        assert ws.cell(row=4, column=6).value == "Thu"
+        assert ws.cell(row=4, column=7).value == "Fri"
+        assert ws.cell(row=4, column=8).value == "Sat"
+        assert ws.cell(row=4, column=9).value == "Sun"
     
     def test_day_numbers_correct(self, workbook):
-        """Test that day numbers are correct (Requirement 3.6)."""
+        """Test that day numbers are correct (now in row 5)."""
         report = Report()
         generator = TimelineGenerator(report)
         ws = workbook.active
@@ -828,15 +828,15 @@ class TestCreateHeaderRows:
         
         generator._create_header_rows(ws, start_date, end_date)
         
-        # Row 3 should have day numbers
-        assert ws.cell(row=3, column=2).value == 1
-        assert ws.cell(row=3, column=3).value == 2
-        assert ws.cell(row=3, column=4).value == 3
-        assert ws.cell(row=3, column=5).value == 4
-        assert ws.cell(row=3, column=6).value == 5
+        # Row 5 should have day numbers (Column C onwards, A=Service, B=Engine-Version)
+        assert ws.cell(row=5, column=3).value == 1
+        assert ws.cell(row=5, column=4).value == 2
+        assert ws.cell(row=5, column=5).value == 3
+        assert ws.cell(row=5, column=6).value == 4
+        assert ws.cell(row=5, column=7).value == 5
     
     def test_month_year_header_format(self, workbook):
-        """Test that month-year header is formatted as 'MMM YYYY' (Requirement 3.7)."""
+        """Test that month header uses full month name (vertical text)."""
         report = Report()
         generator = TimelineGenerator(report)
         ws = workbook.active
@@ -846,11 +846,11 @@ class TestCreateHeaderRows:
         
         generator._create_header_rows(ws, start_date, end_date)
         
-        # Row 1 should have month-year header
-        assert ws.cell(row=1, column=2).value == "Jun 2025"
+        # Row 2 should have full month name (vertical text) starting from column C
+        assert ws.cell(row=2, column=3).value == "June"
     
     def test_month_year_spans_correct_columns(self, workbook):
-        """Test that month-year header spans all columns for that month."""
+        """Test that month header spans all columns for that month."""
         report = Report()
         generator = TimelineGenerator(report)
         ws = workbook.active
@@ -861,13 +861,27 @@ class TestCreateHeaderRows:
         
         generator._create_header_rows(ws, start_date, end_date)
         
-        # June should span columns B-D (28, 29, 30)
-        # July should span columns E-G (1, 2, 3)
-        assert ws.cell(row=1, column=2).value == "Jun 2025"
-        assert ws.cell(row=1, column=5).value == "Jul 2025"
+        # June should span columns C-E (28, 29, 30) - A=Service, B=Engine-Version
+        # July should span columns F-H (1, 2, 3)
+        assert ws.cell(row=2, column=3).value == "June"
+        assert ws.cell(row=2, column=6).value == "July"
+    
+    def test_year_header_present(self, workbook):
+        """Test that year header is present in row 1."""
+        report = Report()
+        generator = TimelineGenerator(report)
+        ws = workbook.active
+        
+        start_date = date(2025, 6, 1)
+        end_date = date(2025, 6, 5)
+        
+        generator._create_header_rows(ws, start_date, end_date)
+        
+        # Row 1 should have year header starting from column C
+        assert ws.cell(row=1, column=3).value == "2025"
     
     def test_weekend_columns_have_styling(self, workbook):
-        """Test that weekend columns have distinct background color (Requirement 3.8)."""
+        """Test that weekend columns have distinct background color (now in rows 4-5)."""
         report = Report()
         generator = TimelineGenerator(report)
         ws = workbook.active
@@ -878,12 +892,13 @@ class TestCreateHeaderRows:
         
         generator._create_header_rows(ws, start_date, end_date)
         
-        # Saturday is column 7 (B=2, C=3, D=4, E=5, F=6, G=7)
-        # Sunday is column 8
-        saturday_dow_cell = ws.cell(row=2, column=7)
-        saturday_day_cell = ws.cell(row=3, column=7)
-        sunday_dow_cell = ws.cell(row=2, column=8)
-        sunday_day_cell = ws.cell(row=3, column=8)
+        # Saturday is column 8 (C=3, D=4, E=5, F=6, G=7, H=8) - A=Service, B=Engine-Version
+        # Sunday is column 9
+        # Day of week is now row 4, day number is row 5
+        saturday_dow_cell = ws.cell(row=4, column=8)
+        saturday_day_cell = ws.cell(row=5, column=8)
+        sunday_dow_cell = ws.cell(row=4, column=9)
+        sunday_day_cell = ws.cell(row=5, column=9)
         
         # Check that weekend cells have the weekend fill color
         assert saturday_dow_cell.fill.start_color.rgb == TimelineGenerator.COLOR_WEEKEND or \
@@ -905,8 +920,8 @@ class TestCreateHeaderRows:
         
         generator._create_header_rows(ws, start_date, end_date)
         
-        # Monday is column 2
-        monday_dow_cell = ws.cell(row=2, column=2)
+        # Monday is column 3 (A=Service, B=Engine-Version, C=first date), day of week is now row 4
+        monday_dow_cell = ws.cell(row=4, column=3)
         
         # Weekday should not have weekend fill
         # Check that fill is not the weekend color
@@ -914,7 +929,7 @@ class TestCreateHeaderRows:
         assert "F0F0F0" not in fill_color or fill_color == "00000000"  # 00000000 is no fill
     
     def test_column_count_matches_date_range(self, workbook):
-        """Test that number of date columns equals date range (Property 9)."""
+        """Test that number of date columns equals date range."""
         report = Report()
         generator = TimelineGenerator(report)
         ws = workbook.active
@@ -924,19 +939,19 @@ class TestCreateHeaderRows:
         
         generator._create_header_rows(ws, start_date, end_date)
         
-        # Should have 10 date columns (B through K)
-        # Column A is for labels, columns B-K are for dates
+        # Should have 10 date columns (C through L) - A=Service, B=Engine-Version
+        # Column A and B are for labels, columns C-L are for dates
         expected_columns = (end_date - start_date).days + 1
         
-        # Check that the last date column has a value
-        last_col = 1 + expected_columns  # Column A + date columns
-        assert ws.cell(row=3, column=last_col).value == 10  # Day 10
+        # Check that the last date column has a value (day numbers now in row 5)
+        last_col = 2 + expected_columns  # Column A + B + date columns
+        assert ws.cell(row=5, column=last_col).value == 10  # Day 10
         
         # Check that the column after last is empty
-        assert ws.cell(row=3, column=last_col + 1).value is None
+        assert ws.cell(row=5, column=last_col + 1).value is None
     
     def test_engine_version_label_in_column_a(self, workbook):
-        """Test that column A has the Engine-Version label."""
+        """Test that column A has Service label and column B has Engine-Version label (now in row 6)."""
         report = Report()
         generator = TimelineGenerator(report)
         ws = workbook.active
@@ -946,8 +961,10 @@ class TestCreateHeaderRows:
         
         generator._create_header_rows(ws, start_date, end_date)
         
-        # Row 3, Column A should have "Engine-Version" label
-        assert ws.cell(row=3, column=1).value == "Engine-Version"
+        # Row 6, Column A should have "Service" label
+        assert ws.cell(row=6, column=1).value == "Service"
+        # Row 6, Column B should have "Engine-Version" label
+        assert ws.cell(row=6, column=2).value == "Engine-Version"
     
     def test_single_day_timeline(self, workbook):
         """Test timeline with a single day."""
@@ -959,10 +976,12 @@ class TestCreateHeaderRows:
         
         generator._create_header_rows(ws, single_date, single_date)
         
-        # Should have one date column
-        assert ws.cell(row=2, column=2).value == "Sun"
-        assert ws.cell(row=3, column=2).value == 15
-        assert ws.cell(row=1, column=2).value == "Jun 2025"
+        # Should have one date column (row 4 is day of week, row 5 is day number)
+        # Column C is first date column (A=Service, B=Engine-Version)
+        assert ws.cell(row=4, column=3).value == "Sun"
+        assert ws.cell(row=5, column=3).value == 15
+        assert ws.cell(row=2, column=3).value == "June"
+        assert ws.cell(row=1, column=3).value == "2025"
     
     def test_multi_month_timeline(self, workbook):
         """Test timeline spanning multiple months."""
@@ -975,16 +994,16 @@ class TestCreateHeaderRows:
         
         generator._create_header_rows(ws, start_date, end_date)
         
-        # Check that all three months are present
+        # Check that all three months are present in row 2 (starting from column C)
         month_values = []
-        for col in range(2, 50):  # Check enough columns
-            val = ws.cell(row=1, column=col).value
+        for col in range(3, 50):  # Check enough columns, starting from C
+            val = ws.cell(row=2, column=col).value
             if val and val not in month_values:
                 month_values.append(val)
         
-        assert "May 2025" in month_values
-        assert "Jun 2025" in month_values
-        assert "Jul 2025" in month_values
+        assert "May" in month_values
+        assert "June" in month_values
+        assert "July" in month_values
     
     def test_today_marker_styling(self, workbook):
         """Test that today's date column has distinct styling (Requirement 4.5)."""
@@ -998,10 +1017,10 @@ class TestCreateHeaderRows:
         
         generator._create_header_rows(ws, start_date, end_date)
         
-        # Today should be in column 4 (A=1, day-2=2, day-1=3, today=4)
-        today_col = 4
-        today_dow_cell = ws.cell(row=2, column=today_col)
-        today_day_cell = ws.cell(row=3, column=today_col)
+        # Today should be in column 5 (A=1, B=2, day-2=3, day-1=4, today=5)
+        today_col = 5
+        today_dow_cell = ws.cell(row=4, column=today_col)  # Day of week is row 4
+        today_day_cell = ws.cell(row=5, column=today_col)  # Day number is row 5
         
         # Check that today's cells have a border (gold border for today marker)
         # The border should be medium style with gold color
@@ -1014,6 +1033,85 @@ class TestCreateHeaderRows:
             if border_color:
                 assert TimelineGenerator.COLOR_TODAY in str(border_color.rgb) or \
                        border_color.rgb == TimelineGenerator.COLOR_TODAY
+    
+    def test_outline_levels_first_day_of_month_is_level_0(self, workbook):
+        """Test that first day of each month has outline level 0."""
+        from openpyxl.utils import get_column_letter
+        
+        report = Report()
+        generator = TimelineGenerator(report)
+        ws = workbook.active
+        
+        # Span two months: Jan 28 to Feb 5
+        start_date = date(2026, 1, 28)
+        end_date = date(2026, 2, 5)
+        
+        generator._create_header_rows(ws, start_date, end_date)
+        
+        # Column C (Jan 28) should be level 0 (first day of timeline, which is first of its month span)
+        # Column G (Feb 1) should be level 0 (first day of February)
+        # A=Service, B=Engine-Version, C=first date
+        assert ws.column_dimensions["C"].outlineLevel == 0  # Jan 28 (first col of Jan span)
+        assert ws.column_dimensions["G"].outlineLevel == 0  # Feb 1 (first col of Feb span)
+    
+    def test_outline_levels_first_day_of_week_is_level_1(self, workbook):
+        """Test that first day of each week (not first of month) has outline level 1."""
+        from openpyxl.utils import get_column_letter
+        
+        report = Report()
+        generator = TimelineGenerator(report)
+        ws = workbook.active
+        
+        # Feb 1, 2026 is Sunday (last day of ISO week 5), Feb 2 is Monday (first day of week 6)
+        start_date = date(2026, 2, 1)
+        end_date = date(2026, 2, 10)
+        
+        generator._create_header_rows(ws, start_date, end_date)
+        
+        # Column C (Feb 1) should be level 0 (first day of month)
+        # Column D (Feb 2) should be level 1 (first day of week 6, Monday)
+        # Column K (Feb 9) should be level 1 (first day of week 7, Monday)
+        # A=Service, B=Engine-Version, C=first date
+        assert ws.column_dimensions["C"].outlineLevel == 0  # Feb 1 (first of month)
+        assert ws.column_dimensions["D"].outlineLevel == 1  # Feb 2 (first of week 6)
+        assert ws.column_dimensions["K"].outlineLevel == 1  # Feb 9 (first of week 7)
+    
+    def test_outline_levels_other_days_are_level_2(self, workbook):
+        """Test that other days have outline level 2."""
+        from openpyxl.utils import get_column_letter
+        
+        report = Report()
+        generator = TimelineGenerator(report)
+        ws = workbook.active
+        
+        # Feb 1, 2026 is Sunday
+        start_date = date(2026, 2, 1)
+        end_date = date(2026, 2, 10)
+        
+        generator._create_header_rows(ws, start_date, end_date)
+        
+        # Columns E-J (Feb 3-8) should all be level 2 (not first of month or week)
+        # E=Feb 3, F=Feb 4, G=Feb 5, H=Feb 6, I=Feb 7, J=Feb 8
+        # A=Service, B=Engine-Version, C=Feb 1, D=Feb 2
+        for col in ["E", "F", "G", "H", "I", "J"]:
+            assert ws.column_dimensions[col].outlineLevel == 2, f"Column {col} should be level 2"
+        
+        # Also check L (Feb 10) which is not first of week
+        assert ws.column_dimensions["L"].outlineLevel == 2  # Feb 10 (Tuesday)
+    
+    def test_outline_settings_summary_right_false(self, workbook):
+        """Test that outline summaryRight is False (summary columns to the left)."""
+        report = Report()
+        generator = TimelineGenerator(report)
+        ws = workbook.active
+        
+        start_date = date(2026, 1, 1)
+        end_date = date(2026, 1, 10)
+        
+        generator._create_header_rows(ws, start_date, end_date)
+        
+        assert ws.sheet_properties.outlinePr.summaryRight == False
+        assert ws.sheet_properties.outlinePr.summaryBelow == False
 
 
 # Property-Based Tests for Header Generation
@@ -1081,19 +1179,19 @@ class TestHeaderGenerationProperties:
         
         # Verify each date column
         current_date = start_date
-        col_idx = 2  # Column B is first date column (Column A is labels)
+        col_idx = 3  # Column C is first date column (A=Service, B=Engine-Version)
         
         while current_date <= end_date:
-            # Verify day of week abbreviation (Row 2)
+            # Verify day of week abbreviation (Row 4 - year is row 1, month is row 2, week is row 3)
             expected_dow = day_abbrevs[current_date.weekday()]
-            actual_dow = ws.cell(row=2, column=col_idx).value
+            actual_dow = ws.cell(row=4, column=col_idx).value
             assert actual_dow == expected_dow, \
                 f"Day of week mismatch at column {col_idx} for {current_date}: " \
                 f"expected '{expected_dow}', got '{actual_dow}'"
             
-            # Verify day number (Row 3)
+            # Verify day number (Row 5)
             expected_day = current_date.day
-            actual_day = ws.cell(row=3, column=col_idx).value
+            actual_day = ws.cell(row=5, column=col_idx).value
             assert actual_day == expected_day, \
                 f"Day number mismatch at column {col_idx} for {current_date}: " \
                 f"expected {expected_day}, got {actual_day}"
@@ -1108,16 +1206,16 @@ class TestHeaderGenerationProperties:
             current_date += timedelta(days=1)
             col_idx += 1
         
-        # Verify month-year headers (Row 1)
+        # Verify month headers (Row 2 - full month name)
         for (year, month), (start_col, end_col) in expected_month_spans.items():
-            # Expected format: "MMM YYYY" (e.g., "Jan 2025")
-            expected_month_year = date(year, month, 1).strftime("%b %Y")
+            # Expected format: full month name (e.g., "January")
+            expected_month = date(year, month, 1).strftime("%B")
             
-            # The month-year header should be in the first column of the span
-            actual_month_year = ws.cell(row=1, column=start_col).value
-            assert actual_month_year == expected_month_year, \
-                f"Month-year header mismatch at column {start_col}: " \
-                f"expected '{expected_month_year}', got '{actual_month_year}'"
+            # The month header should be in the first column of the span
+            actual_month = ws.cell(row=2, column=start_col).value
+            assert actual_month == expected_month, \
+                f"Month header mismatch at column {start_col}: " \
+                f"expected '{expected_month}', got '{actual_month}'"
             
             # If span is more than one column, verify merged cells
             if end_col > start_col:
@@ -1125,7 +1223,7 @@ class TestHeaderGenerationProperties:
                 from openpyxl.utils import get_column_letter
                 start_col_letter = get_column_letter(start_col)
                 end_col_letter = get_column_letter(end_col)
-                expected_merge_range = f"{start_col_letter}1:{end_col_letter}1"
+                expected_merge_range = f"{start_col_letter}2:{end_col_letter}2"
                 
                 # Find if this merge range exists
                 merge_found = False
@@ -1135,7 +1233,7 @@ class TestHeaderGenerationProperties:
                         break
                 
                 assert merge_found, \
-                    f"Expected merged cells {expected_merge_range} for {expected_month_year} not found"
+                    f"Expected merged cells {expected_merge_range} for {expected_month} not found"
     
     @given(date_range=date_range_strategy(min_days=7, max_days=100))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
@@ -1163,14 +1261,14 @@ class TestHeaderGenerationProperties:
         
         # Verify each date column
         current_date = start_date
-        col_idx = 2  # Column B is first date column
+        col_idx = 3  # Column C is first date column (A=Service, B=Engine-Version)
         
         while current_date <= end_date:
             is_weekend = current_date.weekday() >= 5  # Saturday=5, Sunday=6
             
-            # Check both header rows (row 2 = day of week, row 3 = day number)
-            dow_cell = ws.cell(row=2, column=col_idx)
-            day_cell = ws.cell(row=3, column=col_idx)
+            # Check both header rows (row 4 = day of week, row 5 = day number)
+            dow_cell = ws.cell(row=4, column=col_idx)
+            day_cell = ws.cell(row=5, column=col_idx)
             
             if is_weekend:
                 # Weekend cells should have the weekend fill color
@@ -1292,6 +1390,7 @@ class TestCreateDataRows:
         
         engine_versions = [
             EngineVersionData(
+                service="Lambda",
                 engine="python",
                 version="3.9",
                 end_of_support=date(2025, 10, 1),
@@ -1300,6 +1399,7 @@ class TestCreateDataRows:
                 resource_count=1
             ),
             EngineVersionData(
+                service="ElastiCache",
                 engine="redis",
                 version="6.0",
                 end_of_support=date(2025, 12, 1),
@@ -1311,7 +1411,7 @@ class TestCreateDataRows:
         
         start_date = date(2025, 6, 1)
         end_date = date(2025, 6, 5)
-        start_row = 5
+        start_row = 7
         
         result = generator._create_data_rows(ws, engine_versions, start_date, end_date, start_row)
         
@@ -1326,6 +1426,7 @@ class TestCreateDataRows:
         
         engine_versions = [
             EngineVersionData(
+                service="Lambda",
                 engine="python",
                 version="3.9",
                 end_of_support=None,
@@ -1334,6 +1435,7 @@ class TestCreateDataRows:
                 resource_count=1
             ),
             EngineVersionData(
+                service="ElastiCache",
                 engine="redis",
                 version="6.0",
                 end_of_support=None,
@@ -1342,6 +1444,7 @@ class TestCreateDataRows:
                 resource_count=1
             ),
             EngineVersionData(
+                service="RDS",
                 engine="mysql",
                 version="8.0",
                 end_of_support=None,
@@ -1353,14 +1456,18 @@ class TestCreateDataRows:
         
         start_date = date(2025, 6, 1)
         end_date = date(2025, 6, 3)
-        start_row = 5
+        start_row = 7
         
         generator._create_data_rows(ws, engine_versions, start_date, end_date, start_row)
         
-        # Check that each row has the correct label in column A
-        assert ws.cell(row=5, column=1).value == "python 3.9"
-        assert ws.cell(row=6, column=1).value == "redis 6.0"
-        assert ws.cell(row=7, column=1).value == "mysql 8.0"
+        # Check that each row has the correct service in column A and label in column B
+        # Data starts at start_row (7), so rows are 7, 8, 9
+        assert ws.cell(row=7, column=1).value == "Lambda"
+        assert ws.cell(row=7, column=2).value == "python 3.9"
+        assert ws.cell(row=8, column=1).value == "ElastiCache"
+        assert ws.cell(row=8, column=2).value == "redis 6.0"
+        assert ws.cell(row=9, column=1).value == "RDS"
+        assert ws.cell(row=9, column=2).value == "mysql 8.0"
     
     def test_label_uses_display_name(self, workbook):
         """Test that labels use the display_name property."""
@@ -1370,6 +1477,7 @@ class TestCreateDataRows:
         
         engine_versions = [
             EngineVersionData(
+                service="Lambda",
                 engine="python",
                 version="3.9",
                 end_of_support=None,
@@ -1378,6 +1486,7 @@ class TestCreateDataRows:
                 resource_count=1
             ),
             EngineVersionData(
+                service="Lambda",
                 engine="",  # Empty engine
                 version="18.x",
                 end_of_support=None,
@@ -1386,6 +1495,7 @@ class TestCreateDataRows:
                 resource_count=1
             ),
             EngineVersionData(
+                service="Lambda",
                 engine="Unknown",  # Unknown engine
                 version="2.0",
                 end_of_support=None,
@@ -1397,14 +1507,14 @@ class TestCreateDataRows:
         
         start_date = date(2025, 6, 1)
         end_date = date(2025, 6, 3)
-        start_row = 5
+        start_row = 7
         
         generator._create_data_rows(ws, engine_versions, start_date, end_date, start_row)
         
-        # Check labels
-        assert ws.cell(row=5, column=1).value == "python 3.9"
-        assert ws.cell(row=6, column=1).value == "18.x"  # Just version when engine is empty
-        assert ws.cell(row=7, column=1).value == "2.0"   # Just version when engine is "Unknown"
+        # Check labels in column B - data starts at start_row (7), so rows are 7, 8, 9
+        assert ws.cell(row=7, column=2).value == "python 3.9"
+        assert ws.cell(row=8, column=2).value == "18.x"  # Just version when engine is empty
+        assert ws.cell(row=9, column=2).value == "2.0"   # Just version when engine is "Unknown"
     
     def test_eos_event_cell_has_red_fill(self, workbook):
         """Test that EOS event date has red fill (Requirement 4.1)."""
@@ -1415,6 +1525,7 @@ class TestCreateDataRows:
         eos_date = date(2025, 6, 3)
         engine_versions = [
             EngineVersionData(
+                service="Lambda",
                 engine="python",
                 version="3.9",
                 end_of_support=eos_date,
@@ -1426,12 +1537,13 @@ class TestCreateDataRows:
         
         start_date = date(2025, 6, 1)
         end_date = date(2025, 6, 5)
-        start_row = 5
+        start_row = 7
         
         generator._create_data_rows(ws, engine_versions, start_date, end_date, start_row)
         
-        # EOS date is June 3, which is column 4 (B=2, C=3, D=4)
-        eos_cell = ws.cell(row=5, column=4)
+        # EOS date is June 3, which is column 5 (C=3, D=4, E=5) - A=Service, B=Engine-Version
+        # Data starts at start_row (7)
+        eos_cell = ws.cell(row=7, column=5)
         fill_color = self._get_fill_color(eos_cell)
         
         assert fill_color == TimelineGenerator.COLOR_EOS_EVENT
@@ -1445,6 +1557,7 @@ class TestCreateDataRows:
         ext_start_date = date(2025, 6, 3)
         engine_versions = [
             EngineVersionData(
+                service="Lambda",
                 engine="python",
                 version="3.9",
                 end_of_support=None,
@@ -1456,12 +1569,13 @@ class TestCreateDataRows:
         
         start_date = date(2025, 6, 1)
         end_date = date(2025, 6, 5)
-        start_row = 5
+        start_row = 7
         
         generator._create_data_rows(ws, engine_versions, start_date, end_date, start_row)
         
-        # Ext start date is June 3, which is column 4
-        ext_start_cell = ws.cell(row=5, column=4)
+        # Ext start date is June 3, which is column 5 (C=3, D=4, E=5)
+        # Data starts at start_row (7)
+        ext_start_cell = ws.cell(row=7, column=5)
         fill_color = self._get_fill_color(ext_start_cell)
         
         assert fill_color == TimelineGenerator.COLOR_EXT_START_EVENT
@@ -1475,6 +1589,7 @@ class TestCreateDataRows:
         ext_end_date = date(2025, 6, 3)
         engine_versions = [
             EngineVersionData(
+                service="Lambda",
                 engine="python",
                 version="3.9",
                 end_of_support=None,
@@ -1486,12 +1601,13 @@ class TestCreateDataRows:
         
         start_date = date(2025, 6, 1)
         end_date = date(2025, 6, 5)
-        start_row = 5
+        start_row = 7
         
         generator._create_data_rows(ws, engine_versions, start_date, end_date, start_row)
         
-        # Ext end date is June 3, which is column 4
-        ext_end_cell = ws.cell(row=5, column=4)
+        # Ext end date is June 3, which is column 5 (C=3, D=4, E=5)
+        # Data starts at start_row (7)
+        ext_end_cell = ws.cell(row=7, column=5)
         fill_color = self._get_fill_color(ext_end_cell)
         
         assert fill_color == TimelineGenerator.COLOR_EXT_END_EVENT
@@ -1508,6 +1624,7 @@ class TestCreateDataRows:
         
         engine_versions = [
             EngineVersionData(
+                service="Lambda",
                 engine="python",
                 version="3.9",
                 end_of_support=eos_date,
@@ -1518,14 +1635,16 @@ class TestCreateDataRows:
         ]
         
         end_date = date(2025, 6, 10)
-        start_row = 5
+        start_row = 7
         
         generator._create_data_rows(ws, engine_versions, start_date, end_date, start_row)
         
         # All dates from June 1-10 are within 90 days of EOS (July 1)
         # So they should all have yellow fill (approaching EOS)
-        for col in range(2, 12):  # Columns B through K (June 1-10)
-            cell = ws.cell(row=5, column=col)
+        # Data starts at start_row (7)
+        # Date columns start at C (3), so June 1-10 are columns 3-12
+        for col in range(3, 13):  # Columns C through L (June 1-10)
+            cell = ws.cell(row=7, column=col)
             fill_color = self._get_fill_color(cell)
             assert fill_color == TimelineGenerator.COLOR_APPROACHING_EOS, \
                 f"Cell at column {col} should have approaching EOS color"
@@ -1542,6 +1661,7 @@ class TestCreateDataRows:
         
         engine_versions = [
             EngineVersionData(
+                service="Lambda",
                 engine="python",
                 version="3.9",
                 end_of_support=date(2025, 5, 1),  # EOS before ext_start
@@ -1553,13 +1673,15 @@ class TestCreateDataRows:
         
         start_date = date(2025, 6, 2)  # Start after ext_start
         end_date = date(2025, 6, 5)    # End before ext_end
-        start_row = 5
+        start_row = 7
         
         generator._create_data_rows(ws, engine_versions, start_date, end_date, start_row)
         
         # All dates should be in extended support period (light blue)
-        for col in range(2, 6):  # Columns B through E (June 2-5)
-            cell = ws.cell(row=5, column=col)
+        # Data starts at start_row (7)
+        # Date columns start at C (3), so June 2-5 are columns 3-6
+        for col in range(3, 7):  # Columns C through F (June 2-5)
+            cell = ws.cell(row=7, column=col)
             fill_color = self._get_fill_color(cell)
             assert fill_color == TimelineGenerator.COLOR_EXTENDED_SUPPORT, \
                 f"Cell at column {col} should have extended support color"
@@ -1575,6 +1697,7 @@ class TestCreateDataRows:
         
         engine_versions = [
             EngineVersionData(
+                service="Lambda",
                 engine="python",
                 version="3.9",
                 end_of_support=eos_date,
@@ -1586,13 +1709,15 @@ class TestCreateDataRows:
         
         start_date = date(2025, 6, 1)  # After EOS
         end_date = date(2025, 6, 5)
-        start_row = 5
+        start_row = 7
         
         generator._create_data_rows(ws, engine_versions, start_date, end_date, start_row)
         
         # All dates should be out of support (light red)
-        for col in range(2, 7):  # Columns B through F (June 1-5)
-            cell = ws.cell(row=5, column=col)
+        # Data starts at start_row (7)
+        # Date columns start at C (3), so June 1-5 are columns 3-7
+        for col in range(3, 8):  # Columns C through G (June 1-5)
+            cell = ws.cell(row=7, column=col)
             fill_color = self._get_fill_color(cell)
             assert fill_color == TimelineGenerator.COLOR_OUT_OF_SUPPORT, \
                 f"Cell at column {col} should have out of support color"
@@ -1605,6 +1730,7 @@ class TestCreateDataRows:
         
         engine_versions = [
             EngineVersionData(
+                service="Lambda",
                 engine="python",
                 version="3.9",
                 end_of_support=None,  # No dates
@@ -1617,25 +1743,28 @@ class TestCreateDataRows:
         # June 7, 2025 is Saturday, June 8 is Sunday
         start_date = date(2025, 6, 7)
         end_date = date(2025, 6, 8)
-        start_row = 5
+        start_row = 7
         
         generator._create_data_rows(ws, engine_versions, start_date, end_date, start_row)
         
         # Both days are weekends
-        saturday_cell = ws.cell(row=5, column=2)
-        sunday_cell = ws.cell(row=5, column=3)
+        # Data starts at start_row (7)
+        # Date columns start at C (3)
+        saturday_cell = ws.cell(row=7, column=3)
+        sunday_cell = ws.cell(row=7, column=4)
         
         assert self._get_fill_color(saturday_cell) == TimelineGenerator.COLOR_WEEKEND
         assert self._get_fill_color(sunday_cell) == TimelineGenerator.COLOR_WEEKEND
     
     def test_freezes_column_a_and_header_rows(self, workbook):
-        """Test that column A and header rows are frozen."""
+        """Test that columns A-B and header rows are frozen."""
         report = Report()
         generator = TimelineGenerator(report)
         ws = workbook.active
         
         engine_versions = [
             EngineVersionData(
+                service="Lambda",
                 engine="python",
                 version="3.9",
                 end_of_support=None,
@@ -1647,12 +1776,12 @@ class TestCreateDataRows:
         
         start_date = date(2025, 6, 1)
         end_date = date(2025, 6, 5)
-        start_row = 5
+        start_row = 7
         
         generator._create_data_rows(ws, engine_versions, start_date, end_date, start_row)
         
-        # Freeze panes should be set to B5
-        assert ws.freeze_panes == "B5"
+        # Freeze panes should be set to C7 (A=Service, B=Engine-Version frozen)
+        assert ws.freeze_panes == "C7"
     
     def test_empty_engine_versions_list(self, workbook):
         """Test handling of empty engine versions list."""
@@ -1664,7 +1793,7 @@ class TestCreateDataRows:
         
         start_date = date(2025, 6, 1)
         end_date = date(2025, 6, 5)
-        start_row = 5
+        start_row = 7
         
         result = generator._create_data_rows(ws, engine_versions, start_date, end_date, start_row)
         
@@ -1672,7 +1801,7 @@ class TestCreateDataRows:
         assert result == start_row
         
         # Freeze panes should still be set
-        assert ws.freeze_panes == "B5"
+        assert ws.freeze_panes == "C7"
     
     def test_single_day_timeline(self, workbook):
         """Test timeline with a single day."""
@@ -1684,6 +1813,7 @@ class TestCreateDataRows:
         
         engine_versions = [
             EngineVersionData(
+                service="Lambda",
                 engine="python",
                 version="3.9",
                 end_of_support=single_date,  # EOS on this day
@@ -1693,15 +1823,17 @@ class TestCreateDataRows:
             ),
         ]
         
-        start_row = 5
+        start_row = 7
         
         generator._create_data_rows(ws, engine_versions, single_date, single_date, start_row)
         
-        # Should have label in column A
-        assert ws.cell(row=5, column=1).value == "python 3.9"
+        # Should have service in column A and label in column B
+        # Data starts at start_row (7)
+        assert ws.cell(row=7, column=1).value == "Lambda"
+        assert ws.cell(row=7, column=2).value == "python 3.9"
         
-        # Should have EOS color in column B
-        eos_cell = ws.cell(row=5, column=2)
+        # Should have EOS color in column C
+        eos_cell = ws.cell(row=7, column=3)
         assert self._get_fill_color(eos_cell) == TimelineGenerator.COLOR_EOS_EVENT
     
     def test_multiple_engine_versions_with_different_dates(self, workbook):
@@ -1712,6 +1844,7 @@ class TestCreateDataRows:
         
         engine_versions = [
             EngineVersionData(
+                service="Lambda",
                 engine="python",
                 version="3.9",
                 end_of_support=date(2025, 6, 3),  # EOS on June 3
@@ -1720,6 +1853,7 @@ class TestCreateDataRows:
                 resource_count=1
             ),
             EngineVersionData(
+                service="ElastiCache",
                 engine="redis",
                 version="6.0",
                 end_of_support=date(2025, 6, 5),  # EOS on June 5
@@ -1731,23 +1865,25 @@ class TestCreateDataRows:
         
         start_date = date(2025, 6, 1)
         end_date = date(2025, 6, 7)
-        start_row = 5
+        start_row = 7
         
         generator._create_data_rows(ws, engine_versions, start_date, end_date, start_row)
         
-        # Row 5 (python 3.9): EOS on June 3 (column 4)
-        assert self._get_fill_color(ws.cell(row=5, column=4)) == TimelineGenerator.COLOR_EOS_EVENT
+        # Data starts at start_row (7)
+        # Date columns start at C (3)
+        # Row 7 (python 3.9): EOS on June 3 (column 5 = C+2)
+        assert self._get_fill_color(ws.cell(row=7, column=5)) == TimelineGenerator.COLOR_EOS_EVENT
         
-        # Row 6 (redis 6.0): EOS on June 5 (column 6)
-        assert self._get_fill_color(ws.cell(row=6, column=6)) == TimelineGenerator.COLOR_EOS_EVENT
+        # Row 8 (redis 6.0): EOS on June 5 (column 7 = C+4)
+        assert self._get_fill_color(ws.cell(row=8, column=7)) == TimelineGenerator.COLOR_EOS_EVENT
         
-        # Row 5: After EOS (June 4-7) should be out of support
-        for col in [5, 6, 7, 8]:  # June 4, 5, 6, 7
-            fill_color = self._get_fill_color(ws.cell(row=5, column=col))
+        # Row 7: After EOS (June 4-7) should be out of support
+        for col in [6, 7, 8, 9]:  # June 4, 5, 6, 7 (columns 6, 7, 8, 9)
+            fill_color = self._get_fill_color(ws.cell(row=7, column=col))
             # Weekend days (June 7 is Saturday, June 8 is Sunday) might have different handling
             # but since we're past EOS, it should be out of support
             assert fill_color == TimelineGenerator.COLOR_OUT_OF_SUPPORT, \
-                f"Row 5, column {col} should be out of support"
+                f"Row 7, column {col} should be out of support"
 
 
 class TestCreateLegend:
@@ -2162,8 +2298,9 @@ class TestGenerate:
         
         generator.generate(ws)
         
-        # Check that header row exists (Engine-Version label in column A, row 3)
-        assert ws.cell(row=3, column=1).value == "Engine-Version"
+        # Check that header row exists (Service label in column A, Engine-Version in column B, row 6)
+        assert ws.cell(row=6, column=1).value == "Service"
+        assert ws.cell(row=6, column=2).value == "Engine-Version"
     
     def test_generate_creates_data_rows(self, workbook):
         """Test that generate creates data rows for engine-versions."""
@@ -2179,9 +2316,10 @@ class TestGenerate:
         
         generator.generate(ws)
         
-        # Data rows start at row 5 (after headers and separator)
-        # Check that the engine-version label is present
-        assert ws.cell(row=5, column=1).value == "python 3.9"
+        # Data rows start at row 7 (after 5 header rows + separator)
+        # Check that the service and engine-version labels are present
+        assert ws.cell(row=7, column=1).value == "Lambda"  # Service from create_resource default
+        assert ws.cell(row=7, column=2).value == "python 3.9"
     
     def test_generate_creates_legend(self, workbook):
         """Test that generate creates a legend section."""
@@ -2217,17 +2355,18 @@ class TestGenerate:
         generator.generate(ws)
         
         # Check that headers are still created
-        assert ws.cell(row=3, column=1).value == "Engine-Version"
+        assert ws.cell(row=6, column=1).value == "Service"
+        assert ws.cell(row=6, column=2).value == "Engine-Version"
         
-        # Check that "no data" message is shown
-        assert ws.cell(row=5, column=1).value == "No engine-version data available"
+        # Check that "no data" message is shown (at row 7, where data would start)
+        assert ws.cell(row=7, column=1).value == "No engine-version data available"
     
     def test_generate_with_multiple_engine_versions(self, workbook):
         """Test that generate creates rows for multiple engine-versions."""
         resources = [
-            create_resource(engine="python", version="3.9", end_of_support=date.today() + timedelta(days=30)),
-            create_resource(engine="redis", version="6.0", end_of_support=date.today() + timedelta(days=60)),
-            create_resource(engine="mysql", version="8.0", end_of_support=date.today() + timedelta(days=90)),
+            create_resource(service="Lambda", engine="python", version="3.9", end_of_support=date.today() + timedelta(days=30)),
+            create_resource(service="ElastiCache", engine="redis", version="6.0", end_of_support=date.today() + timedelta(days=60)),
+            create_resource(service="RDS", engine="mysql", version="8.0", end_of_support=date.today() + timedelta(days=90)),
         ]
         report = build_report_from_resources(resources)
         
@@ -2236,13 +2375,17 @@ class TestGenerate:
         
         generator.generate(ws)
         
-        # Data rows start at row 5, sorted alphabetically by engine
-        assert ws.cell(row=5, column=1).value == "mysql 8.0"
-        assert ws.cell(row=6, column=1).value == "python 3.9"
-        assert ws.cell(row=7, column=1).value == "redis 6.0"
+        # Data rows start at row 7, sorted alphabetically by service, then engine
+        # ElastiCache < Lambda < RDS
+        assert ws.cell(row=7, column=1).value == "ElastiCache"
+        assert ws.cell(row=7, column=2).value == "redis 6.0"
+        assert ws.cell(row=8, column=1).value == "Lambda"
+        assert ws.cell(row=8, column=2).value == "python 3.9"
+        assert ws.cell(row=9, column=1).value == "RDS"
+        assert ws.cell(row=9, column=2).value == "mysql 8.0"
     
     def test_generate_sets_column_a_width(self, workbook):
-        """Test that generate sets column A width for labels."""
+        """Test that generate sets column A width for Service labels."""
         resource = create_resource(
             engine="python",
             version="3.9",
@@ -2255,8 +2398,10 @@ class TestGenerate:
         
         generator.generate(ws)
         
-        # Column A should be 25 characters wide (set in _create_header_rows)
-        assert ws.column_dimensions["A"].width == 25
+        # Column A should be 20 characters wide (Service column)
+        # Column B should be 25 characters wide (Engine-Version column)
+        assert ws.column_dimensions["A"].width == 20
+        assert ws.column_dimensions["B"].width == 25
     
     def test_generate_sets_date_column_widths(self, workbook):
         """Test that generate sets narrow widths for date columns."""
@@ -2272,12 +2417,12 @@ class TestGenerate:
         
         generator.generate(ws)
         
-        # Date columns (B onwards) should be 4 characters wide
-        assert ws.column_dimensions["B"].width == 4
+        # Date columns (C onwards) should be 4 characters wide (A=Service, B=Engine-Version)
         assert ws.column_dimensions["C"].width == 4
+        assert ws.column_dimensions["D"].width == 4
     
     def test_generate_freezes_panes(self, workbook):
-        """Test that generate freezes column A and header rows."""
+        """Test that generate freezes columns A-B and header rows."""
         resource = create_resource(
             engine="python",
             version="3.9",
@@ -2290,8 +2435,8 @@ class TestGenerate:
         
         generator.generate(ws)
         
-        # Freeze panes should be at B5 (freezing rows 1-4 and column A)
-        assert ws.freeze_panes == "B5"
+        # Freeze panes should be at C7 (freezing rows 1-6 and columns A-B)
+        assert ws.freeze_panes == "C7"
     
     def test_generate_with_no_future_dates(self, workbook):
         """Test that generate handles resources with no future dates."""
@@ -2310,10 +2455,11 @@ class TestGenerate:
         generator.generate(ws)
         
         # Check that headers are created
-        assert ws.cell(row=3, column=1).value == "Engine-Version"
+        assert ws.cell(row=6, column=1).value == "Service"
+        assert ws.cell(row=6, column=2).value == "Engine-Version"
         
-        # Check that data row is created
-        assert ws.cell(row=5, column=1).value == "python 3.9"
+        # Check that data row is created (at row 7)
+        assert ws.cell(row=7, column=2).value == "python 3.9"
     
     def test_generate_with_none_dates(self, workbook):
         """Test that generate handles resources with None dates."""
@@ -2333,10 +2479,11 @@ class TestGenerate:
         generator.generate(ws)
         
         # Check that headers are created
-        assert ws.cell(row=3, column=1).value == "Engine-Version"
+        assert ws.cell(row=6, column=1).value == "Service"
+        assert ws.cell(row=6, column=2).value == "Engine-Version"
         
-        # Check that data row is created
-        assert ws.cell(row=5, column=1).value == "python 3.9"
+        # Check that data row is created (at row 7)
+        assert ws.cell(row=7, column=2).value == "python 3.9"
     
     def test_generate_legend_after_data_rows(self, workbook):
         """Test that legend appears after all data rows."""
@@ -2378,11 +2525,12 @@ class TestGenerate:
         generator.generate(ws)
         
         # Find the column for the EOS date
-        # Start date is today, so EOS date column is at column B + 10 = column L (column 12)
-        eos_col = 2 + 10  # Column B is 2, plus 10 days
+        # Start date is today, so EOS date column is at column C + 10 = column M (column 13)
+        # A=Service, B=Engine-Version, C=today, so EOS is at C + 10 = column 13
+        eos_col = 3 + 10  # Column C is 3, plus 10 days
         
-        # Check that the EOS date cell has red fill
-        eos_cell = ws.cell(row=5, column=eos_col)
+        # Check that the EOS date cell has red fill (data starts at row 7)
+        eos_cell = ws.cell(row=7, column=eos_col)
         if eos_cell.fill and eos_cell.fill.fgColor:
             fill_color = eos_cell.fill.fgColor.rgb
             if isinstance(fill_color, str) and len(fill_color) == 8:
@@ -2410,5 +2558,9 @@ class TestGenerate:
         # Should not raise an exception
         generator.generate(ws)
         
-        # Check that data row is created
-        assert ws.cell(row=5, column=1).value == "python 3.9"
+        # Check that data row is created (at row 7)
+        # Column A has Service, Column B has Engine-Version
+        assert ws.cell(row=7, column=1).value == "Lambda"  # Service from create_resource default
+        assert ws.cell(row=7, column=2).value == "python 3.9"
+
+
