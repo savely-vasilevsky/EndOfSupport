@@ -5,7 +5,7 @@ Groups resources by: Account -> Service -> Engine -> Version
 """
 
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime
 from typing import Dict, List, Optional
 
 # Handle imports for both package and frozen executable modes
@@ -81,7 +81,7 @@ class ReportGenerator:
             accounts=accounts,
             total_counts=total_counts,
             total_resources=len(filtered_resources),
-            generated_at=date.today(),
+            generated_at=datetime.now(),
         )
     
     def _apply_filters(

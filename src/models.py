@@ -1,7 +1,7 @@
 """Data models for EndOfSupportTool."""
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
 from typing import Optional, List, Dict
 
@@ -84,4 +84,4 @@ class Report:
     accounts: Dict[str, AccountGroup] = field(default_factory=dict)
     total_counts: Dict[SupportStatus, int] = field(default_factory=dict)
     total_resources: int = 0
-    generated_at: date = field(default_factory=date.today)
+    generated_at: datetime = field(default_factory=datetime.now)

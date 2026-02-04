@@ -10,13 +10,14 @@ from typing import List, Optional
 
 from .classifier import ResourceClassifier
 from .formatters import TextFormatter, CSVFormatter, JSONFormatter, ExcelFormatter, EXCEL_AVAILABLE
+from .html_formatter import HTMLFormatter
 from .generator import ReportGenerator
 from .models import ReportFilters, SupportStatus
 from .parser import CSVParser, CSVParseError
 
 
 # Valid output formats
-OUTPUT_FORMATS = ["text", "csv", "json", "excel"]
+OUTPUT_FORMATS = ["text", "csv", "json", "excel", "html"]
 
 # Valid status filter values (case-insensitive matching)
 STATUS_CHOICES = {
@@ -170,7 +171,7 @@ def get_formatter(output_format: str):
     """Get the appropriate formatter for the output format.
     
     Args:
-        output_format: One of 'text', 'csv', 'json', or 'excel'.
+        output_format: One of 'text', 'csv', 'json', 'excel', or 'html'.
         
     Returns:
         Formatter instance.
@@ -185,6 +186,9 @@ def get_formatter(output_format: str):
                 "Excel output requires openpyxl. Install with: pip install openpyxl"
             )
         return ExcelFormatter()
+    
+    if output_format == "html":
+        return HTMLFormatter()
     
     formatters = {
         "text": TextFormatter,

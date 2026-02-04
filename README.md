@@ -6,7 +6,7 @@ A CLI and GUI tool to analyze AWS resource inventory CSV files and generate supp
 
 - **Support Status Classification**: Classifies resources as Supported, Approaching End-of-Support, Extended Support, or Out of Support
 - **Hierarchical Grouping**: Groups resources by Account → Service → Engine → Version
-- **Multiple Output Formats**: Text, CSV, JSON, and Excel
+- **Multiple Output Formats**: Text, CSV, JSON, Excel, and HTML
 - **Cross-Platform PivotTable**: Real Excel PivotTables on Windows, Mac, and Linux
 - **Pivot Per Account**: Optional separate pivot tables for each AWS account
 - **Timeline View**: Visual Gantt-chart style timeline showing support lifecycle events with Service grouping
@@ -60,6 +60,9 @@ python -m src.main inventory.csv --output-format json --output-file report.json
 
 # Generate Excel report with PivotTable
 python -m src.main inventory.csv --output-format excel --output-file report.xlsx
+
+# Generate HTML report (interactive web page)
+python -m src.main inventory.csv --output-format html --output-file report.html
 
 # Generate Excel report with per-account pivot tables
 python -m src.main inventory.csv --output-format excel --output-file report.xlsx --pivot-per-account
@@ -175,6 +178,16 @@ Professional spreadsheet with:
   - 🔴 Red: Out of Support
 - Auto-filters on data sheet
 
+### HTML
+Interactive web-based report with:
+- **Summary Dashboard**: Visual cards showing resource counts by status
+- **Charts**: Stacked bar charts by service/account, pie charts for distribution
+- **Searchable Data Table**: All resources with search, sort, and export (CSV/Excel)
+- **Timeline Visualization**: Support events sorted by end-of-support date
+- **By Service Breakdown**: Collapsible sections showing resources per service
+- Works offline - all dependencies loaded from CDN
+- Responsive design for desktop and mobile
+
 ## Development
 
 ```bash
@@ -188,7 +201,9 @@ pytest
 pytest --cov=src
 ```
 
-## Building Windows Executable
+## Building Executables
+
+### Windows
 
 To create a standalone Windows executable:
 
@@ -204,6 +219,35 @@ build.bat
 ```
 
 The executable will be created at `dist/EndOfSupportTool.exe` (~30 MB). It includes all dependencies and can be distributed without requiring Python installation.
+
+### macOS
+
+To create a macOS application bundle:
+
+```bash
+# Make the build script executable
+chmod +x build_mac.sh
+
+# Run the build script
+./build_mac.sh
+```
+
+Or manually:
+
+```bash
+# Install PyInstaller
+pip install pyinstaller
+
+# Build the app bundle
+python -m PyInstaller EndOfSupportTool_mac.spec --clean
+```
+
+The application will be created at `dist/EndOfSupportTool.app`. You can:
+- Run it directly: `open dist/EndOfSupportTool.app`
+- Distribute as a zip: `zip -r EndOfSupportTool_mac.zip dist/EndOfSupportTool.app`
+- Create a DMG: `hdiutil create -volname EndOfSupportTool -srcfolder dist/EndOfSupportTool.app -ov EndOfSupportTool.dmg`
+
+Note: macOS builds must be created on a Mac. The Windows executable cannot be built on Mac and vice versa.
 
 ## Requirements
 

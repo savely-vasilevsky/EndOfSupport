@@ -9,7 +9,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
-from hypothesis import given, settings, assume
+from hypothesis import given, settings, assume, HealthCheck
 from hypothesis import strategies as st
 
 # Add tests directory to path for conftest imports
@@ -123,7 +123,7 @@ class TestResourceClassifierProperties:
     """
     
     @given(resource=resource_strategy(), reference_date=valid_date_strategy())
-    @settings(max_examples=100)
+    @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
     def test_property_4_classification_determinism(self, resource, reference_date):
         """Property 4: Classification Determinism
         

@@ -18,6 +18,7 @@ try:
     # Try relative imports first (when running as package)
     from .classifier import ResourceClassifier
     from .formatters import TextFormatter, CSVFormatter, JSONFormatter, ExcelFormatter, EXCEL_AVAILABLE, WIN32COM_AVAILABLE, TEMPLATE_DIR
+    from .html_formatter import HTMLFormatter
     from .generator import ReportGenerator
     from .models import ReportFilters, SupportStatus
     from .parser import CSVParser, CSVParseError
@@ -25,6 +26,7 @@ except ImportError:
     # Fall back to absolute imports (when running as frozen executable or standalone)
     from classifier import ResourceClassifier
     from formatters import TextFormatter, CSVFormatter, JSONFormatter, ExcelFormatter, EXCEL_AVAILABLE, WIN32COM_AVAILABLE, TEMPLATE_DIR
+    from html_formatter import HTMLFormatter
     from generator import ReportGenerator
     from models import ReportFilters, SupportStatus
     from parser import CSVParser, CSVParseError
@@ -43,14 +45,14 @@ class EndOfSupportGUI:
         # Variables
         self.input_file = tk.StringVar()
         self.output_file = tk.StringVar()
-        self.output_format = tk.StringVar(value="text")
+        self.output_format = tk.StringVar(value="html")
         self.days_threshold = tk.IntVar(value=90)
         
-        # Status filter checkboxes
+        # Status filter checkboxes - default to showing action-needed items
         self.filter_supported = tk.BooleanVar(value=False)
-        self.filter_approaching = tk.BooleanVar(value=False)
-        self.filter_extended = tk.BooleanVar(value=False)
-        self.filter_oos = tk.BooleanVar(value=False)
+        self.filter_approaching = tk.BooleanVar(value=True)
+        self.filter_extended = tk.BooleanVar(value=True)
+        self.filter_oos = tk.BooleanVar(value=True)
         
         # Excel options
         self.include_pivot = tk.BooleanVar(value=True)
@@ -85,7 +87,7 @@ class EndOfSupportGUI:
         
         ttk.Label(output_frame, text="Format:").grid(row=0, column=0, sticky="w")
         format_combo = ttk.Combobox(output_frame, textvariable=self.output_format, 
-                                     values=["text", "csv", "json", "excel"], state="readonly", width=15)
+                                     values=["html", "excel", "text", "csv", "json"], state="readonly", width=15)
         format_combo.grid(row=0, column=1, sticky="w", padx=5)
         format_combo.bind("<<ComboboxSelected>>", self._on_format_change)
         
@@ -149,7 +151,7 @@ class EndOfSupportGUI:
         
         ttk.Label(filter_frame, text="Status Filters (leave unchecked for all):").grid(row=0, column=0, columnspan=4, sticky="w")
         
-        ttk.Checkbutton(filter_frame, text="Supported", variable=self.filter_supported).grid(row=1, column=0, sticky="w")
+        ttk.Checkbutton(filter_frame, text="Regular Support", variable=self.filter_supported).grid(row=1, column=0, sticky="w")
         ttk.Checkbutton(filter_frame, text="Approaching EOS", variable=self.filter_approaching).grid(row=1, column=1, sticky="w")
         ttk.Checkbutton(filter_frame, text="Extended Support", variable=self.filter_extended).grid(row=1, column=2, sticky="w")
         ttk.Checkbutton(filter_frame, text="Out of Support", variable=self.filter_oos).grid(row=1, column=3, sticky="w")
@@ -208,7 +210,8 @@ class EndOfSupportGUI:
         """Open file dialog for input CSV file."""
         filename = filedialog.askopenfilename(
             title="Select CSV File",
-            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+            initialdir=os.getcwd()
         )
         if filename:
             self.input_file.set(filename)
@@ -221,13 +224,23 @@ class EndOfSupportGUI:
             "csv": [("CSV files", "*.csv"), ("All files", "*.*")],
             "json": [("JSON files", "*.json"), ("All files", "*.*")],
             "excel": [("Excel files", "*.xlsx"), ("All files", "*.*")],
+            "html": [("HTML files", "*.html"), ("All files", "*.*")],
         }
-        default_ext = {"text": ".txt", "csv": ".csv", "json": ".json", "excel": ".xlsx"}
+        default_ext = {"text": ".txt", "csv": ".csv", "json": ".json", "excel": ".xlsx", "html": ".html"}
+        
+        # Start in input file's directory if available, otherwise current directory
+        initial_dir = None
+        input_path = self.input_file.get().strip()
+        if input_path and os.path.exists(input_path):
+            initial_dir = os.path.dirname(input_path)
+        if not initial_dir:
+            initial_dir = os.getcwd()
         
         filename = filedialog.asksaveasfilename(
             title="Save Report As",
             filetypes=extensions.get(fmt, [("All files", "*.*")]),
-            defaultextension=default_ext.get(fmt, "")
+            defaultextension=default_ext.get(fmt, ""),
+            initialdir=initial_dir
         )
         if filename:
             self.output_file.set(filename)
@@ -301,12 +314,13 @@ class EndOfSupportGUI:
         """Clear all form fields."""
         self.input_file.set("")
         self.output_file.set("")
-        self.output_format.set("text")
+        self.output_format.set("html")
         self.days_threshold.set(90)
+        # Reset filters to defaults (show action-needed items)
         self.filter_supported.set(False)
-        self.filter_approaching.set(False)
-        self.filter_extended.set(False)
-        self.filter_oos.set(False)
+        self.filter_approaching.set(True)
+        self.filter_extended.set(True)
+        self.filter_oos.set(True)
         self.include_pivot.set(True)
         self.pivot_method.set("auto")
         self.pivot_per_account.set(False)
@@ -407,6 +421,7 @@ class EndOfSupportGUI:
                     "text": TextFormatter(),
                     "csv": CSVFormatter(),
                     "json": JSONFormatter(),
+                    "html": HTMLFormatter(),
                 }
                 formatter = formatters[fmt]
                 output_text = formatter.format(report)
@@ -539,27 +554,39 @@ class EndOfSupportGUI:
 
 GETTING STARTED:
 1. Click 'Browse...' to select your AWS inventory CSV file
-2. Choose an output format (text, csv, json, or excel)
-3. For Excel: specify an output file path
+2. Choose an output format (html, excel, text, csv, json)
+3. For Excel/HTML: specify an output file path
 4. Click 'Generate Report'
 
 OUTPUT FORMATS:
+• HTML: Interactive web report with charts & filters (recommended)
+• Excel: Professional report with pivot tables & timeline
 • Text: Human-readable console output
 • CSV: Flat table for spreadsheets
 • JSON: Structured data format
-• Excel: Professional report with pivot tables
+
+HTML REPORT FEATURES:
+• Filter Bar: Multi-select filters for Service, Account, Status
+• Summary Dashboard: Visual cards with status counts
+• Charts: Stacked bar charts by Service/Account, doughnut/pie charts
+• Timeline View: Resources by End-of-Support month
+• DataTables: Searchable, sortable, exportable tables
+• Service Groups: Paginated tables per service with expand/collapse
+• Navigation: Sticky menu, smooth scroll, go-to-top button
+• Loading Indicator: Shows while data loads
 
 EXCEL OPTIONS:
 • Include Pivot Table: Creates interactive pivot
 • Pivot Method: auto/windows/cross-platform
 • Pivot per Account: Separate pivot for each account
+• Include Timeline: Visual Gantt-style timeline view
 
 FILTERS:
 • Status Filters: Show only specific statuses
 • Days Threshold: Days before EOS to mark 'Approaching'
 
 SUPPORT STATUS:
-🟢 Supported - No action needed
+🟢 Regular Support - No action needed
 🟡 Approaching EOS - Plan upgrades
 🔵 Extended Support - May incur costs
 🔴 Out of Support - Immediate action needed
