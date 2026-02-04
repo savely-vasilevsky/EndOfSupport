@@ -71,6 +71,9 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
@@ -87,4 +90,5 @@ jobs:
           files: |
             EndOfSupportTool.exe
             EndOfSupportTool-macOS.zip
-          generate_release_notes: true
+          body_path: RELEASE_NOTES.md
+          fail_on_unmatched_files: false
