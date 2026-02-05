@@ -791,6 +791,11 @@ class TextFormatter(BaseFormatter):
         lines.append("=" * 80)
         lines.append("AWS Resource Support Status Report")
         lines.append(f"Generated: {report.generated_at.isoformat()}")
+        
+        # Generation parameters
+        if report.generation_params:
+            lines.append(f"Parameters: {report.generation_params.to_display_string()}")
+        
         lines.append("=" * 80)
         lines.append("")
         
@@ -1027,6 +1032,13 @@ class CSVFormatter(BaseFormatter):
         output = StringIO()
         writer = csv.writer(output)
         
+        # Write generation info as comment rows
+        output.write(f"# AWS End-of-Support Report\n")
+        output.write(f"# Generated: {report.generated_at.isoformat()}\n")
+        if report.generation_params:
+            output.write(f"# Parameters: {report.generation_params.to_display_string()}\n")
+        output.write("#\n")
+        
         # Write header row
         writer.writerow(self.HEADERS)
         
@@ -1106,7 +1118,7 @@ class JSONFormatter(BaseFormatter):
         Returns:
             Dictionary representation of the report.
         """
-        return {
+        result = {
             "generated_at": report.generated_at.isoformat(),
             "total_resources": report.total_resources,
             "total_counts": self._status_counts_to_dict(report.total_counts),
@@ -1115,6 +1127,19 @@ class JSONFormatter(BaseFormatter):
                 for name, group in sorted(report.accounts.items())
             },
         }
+        
+        # Add generation parameters if available
+        if report.generation_params:
+            result["generation_parameters"] = {
+                "input_file": report.generation_params.input_file,
+                "output_format": report.generation_params.output_format,
+                "days_threshold": report.generation_params.days_threshold,
+                "status_filters": report.generation_params.status_filters,
+                "account_filters": report.generation_params.account_filters,
+                "service_filters": report.generation_params.service_filters,
+            }
+        
+        return result
     
     def _account_to_dict(self, account: AccountGroup) -> Dict[str, Any]:
         """Convert AccountGroup to dictionary.
@@ -1424,7 +1449,7 @@ class ExcelFormatter(BaseFormatter):
             sheet_info.append(("Timeline", "Visual timeline of support events by engine-version"))
         
         # Populate Table of Contents
-        self._create_table_of_contents(toc_sheet, sheet_info)
+        self._create_table_of_contents(toc_sheet, sheet_info, report)
         
         # Save workbook first
         wb.save(filepath)
@@ -1559,18 +1584,20 @@ class ExcelFormatter(BaseFormatter):
         # Freeze after header row
         ws.freeze_panes = "A5"
     
-    def _create_table_of_contents(self, ws, sheet_info: List[tuple]) -> None:
+    def _create_table_of_contents(self, ws, sheet_info: List[tuple], report: Report) -> None:
         """Create a Table of Contents sheet with links to all other sheets.
         
         Args:
             ws: Worksheet to populate with TOC.
             sheet_info: List of tuples (sheet_name, description).
+            report: Report object with generation parameters.
         """
         # Style definitions
         title_font = Font(bold=True, size=16, color="4472C4")
         header_font = Font(bold=True, color="FFFFFF")
         header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
         link_font = Font(color="0563C1", underline="single")
+        params_font = Font(italic=True, size=10, color="666666")
         thin_border = Border(
             left=Side(style="thin"),
             right=Side(style="thin"),
@@ -1586,18 +1613,26 @@ class ExcelFormatter(BaseFormatter):
         ws.cell(row=2, column=1, value="Table of Contents")
         ws.cell(row=2, column=1).font = Font(bold=True, size=12)
         
-        # Empty row
-        # Header row
-        ws.cell(row=4, column=1, value="Sheet Name").font = header_font
-        ws.cell(row=4, column=1).fill = header_fill
-        ws.cell(row=4, column=1).border = thin_border
+        # Generation parameters (row 3)
+        params_row = 3
+        if report.generation_params:
+            params_str = report.generation_params.to_display_string()
+            ws.cell(row=params_row, column=1, value=f"Parameters: {params_str}")
+            ws.cell(row=params_row, column=1).font = params_font
+            ws.merge_cells(f"A{params_row}:B{params_row}")
         
-        ws.cell(row=4, column=2, value="Description").font = header_font
-        ws.cell(row=4, column=2).fill = header_fill
-        ws.cell(row=4, column=2).border = thin_border
+        # Header row (row 5)
+        header_row = 5
+        ws.cell(row=header_row, column=1, value="Sheet Name").font = header_font
+        ws.cell(row=header_row, column=1).fill = header_fill
+        ws.cell(row=header_row, column=1).border = thin_border
+        
+        ws.cell(row=header_row, column=2, value="Description").font = header_font
+        ws.cell(row=header_row, column=2).fill = header_fill
+        ws.cell(row=header_row, column=2).border = thin_border
         
         # Sheet entries
-        row_idx = 5
+        row_idx = header_row + 1
         for sheet_name, description in sheet_info:
             # Sheet name with hyperlink
             cell = ws.cell(row=row_idx, column=1, value=sheet_name)
@@ -1615,8 +1650,8 @@ class ExcelFormatter(BaseFormatter):
         ws.column_dimensions["A"].width = 30
         ws.column_dimensions["B"].width = 60
         
-        # Freeze header row
-        ws.freeze_panes = "A5"
+        # Freeze header row (row 6 = A6)
+        ws.freeze_panes = "A6"
     
     def _create_pivot_summary_per_account(self, wb: Workbook, report: Report) -> None:
         """Create a styled pivot-like summary sheet for each account.

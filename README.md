@@ -188,6 +188,43 @@ Interactive web-based report with:
 - Works offline - all dependencies loaded from CDN
 - Responsive design for desktop and mobile
 
+## Documentation
+
+### User Guides
+
+- **[USERGUIDE.md](USERGUIDE.md)** - Text user guide
+- **[docs/USERGUIDE.html](docs/USERGUIDE.html)** - Visual HTML guide with 40 screenshots
+  - Access from GUI: Press **F1** or click **Help** button
+  - Open directly: `start docs/USERGUIDE.html` (Windows) or `open docs/USERGUIDE.html` (Mac)
+
+### Generating Documentation
+
+To regenerate the HTML user guide with screenshots:
+
+```bash
+# One command - fully automated (captures screenshots, updates markdown, generates HTML)
+python generate_userguide.py
+
+# Or use the batch file (Windows)
+generate_userguide.bat
+
+# Skip screenshot capture (use existing screenshots)
+python generate_userguide.py --skip-screenshots
+
+# Step by step
+python tests/capture_all_screenshots.py  # 1. Capture screenshots (automated)
+python scripts/update_screenshots.py     # 2. Update markdown references
+python src/html_userguide_generator.py   # 3. Generate HTML guide
+```
+
+**Screenshot Automation:**
+- HTML reports: Playwright (browser automation)
+- CLI output: PIL/Pillow (text-to-image)
+- GUI: PyAutoGUI (desktop automation)
+- Excel: win32com (Windows) or placeholders (cross-platform)
+
+See [docs/SCREENSHOT_STATUS.md](docs/SCREENSHOT_STATUS.md) for details.
+
 ## Development
 
 ```bash

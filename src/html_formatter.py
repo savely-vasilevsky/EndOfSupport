@@ -155,6 +155,19 @@ body {
     font-size: 14px;
 }
 
+.header .generation-params {
+    margin-left: 20px;
+    padding: 4px 12px;
+    background: rgba(255, 153, 0, 0.15);
+    border-radius: 4px;
+    color: #d4a259;
+    font-size: 12px;
+    max-width: 600px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .header .loading-status {
     margin-left: auto;
     display: flex;
@@ -245,6 +258,13 @@ body {
     padding: 20px;
     border-radius: 8px;
     text-align: center;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.summary-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
 }
 
 .summary-card.total {
@@ -276,6 +296,51 @@ body {
 .summary-card .label {
     font-size: 14px;
     opacity: 0.9;
+}
+
+/* Summary card tooltip */
+.summary-card-tooltip {
+    position: absolute;
+    background: rgba(35, 47, 62, 0.95);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    z-index: 1000;
+    pointer-events: none;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    max-width: 280px;
+    white-space: nowrap;
+}
+
+.summary-card-tooltip .tooltip-title {
+    font-weight: 600;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.summary-card-tooltip .tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+}
+
+.summary-card-tooltip .tooltip-service {
+    margin-right: 20px;
+}
+
+.summary-card-tooltip .tooltip-count {
+    font-weight: 600;
+    color: #ff9900;
+}
+
+.summary-card-tooltip .tooltip-more {
+    color: #aab7b8;
+    font-style: italic;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255,255,255,0.2);
 }
 
 .status-supported { background-color: #c8e6c9; color: #1b5e20; }
@@ -552,6 +617,162 @@ table.dataTable tbody tr:hover {
     border-color: #e53935;
 }
 
+/* Multi-select dropdown styles */
+.filter-group-dropdown {
+    max-width: 300px;
+}
+
+.multi-select-dropdown {
+    position: relative;
+}
+
+.dropdown-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: white;
+    border: 2px solid #2074d5;
+    border-radius: 6px;
+    cursor: pointer;
+    min-width: 200px;
+    transition: all 0.2s;
+}
+
+.dropdown-trigger:hover {
+    background: #f5f9ff;
+    border-color: #1565c0;
+}
+
+.dropdown-text {
+    font-size: 13px;
+    color: #16191f;
+}
+
+.dropdown-arrow {
+    font-size: 10px;
+    color: #2074d5;
+    transition: transform 0.2s;
+}
+
+.multi-select-dropdown.open .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    margin-top: 4px;
+    max-height: 350px;
+    overflow: hidden;
+}
+
+.multi-select-dropdown.open .dropdown-menu {
+    display: block;
+}
+
+.dropdown-search {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.dropdown-search input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.dropdown-search input:focus {
+    outline: none;
+    border-color: #2074d5;
+}
+
+.dropdown-actions {
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+    background: #f9f9f9;
+}
+
+.dropdown-actions button {
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dropdown-actions button:hover {
+    background: #2074d5;
+    color: white;
+    border-color: #2074d5;
+}
+
+.dropdown-items {
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.dropdown-item:hover {
+    background: #f5f9ff;
+}
+
+.dropdown-item.selected {
+    background: #e8f4fd;
+}
+
+.dropdown-item .checkbox {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #ccc;
+    border-radius: 3px;
+    margin-right: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: transparent;
+    transition: all 0.15s;
+}
+
+.dropdown-item.selected .checkbox {
+    background: #2074d5;
+    border-color: #2074d5;
+    color: white;
+}
+
+.dropdown-item .item-text {
+    font-size: 13px;
+    color: #16191f;
+}
+
+.dropdown-item.hidden {
+    display: none;
+}
+
 /* Lazy loading placeholder */
 .chart-placeholder {
     display: flex;
@@ -574,9 +795,16 @@ table.dataTable tbody tr:hover {
 
     def _generate_header(self, report: Report) -> str:
         """Generate the page header."""
+        # Build parameters display string
+        params_html = ""
+        if report.generation_params:
+            params_str = report.generation_params.to_display_string()
+            params_html = f'<div class="generation-params">{params_str}</div>'
+        
         return f"""<div class="header">
     <h1>🔧 AWS End-of-Support Report</h1>
     <span class="subtitle">Generated: {report.generated_at.strftime('%Y-%m-%d %H:%M:%S')}</span>
+    {params_html}
     <div class="loading-status">
         <span id="loading-text">Loading...</span>
         <div id="header-spinner" class="header-spinner"></div>
@@ -591,6 +819,7 @@ table.dataTable tbody tr:hover {
     <li><a href="#resources-table" onclick="scrollToSection(event)">All Resources</a></li>
     <li><a href="#timeline-section" onclick="scrollToSection(event)">Timeline</a></li>
     <li><a href="#by-service-section" onclick="scrollToSection(event)">By Service</a></li>
+    <li><a href="#" onclick="showReportHelp(event)" style="color: #ff9900;">Help</a></li>
 </ul>
 <button class="go-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">↑</button>"""
 
@@ -619,14 +848,15 @@ table.dataTable tbody tr:hover {
             )
         service_options_html = '\n'.join(service_options)
         
-        # Generate account filter options (all selected by default)
+        # Generate account filter options for dropdown (all selected by default)
         account_options = []
         for account in accounts:
             account_options.append(
-                f'<label class="filter-option selected" data-filter="account" data-value="{self._escape_html(account)}">'
-                f'<input type="checkbox" checked><span class="checkmark">✓</span>{self._escape_html(account)}</label>'
+                f'<div class="dropdown-item selected" data-filter="account" data-value="{self._escape_html(account)}">'
+                f'<span class="checkbox">✓</span><span class="item-text">{self._escape_html(account)}</span></div>'
             )
         account_options_html = '\n'.join(account_options)
+        account_count = len(accounts)
         
         # Status filter options (all selected by default)
         status_options = f'''
@@ -642,16 +872,31 @@ table.dataTable tbody tr:hover {
         
         return f"""<div class="filter-bar">
     <div class="filter-container">
+        <div class="filter-group filter-group-dropdown">
+            <label>Account</label>
+            <div class="multi-select-dropdown" id="account-dropdown">
+                <div class="dropdown-trigger" onclick="toggleAccountDropdown()">
+                    <span class="dropdown-text"><span id="account-count">{account_count}</span> of {account_count} selected</span>
+                    <span class="dropdown-arrow">▼</span>
+                </div>
+                <div class="dropdown-menu" id="account-menu">
+                    <div class="dropdown-search">
+                        <input type="text" placeholder="Search accounts..." id="account-search" oninput="filterAccountOptions()">
+                    </div>
+                    <div class="dropdown-actions">
+                        <button type="button" onclick="selectAllAccounts()">Select All</button>
+                        <button type="button" onclick="deselectAllAccounts()">Deselect All</button>
+                    </div>
+                    <div class="dropdown-items" id="account-items">
+                        {account_options_html}
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="filter-group">
             <label>Service</label>
             <div class="filter-options" id="service-filters">
                 {service_options_html}
-            </div>
-        </div>
-        <div class="filter-group">
-            <label>Account</label>
-            <div class="filter-options" id="account-filters">
-                {account_options_html}
             </div>
         </div>
         <div class="filter-group">
@@ -673,24 +918,25 @@ table.dataTable tbody tr:hover {
         
         return f"""<div id="summary-section" class="section">
     <h2>Summary Dashboard</h2>
+    <p style="color: #666; margin-bottom: 15px;"><strong>Click on any card to view affected resources in a new tab. Hover to see breakdown by service.</strong></p>
     <div class="summary-cards">
-        <div class="summary-card total">
+        <div class="summary-card total" onclick="showAllResources()" onmouseenter="showSummaryTooltip(event, 'total')" onmousemove="positionSummaryTooltip(event)" onmouseleave="hideSummaryTooltip()">
             <div class="count">{report.total_resources}</div>
             <div class="label">Total Resources</div>
         </div>
-        <div class="summary-card supported">
+        <div class="summary-card supported" onclick="showStatusResources('supported')" onmouseenter="showSummaryTooltip(event, 'supported')" onmousemove="positionSummaryTooltip(event)" onmouseleave="hideSummaryTooltip()">
             <div class="count">{status_counts.get(SupportStatus.SUPPORTED, 0)}</div>
             <div class="label">Supported</div>
         </div>
-        <div class="summary-card approaching">
+        <div class="summary-card approaching" onclick="showStatusResources('approaching')" onmouseenter="showSummaryTooltip(event, 'approaching')" onmousemove="positionSummaryTooltip(event)" onmouseleave="hideSummaryTooltip()">
             <div class="count">{status_counts.get(SupportStatus.APPROACHING_EOS, 0)}</div>
             <div class="label">Approaching EOS</div>
         </div>
-        <div class="summary-card extended">
+        <div class="summary-card extended" onclick="showStatusResources('extended')" onmouseenter="showSummaryTooltip(event, 'extended')" onmousemove="positionSummaryTooltip(event)" onmouseleave="hideSummaryTooltip()">
             <div class="count">{status_counts.get(SupportStatus.EXTENDED_SUPPORT, 0)}</div>
             <div class="label">Extended Support</div>
         </div>
-        <div class="summary-card out-of-support">
+        <div class="summary-card out-of-support" onclick="showStatusResources('out_of_support')" onmouseenter="showSummaryTooltip(event, 'out_of_support')" onmousemove="positionSummaryTooltip(event)" onmouseleave="hideSummaryTooltip()">
             <div class="count">{status_counts.get(SupportStatus.OUT_OF_SUPPORT, 0)}</div>
             <div class="label">Out of Support</div>
         </div>
@@ -730,16 +976,17 @@ table.dataTable tbody tr:hover {
         <button class="collapse-btn" onclick="toggleSection('status-breakdown-content')">−</button>
     </h2>
     <div id="status-breakdown-content" class="collapsible-content">
+        <p style="color: #666; margin-bottom: 15px;"><strong>Click on any chart element to view affected resources in a new tab.</strong></p>
         <div class="chart-row">
             <div>
                 <h3>By Service</h3>
-                <div class="chart-container">
+                <div class="chart-container" style="cursor: pointer;">
                     <canvas id="serviceChart"></canvas>
                 </div>
             </div>
             <div>
                 <h3>By Account</h3>
-                <div class="chart-container">
+                <div class="chart-container" style="cursor: pointer;">
                     <canvas id="accountChart"></canvas>
                 </div>
             </div>
@@ -747,13 +994,13 @@ table.dataTable tbody tr:hover {
         <div class="chart-row">
             <div>
                 <h3>Overall Status Distribution</h3>
-                <div class="chart-container">
+                <div class="chart-container" style="cursor: pointer;">
                     <canvas id="statusPieChart"></canvas>
                 </div>
             </div>
             <div>
                 <h3>Resources by Service</h3>
-                <div class="chart-container">
+                <div class="chart-container" style="cursor: pointer;">
                     <canvas id="servicePieChart"></canvas>
                 </div>
             </div>
@@ -850,6 +1097,8 @@ table.dataTable tbody tr:hover {
         
         # Collect timeline data grouped by month and status
         monthly_data = defaultdict(lambda: {'supported': 0, 'approaching': 0, 'extended': 0, 'out_of_support': 0})
+        # Also collect detailed resources by month for click-through
+        monthly_resources = defaultdict(list)
         timeline_items = []
         seen = set()
         
@@ -863,6 +1112,17 @@ table.dataTable tbody tr:hover {
                                 month_key = resource.end_of_support.strftime('%Y-%m')
                                 status_key = self._status_to_key(resource.status)
                                 monthly_data[month_key][status_key] += 1
+                                
+                                # Store detailed resource info for click-through
+                                monthly_resources[month_key].append({
+                                    'account': account_name,
+                                    'service': service_name,
+                                    'engine': engine_name or 'N/A',
+                                    'version': version_name,
+                                    'resource': resource.resource_name or resource.resource_arn or 'N/A',
+                                    'eos_date': resource.end_of_support.strftime('%Y-%m-%d'),
+                                    'status': status_key
+                                })
                                 
                                 # Collect unique items for list
                                 key = (service_name, engine_name or 'N/A', version_name)
@@ -889,6 +1149,18 @@ table.dataTable tbody tr:hover {
         chart_extended = json.dumps([monthly_data[m]['extended'] for m in sorted_months])
         chart_out_of_support = json.dumps([monthly_data[m]['out_of_support'] for m in sorted_months])
         
+        # Prepare detailed resources data for click-through (JSON for JavaScript)
+        monthly_resources_json = json.dumps({m: monthly_resources[m] for m in sorted_months})
+        
+        # Prepare service summary per month for tooltip
+        monthly_service_summary = {}
+        for month in sorted_months:
+            service_counts = defaultdict(int)
+            for res in monthly_resources[month]:
+                service_counts[res['service']] += 1
+            monthly_service_summary[month] = dict(service_counts)
+        monthly_service_summary_json = json.dumps(monthly_service_summary)
+        
         # Generate timeline list HTML
         timeline_list_html = []
         for item in timeline_items[:100]:  # Limit to 100 items
@@ -906,20 +1178,68 @@ table.dataTable tbody tr:hover {
         timeline_list = '\n'.join(timeline_list_html) if timeline_list_html else '<p>No timeline data available.</p>'
         more_text = f'<p style="color: #666; font-style: italic;">Showing {len(timeline_list_html)} of {len(timeline_items)} unique engine-version combinations</p>' if len(timeline_items) > 100 else ''
         
+        # Get min and max dates for the date range inputs
+        # Default: earliest date in report to 6 months in the future
+        from datetime import datetime
+        
+        today = datetime.now()
+        
+        # Calculate 6 months ahead
+        year_end = today.year
+        month_end = today.month + 6
+        while month_end > 12:
+            month_end -= 12
+            year_end += 1
+        default_end = f"{year_end:04d}-{month_end:02d}"
+        
+        if sorted_months:
+            data_min_month = sorted_months[0]
+            data_max_month = sorted_months[-1]
+            # Start from earliest date in report
+            default_start = data_min_month
+            # Clamp end to available data range
+            if default_end > data_max_month:
+                default_end = data_max_month
+        else:
+            data_min_month = ""
+            data_max_month = ""
+            default_start = ""
+            default_end = ""
+        
         return f"""<div id="timeline-section" class="section">
     <h2>Support Timeline
         <button class="collapse-btn" onclick="toggleSection('timeline-content')">−</button>
     </h2>
     <div id="timeline-content" class="collapsible-content">
-        <p>End-of-Support events aggregated by month:</p>
-        <div class="chart-container" style="height: 350px;">
+        <p>End-of-Support events aggregated by month. <strong>Click on a bar to view affected resources in a new tab.</strong></p>
+        <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px; padding: 12px; background: #f9f9f9; border-radius: 6px; flex-wrap: wrap;">
+            <label style="font-weight: 500;">Date Range:</label>
+            <input type="month" id="timelineStartDate" value="{default_start}" min="{data_min_month}" max="{data_max_month}" style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;">
+            <span>to</span>
+            <input type="month" id="timelineEndDate" value="{default_end}" min="{data_min_month}" max="{data_max_month}" style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;">
+            <button onclick="applyTimelineDateFilter()" style="padding: 6px 16px; background: #2074d5; color: white; border: none; border-radius: 4px; cursor: pointer;">Apply</button>
+            <button onclick="resetTimelineDateFilter()" style="padding: 6px 16px; background: #f5f5f5; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">Reset</button>
+        </div>
+        <div class="chart-container" style="height: 350px; cursor: pointer;">
             <canvas id="timelineChart"></canvas>
         </div>
         <script>
+            var timelineResourcesData = {monthly_resources_json};
+            var timelineServiceSummary = {monthly_service_summary_json};
+            var timelineMonths = {chart_labels};
+            var allTimelineMonths = {chart_labels};
+            var allTimelineData = {{
+                out_of_support: {chart_out_of_support},
+                extended: {chart_extended},
+                approaching: {chart_approaching},
+                supported: {chart_supported}
+            }};
+            var timelineChartInstance = null;
+            
             function initTimelineChart() {{
                 var timelineCtx = document.getElementById('timelineChart');
-                if (timelineCtx && !timelineCtx.chart) {{
-                    timelineCtx.chart = new Chart(timelineCtx, {{
+                if (timelineCtx && !timelineChartInstance) {{
+                    timelineChartInstance = new Chart(timelineCtx, {{
                         type: 'bar',
                         data: {{
                             labels: {chart_labels},
@@ -933,11 +1253,97 @@ table.dataTable tbody tr:hover {
                         options: {{
                             responsive: true,
                             maintainAspectRatio: false,
-                            plugins: {{ title: {{ display: true, text: 'Resources by End-of-Support Month' }}, legend: {{ position: 'top' }} }},
+                            onClick: function(event, elements) {{
+                                if (elements.length > 0) {{
+                                    var index = elements[0].index;
+                                    var month = timelineChartInstance.data.labels[index];
+                                    showMonthResources(month);
+                                }}
+                            }},
+                            plugins: {{ 
+                                title: {{ display: true, text: 'Resources by End-of-Support Month (Click to view details)' }}, 
+                                legend: {{ position: 'top' }},
+                                tooltip: {{
+                                    callbacks: {{
+                                        afterBody: function(context) {{
+                                            var month = context[0].label;
+                                            var services = timelineServiceSummary[month] || {{}};
+                                            var lines = ['', 'By Service:'];
+                                            var sortedServices = Object.keys(services).sort(function(a, b) {{
+                                                return services[b] - services[a];
+                                            }});
+                                            for (var i = 0; i < sortedServices.length && i < 5; i++) {{
+                                                var svc = sortedServices[i];
+                                                lines.push('  ' + svc + ': ' + services[svc]);
+                                            }}
+                                            if (sortedServices.length > 5) {{
+                                                lines.push('  ... and ' + (sortedServices.length - 5) + ' more');
+                                            }}
+                                            lines.push('', 'Click to view all resources');
+                                            return lines;
+                                        }}
+                                    }}
+                                }}
+                            }},
                             scales: {{ x: {{ stacked: true, title: {{ display: true, text: 'End-of-Support Month' }} }}, y: {{ stacked: true, beginAtZero: true, title: {{ display: true, text: 'Number of Resources' }} }} }}
                         }}
                     }});
+                    timelineCtx.chart = timelineChartInstance;
+                    // Apply default date filter on load
+                    applyTimelineDateFilter();
                 }}
+            }}
+            
+            function applyTimelineDateFilter() {{
+                var startDate = document.getElementById('timelineStartDate').value;
+                var endDate = document.getElementById('timelineEndDate').value;
+                
+                if (!startDate || !endDate) {{
+                    alert('Please select both start and end dates');
+                    return;
+                }}
+                
+                var filteredIndices = [];
+                for (var i = 0; i < allTimelineMonths.length; i++) {{
+                    var month = allTimelineMonths[i];
+                    if (month >= startDate && month <= endDate) {{
+                        filteredIndices.push(i);
+                    }}
+                }}
+                
+                var filteredMonths = filteredIndices.map(function(i) {{ return allTimelineMonths[i]; }});
+                var filteredOutOfSupport = filteredIndices.map(function(i) {{ return allTimelineData.out_of_support[i]; }});
+                var filteredExtended = filteredIndices.map(function(i) {{ return allTimelineData.extended[i]; }});
+                var filteredApproaching = filteredIndices.map(function(i) {{ return allTimelineData.approaching[i]; }});
+                var filteredSupported = filteredIndices.map(function(i) {{ return allTimelineData.supported[i]; }});
+                
+                timelineChartInstance.data.labels = filteredMonths;
+                timelineChartInstance.data.datasets[0].data = filteredOutOfSupport;
+                timelineChartInstance.data.datasets[1].data = filteredExtended;
+                timelineChartInstance.data.datasets[2].data = filteredApproaching;
+                timelineChartInstance.data.datasets[3].data = filteredSupported;
+                timelineChartInstance.update();
+            }}
+            
+            function resetTimelineDateFilter() {{
+                document.getElementById('timelineStartDate').value = allTimelineMonths[0] || '';
+                document.getElementById('timelineEndDate').value = allTimelineMonths[allTimelineMonths.length - 1] || '';
+                
+                timelineChartInstance.data.labels = allTimelineMonths;
+                timelineChartInstance.data.datasets[0].data = allTimelineData.out_of_support;
+                timelineChartInstance.data.datasets[1].data = allTimelineData.extended;
+                timelineChartInstance.data.datasets[2].data = allTimelineData.approaching;
+                timelineChartInstance.data.datasets[3].data = allTimelineData.supported;
+                timelineChartInstance.update();
+            }}
+            
+            function showMonthResources(month) {{
+                var resources = timelineResourcesData[month] || [];
+                if (resources.length === 0) {{
+                    alert('No resources found for ' + month);
+                    return;
+                }}
+                showChartResources('Resources with End-of-Support in ' + month, resources, {{}});
             }}
         </script>
         <h3 style="margin-top: 30px; color: #ff9900;">Upcoming End-of-Support Events</h3>
@@ -950,26 +1356,28 @@ table.dataTable tbody tr:hover {
 
     def _generate_by_service_section(self, report: Report) -> str:
         """Generate the by-service breakdown section with paginated DataTables."""
-        service_groups = []
-        service_table_ids = []
+        # First, aggregate all resources by service (across all accounts)
+        service_data = {}  # service_name -> {status_counts, resources_list}
         
         for account_name, account_group in report.accounts.items():
             for service_name, service_group in account_group.services.items():
-                # Count resources by status for this service
-                status_counts = {
-                    'supported': 0,
-                    'approaching': 0,
-                    'extended': 0,
-                    'out_of_support': 0
-                }
-                resources_list = []
+                if service_name not in service_data:
+                    service_data[service_name] = {
+                        'status_counts': {
+                            'supported': 0,
+                            'approaching': 0,
+                            'extended': 0,
+                            'out_of_support': 0
+                        },
+                        'resources_list': []
+                    }
                 
                 for engine_name, engine_group in service_group.engines.items():
                     for version_name, version_group in engine_group.versions.items():
                         for resource in version_group.resources:
                             status_key = self._status_to_key(resource.status)
-                            status_counts[status_key] += 1
-                            resources_list.append({
+                            service_data[service_name]['status_counts'][status_key] += 1
+                            service_data[service_name]['resources_list'].append({
                                 'account': account_name,
                                 'engine': engine_name or 'N/A',
                                 'version': version_name,
@@ -977,20 +1385,29 @@ table.dataTable tbody tr:hover {
                                 'eos': resource.end_of_support.strftime('%Y-%m-%d') if resource.end_of_support else 'N/A',
                                 'status': resource.status
                             })
-                
-                total = sum(status_counts.values())
-                # Create safe ID for service
-                safe_service_id = self._escape_html(service_name).replace(' ', '-').replace('.', '-').replace('/', '-').lower()
-                service_id = f"service-{safe_service_id}"
-                table_id = f"serviceTable-{safe_service_id}"
-                service_table_ids.append(table_id)
-                
-                # Build ALL resources rows for this service (DataTable will paginate)
-                resource_rows = []
-                for r in resources_list:
-                    status_class = self._get_status_class(r['status'])
-                    status_label = self.STATUS_LABELS.get(r['status'], 'Unknown')
-                    resource_rows.append(f"""<tr data-account="{self._escape_html(r['account'])}" data-status="{status_label}">
+        
+        # Now generate HTML for each service
+        service_groups = []
+        service_table_ids = []
+        
+        for service_name in sorted(service_data.keys()):
+            data = service_data[service_name]
+            status_counts = data['status_counts']
+            resources_list = data['resources_list']
+            
+            total = sum(status_counts.values())
+            # Create safe ID for service
+            safe_service_id = self._escape_html(service_name).replace(' ', '-').replace('.', '-').replace('/', '-').lower()
+            service_id = f"service-{safe_service_id}"
+            table_id = f"serviceTable-{safe_service_id}"
+            service_table_ids.append(table_id)
+            
+            # Build ALL resources rows for this service (DataTable will paginate)
+            resource_rows = []
+            for r in resources_list:
+                status_class = self._get_status_class(r['status'])
+                status_label = self.STATUS_LABELS.get(r['status'], 'Unknown')
+                resource_rows.append(f"""<tr data-account="{self._escape_html(r['account'])}" data-status="{status_label}">
                         <td>{self._escape_html(r['account'])}</td>
                         <td>{self._escape_html(r['engine'])}</td>
                         <td>{self._escape_html(r['version'])}</td>
@@ -998,10 +1415,10 @@ table.dataTable tbody tr:hover {
                         <td>{r['eos']}</td>
                         <td><span class="status-badge {status_class}">{status_label}</span></td>
                     </tr>""")
-                
-                resource_rows_html = '\n'.join(resource_rows)
-                
-                service_groups.append(f"""
+            
+            resource_rows_html = '\n'.join(resource_rows)
+            
+            service_groups.append(f"""
                 <div class="service-group" id="{service_id}" data-service="{self._escape_html(service_name)}">
                     <div class="service-group-header" onclick="toggleServiceGroup('{service_id}')">
                         <span>
@@ -1067,6 +1484,12 @@ table.dataTable tbody tr:hover {
             'out_of_support': 0
         }
         
+        # Also collect detailed resources for click-through
+        from collections import defaultdict
+        service_resources = defaultdict(list)
+        account_resources = defaultdict(list)
+        status_resources = defaultdict(list)
+        
         for account_name, account_group in report.accounts.items():
             if account_name not in account_data:
                 account_data[account_name] = {'supported': 0, 'approaching': 0, 'extended': 0, 'out_of_support': 0}
@@ -1080,6 +1503,20 @@ table.dataTable tbody tr:hover {
                             service_data[service_name][status_key] += 1
                             account_data[account_name][status_key] += 1
                             status_totals[status_key] += 1
+                            
+                            # Store detailed resource info
+                            resource_info = {
+                                'account': account_name,
+                                'service': service_name,
+                                'engine': engine_name or 'N/A',
+                                'version': version_name,
+                                'resource': resource.resource_name or resource.resource_arn or 'N/A',
+                                'eos_date': resource.end_of_support.strftime('%Y-%m-%d') if resource.end_of_support else 'N/A',
+                                'status': status_key
+                            }
+                            service_resources[service_name].append(resource_info)
+                            account_resources[account_name].append(resource_info)
+                            status_resources[status_key].append(resource_info)
         
         # Convert to JSON-safe format
         import json
@@ -1104,7 +1541,626 @@ table.dataTable tbody tr:hover {
         
         service_totals = json.dumps([sum(v.values()) for v in service_data.values()])
         
+        # JSON for click-through data
+        service_resources_json = json.dumps(dict(service_resources))
+        account_resources_json = json.dumps(dict(account_resources))
+        status_resources_json = json.dumps(dict(status_resources))
+        
+        # Build service summary per status for tooltips
+        status_service_summary = {
+            'total': {},
+            'supported': {},
+            'approaching': {},
+            'extended': {},
+            'out_of_support': {}
+        }
+        for svc_name, svc_counts in service_data.items():
+            total_for_service = sum(svc_counts.values())
+            if total_for_service > 0:
+                status_service_summary['total'][svc_name] = total_for_service
+            for status_key in ['supported', 'approaching', 'extended', 'out_of_support']:
+                if svc_counts[status_key] > 0:
+                    status_service_summary[status_key][svc_name] = svc_counts[status_key]
+        
+        status_service_summary_json = json.dumps(status_service_summary)
+        
         return f"""<script>
+// Chart click-through data
+var serviceResourcesData = {service_resources_json};
+var accountResourcesData = {account_resources_json};
+var statusResourcesData = {status_resources_json};
+var statusServiceSummary = {status_service_summary_json};
+var statusLabelsMap = ['supported', 'approaching', 'extended', 'out_of_support'];
+var statusDisplayNames = {{
+    'supported': 'Supported',
+    'approaching': 'Approaching EOS',
+    'extended': 'Extended Support',
+    'out_of_support': 'Out of Support'
+}};
+
+// Show resources for a specific status (from summary card click)
+function showStatusResources(statusKey) {{
+    var resources = statusResourcesData[statusKey] || [];
+    var title = statusDisplayNames[statusKey] + ' Resources';
+    showChartResources(title, resources, {{ statuses: [statusKey] }});
+}}
+
+// Show all resources (from Total card click)
+function showAllResources() {{
+    var allResources = [];
+    for (var status in statusResourcesData) {{
+        allResources = allResources.concat(statusResourcesData[status]);
+    }}
+    showChartResources('All Resources', allResources, {{}});
+}}
+
+// Summary card tooltip functions
+var summaryTooltip = null;
+
+function showSummaryTooltip(event, statusKey) {{
+    var services = statusServiceSummary[statusKey] || {{}};
+    var serviceList = Object.keys(services);
+    
+    if (serviceList.length === 0) return;
+    
+    // Sort by count descending
+    serviceList.sort(function(a, b) {{ return services[b] - services[a]; }});
+    
+    // Create tooltip element if not exists
+    if (!summaryTooltip) {{
+        summaryTooltip = document.createElement('div');
+        summaryTooltip.className = 'summary-card-tooltip';
+        document.body.appendChild(summaryTooltip);
+    }}
+    
+    // Build tooltip content
+    var title = statusKey === 'total' ? 'All Resources' : statusDisplayNames[statusKey];
+    var html = '<div class="tooltip-title">Resources by Service</div>';
+    
+    var maxShow = 5;
+    var shown = Math.min(serviceList.length, maxShow);
+    
+    for (var i = 0; i < shown; i++) {{
+        var svc = serviceList[i];
+        html += '<div class="tooltip-row">';
+        html += '<span class="tooltip-service">' + svc + '</span>';
+        html += '<span class="tooltip-count">' + services[svc] + '</span>';
+        html += '</div>';
+    }}
+    
+    if (serviceList.length > maxShow) {{
+        var remaining = serviceList.length - maxShow;
+        html += '<div class="tooltip-more">... and ' + remaining + ' more service' + (remaining > 1 ? 's' : '') + '</div>';
+    }}
+    
+    summaryTooltip.innerHTML = html;
+    summaryTooltip.style.display = 'block';
+    
+    // Position tooltip
+    positionSummaryTooltip(event);
+}}
+
+function positionSummaryTooltip(event) {{
+    if (!summaryTooltip) return;
+    
+    var x = event.pageX + 15;
+    var y = event.pageY + 15;
+    
+    // Adjust if tooltip goes off screen
+    var tooltipRect = summaryTooltip.getBoundingClientRect();
+    if (x + tooltipRect.width > window.innerWidth) {{
+        x = event.pageX - tooltipRect.width - 15;
+    }}
+    if (y + tooltipRect.height > window.innerHeight + window.scrollY) {{
+        y = event.pageY - tooltipRect.height - 15;
+    }}
+    
+    summaryTooltip.style.left = x + 'px';
+    summaryTooltip.style.top = y + 'px';
+}}
+
+function hideSummaryTooltip() {{
+    if (summaryTooltip) {{
+        summaryTooltip.style.display = 'none';
+    }}
+}}
+
+// Show Report Help Guide
+function showReportHelp(event) {{
+    event.preventDefault();
+    
+    var html = '<!DOCTYPE html><html><head>';
+    html += '<meta charset="UTF-8">';
+    html += '<title>AWS End-of-Support Report - User Guide</title>';
+    html += '<style>';
+    html += 'body {{ font-family: "Segoe UI", Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }}';
+    html += '.header {{ background: linear-gradient(135deg, #232f3e 0%, #37475a 100%); color: white; padding: 30px; text-align: center; }}';
+    html += '.header h1 {{ margin: 0; font-size: 28px; }}';
+    html += '.header p {{ margin: 10px 0 0 0; opacity: 0.9; }}';
+    html += '.container {{ max-width: 900px; margin: 0 auto; padding: 30px; }}';
+    html += '.toc {{ background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 30px; }}';
+    html += '.toc h2 {{ color: #232f3e; margin-top: 0; border-bottom: 2px solid #ff9900; padding-bottom: 10px; }}';
+    html += '.toc ul {{ list-style: none; padding: 0; margin: 0; }}';
+    html += '.toc li {{ padding: 8px 0; }}';
+    html += '.toc a {{ color: #2074d5; text-decoration: none; }}';
+    html += '.toc a:hover {{ text-decoration: underline; }}';
+    html += '.section {{ background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }}';
+    html += '.section h2 {{ color: #232f3e; margin-top: 0; border-bottom: 2px solid #ff9900; padding-bottom: 10px; }}';
+    html += '.section h3 {{ color: #37475a; margin-top: 20px; }}';
+    html += '.feature {{ background: #f9f9f9; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #ff9900; }}';
+    html += '.feature h4 {{ margin: 0 0 10px 0; color: #232f3e; }}';
+    html += '.tip {{ background: #e8f4fd; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #2074d5; }}';
+    html += '.tip strong {{ color: #0d47a1; }}';
+    html += '.status-example {{ display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; margin: 2px; }}';
+    html += '.status-supported {{ background: #c8e6c9; color: #1b5e20; }}';
+    html += '.status-approaching {{ background: #fff9c4; color: #f57f17; }}';
+    html += '.status-extended {{ background: #bbdefb; color: #0d47a1; }}';
+    html += '.status-out {{ background: #ffcdd2; color: #b71c1c; }}';
+    html += 'code {{ background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-family: monospace; }}';
+    html += 'ul {{ padding-left: 20px; }}';
+    html += 'li {{ margin: 8px 0; }}';
+    html += '</style>';
+    html += '</head><body>';
+    
+    // Header
+    html += '<div class="header">';
+    html += '<h1>AWS End-of-Support Report</h1>';
+    html += '<p>User Guide - How to Use This Report</p>';
+    html += '</div>';
+    
+    html += '<div class="container">';
+    
+    // Table of Contents
+    html += '<div class="toc">';
+    html += '<h2>Table of Contents</h2>';
+    html += '<ul>';
+    html += '<li><a href="#overview">1. Report Overview</a></li>';
+    html += '<li><a href="#status-types">2. Understanding Status Types</a></li>';
+    html += '<li><a href="#navigation">3. Navigation Menu</a></li>';
+    html += '<li><a href="#filters">4. Using Filters</a></li>';
+    html += '<li><a href="#summary">5. Summary Section</a></li>';
+    html += '<li><a href="#charts">6. Status Breakdown Charts</a></li>';
+    html += '<li><a href="#resources-table">7. All Resources Table</a></li>';
+    html += '<li><a href="#timeline">8. Support Timeline</a></li>';
+    html += '<li><a href="#by-service">9. By Service Section</a></li>';
+    html += '<li><a href="#export">10. Exporting Data</a></li>';
+    html += '</ul>';
+    html += '</div>';
+    
+    // Section 1: Overview
+    html += '<div class="section" id="overview">';
+    html += '<h2>1. Report Overview</h2>';
+    html += '<p>This report provides a comprehensive view of your AWS resources and their End-of-Support (EOS) status. It helps you identify resources that need attention before they reach their end-of-support dates.</p>';
+    html += '<div class="feature"><h4>Key Features</h4>';
+    html += '<ul>';
+    html += '<li>Visual status breakdown by service, account, and overall distribution</li>';
+    html += '<li>Interactive timeline showing upcoming EOS events</li>';
+    html += '<li>Detailed resource tables with search and export capabilities</li>';
+    html += '<li>Click-through functionality on all charts to view affected resources</li>';
+    html += '</ul></div>';
+    html += '</div>';
+    
+    // Section 2: Status Types
+    html += '<div class="section" id="status-types">';
+    html += '<h2>2. Understanding Status Types</h2>';
+    html += '<p>Resources are classified into four status categories:</p>';
+    html += '<div class="feature">';
+    html += '<p><span class="status-example status-supported">Supported</span> - Resource version is fully supported with no immediate action required.</p>';
+    html += '<p><span class="status-example status-approaching">Approaching EOS</span> - End-of-support date is within the configured threshold (default: 90 days). Plan your upgrade soon.</p>';
+    html += '<p><span class="status-example status-extended">Extended Support</span> - Resource is in extended support period. May incur additional costs.</p>';
+    html += '<p><span class="status-example status-out">Out of Support</span> - Resource has passed its end-of-support date. Immediate action recommended.</p>';
+    html += '</div>';
+    html += '</div>';
+    
+    // Section 3: Navigation
+    html += '<div class="section" id="navigation">';
+    html += '<h2>3. Navigation Menu</h2>';
+    html += '<p>The top navigation bar provides quick access to all report sections:</p>';
+    html += '<ul>';
+    html += '<li><strong>Summary</strong> - Jump to the executive summary with key metrics</li>';
+    html += '<li><strong>Status Breakdown</strong> - View charts showing resource distribution</li>';
+    html += '<li><strong>All Resources</strong> - Access the complete resource table</li>';
+    html += '<li><strong>Timeline</strong> - See upcoming EOS events on a timeline</li>';
+    html += '<li><strong>By Service</strong> - View resources grouped by AWS service</li>';
+    html += '<li><strong>Help</strong> - Open this user guide</li>';
+    html += '</ul>';
+    html += '<div class="tip"><strong>Tip:</strong> Use the arrow button (↑) in the bottom-right corner to quickly return to the top of the report.</div>';
+    html += '</div>';
+    
+    // Section 4: Filters
+    html += '<div class="section" id="filters">';
+    html += '<h2>4. Using Filters</h2>';
+    html += '<p>The filter bar below the navigation allows you to focus on specific subsets of your resources:</p>';
+    html += '<h3>Service Filter</h3>';
+    html += '<p>Click on service badges to toggle them on/off. Selected services appear highlighted. Only resources from selected services will be shown in the tables.</p>';
+    html += '<h3>Account Filter</h3>';
+    html += '<p>Click the account dropdown to select/deselect specific AWS accounts:</p>';
+    html += '<ul>';
+    html += '<li>Use the search box to find specific accounts</li>';
+    html += '<li>Click "Select All" or "Deselect All" for bulk selection</li>';
+    html += '<li>Click individual accounts to toggle them</li>';
+    html += '</ul>';
+    html += '<h3>Status Filter</h3>';
+    html += '<p>Click on status badges to show/hide resources with specific statuses. This helps you focus on resources that need immediate attention.</p>';
+    html += '<div class="tip"><strong>Tip:</strong> Click "Apply Filters" after making your selections to update the view.</div>';
+    html += '</div>';
+    
+    // Section 5: Summary
+    html += '<div class="section" id="summary">';
+    html += '<h2>5. Summary Section</h2>';
+    html += '<p>The summary section provides an at-a-glance view of your resource status:</p>';
+    html += '<ul>';
+    html += '<li><strong>Total Resources</strong> - The total number of resources analyzed</li>';
+    html += '<li><strong>Status Cards</strong> - Color-coded cards showing counts for each status type</li>';
+    html += '</ul>';
+    html += '<p>Use this section to quickly assess the overall health of your AWS resources.</p>';
+    html += '</div>';
+    
+    // Section 6: Charts
+    html += '<div class="section" id="charts">';
+    html += '<h2>6. Status Breakdown Charts</h2>';
+    html += '<p>Four interactive charts provide visual insights into your resource distribution:</p>';
+    html += '<h3>By Service (Bar Chart)</h3>';
+    html += '<p>Shows resource counts per AWS service, stacked by status. Click on any bar to view all resources for that service in a new tab.</p>';
+    html += '<h3>By Account (Bar Chart)</h3>';
+    html += '<p>Shows resource counts per AWS account, stacked by status. Click on any bar to view all resources for that account in a new tab.</p>';
+    html += '<h3>Overall Status Distribution (Doughnut Chart)</h3>';
+    html += '<p>Shows the proportion of resources in each status category. Click on any segment to view all resources with that status in a new tab.</p>';
+    html += '<h3>Resources by Service (Pie Chart)</h3>';
+    html += '<p>Shows the total resource count per service regardless of status. Click on any slice to view all resources for that service in a new tab.</p>';
+    html += '<div class="tip"><strong>Tip:</strong> Hover over chart elements to see detailed counts. All charts are clickable - click to open a detailed view in a new tab.</div>';
+    html += '</div>';
+    
+    // Section 7: Resources Table
+    html += '<div class="section" id="resources-table">';
+    html += '<h2>7. All Resources Table</h2>';
+    html += '<p>The main resources table shows all analyzed resources with the following columns:</p>';
+    html += '<ul>';
+    html += '<li><strong>Account</strong> - AWS account name or ID</li>';
+    html += '<li><strong>Service</strong> - AWS service (RDS, ElastiCache, etc.)</li>';
+    html += '<li><strong>Engine</strong> - Database or service engine type</li>';
+    html += '<li><strong>Version</strong> - Current version of the resource</li>';
+    html += '<li><strong>Resource</strong> - Resource name or ARN</li>';
+    html += '<li><strong>EOS Date</strong> - End-of-support date</li>';
+    html += '<li><strong>Days to EOS</strong> - Number of days until end-of-support</li>';
+    html += '<li><strong>Status</strong> - Current support status</li>';
+    html += '</ul>';
+    html += '<h3>Table Features</h3>';
+    html += '<ul>';
+    html += '<li><strong>Search</strong> - Use the search box to filter by any column</li>';
+    html += '<li><strong>Sort</strong> - Click column headers to sort ascending/descending</li>';
+    html += '<li><strong>Pagination</strong> - Navigate through pages using the controls at the bottom</li>';
+    html += '<li><strong>Copy</strong> - Copy table data to clipboard</li>';
+    html += '<li><strong>CSV</strong> - Export visible data to CSV file</li>';
+    html += '</ul>';
+    html += '</div>';
+    
+    // Section 8: Timeline
+    html += '<div class="section" id="timeline">';
+    html += '<h2>8. Support Timeline</h2>';
+    html += '<p>The timeline section visualizes upcoming end-of-support events:</p>';
+    html += '<h3>Timeline Chart</h3>';
+    html += '<p>A stacked bar chart showing resource counts by month, colored by status. This helps you plan upgrades by seeing when resources will reach their EOS dates.</p>';
+    html += '<h3>Date Range Filter</h3>';
+    html += '<p>Use the date range inputs to focus on a specific time period:</p>';
+    html += '<ul>';
+    html += '<li>Select start and end months using the date pickers</li>';
+    html += '<li>Click "Apply" to filter the chart</li>';
+    html += '<li>Click "Reset" to show all available data</li>';
+    html += '</ul>';
+    html += '<h3>Click-Through Details</h3>';
+    html += '<p>Click on any bar in the timeline to open a new tab showing all resources with EOS dates in that month.</p>';
+    html += '<h3>Tooltip Information</h3>';
+    html += '<p>Hover over bars to see:</p>';
+    html += '<ul>';
+    html += '<li>Status breakdown for that month</li>';
+    html += '<li>Top 5 services with resource counts</li>';
+    html += '</ul>';
+    html += '<div class="tip"><strong>Tip:</strong> The timeline defaults to showing from the earliest EOS date to 6 months in the future.</div>';
+    html += '</div>';
+    
+    // Section 9: By Service
+    html += '<div class="section" id="by-service">';
+    html += '<h2>9. By Service Section</h2>';
+    html += '<p>This section groups resources by AWS service for detailed analysis:</p>';
+    html += '<ul>';
+    html += '<li>Each service has its own expandable panel</li>';
+    html += '<li>Click on a service header to expand/collapse its details</li>';
+    html += '<li>Each panel shows status counts and a detailed resource table</li>';
+    html += '<li>Tables support search, sort, and pagination</li>';
+    html += '</ul>';
+    html += '<p>Use this section when you need to focus on a specific AWS service.</p>';
+    html += '</div>';
+    
+    // Section 10: Export
+    html += '<div class="section" id="export">';
+    html += '<h2>10. Exporting Data</h2>';
+    html += '<p>Multiple export options are available throughout the report:</p>';
+    html += '<h3>Main Table Export</h3>';
+    html += '<p>The "All Resources" table provides three export buttons:</p>';
+    html += '<ul>';
+    html += '<li><strong>Copy</strong> - Copies visible data to clipboard (tab-separated)</li>';
+    html += '<li><strong>CSV</strong> - Downloads visible data as a CSV file</li>';
+    html += '</ul>';
+    html += '<h3>Chart Detail Export</h3>';
+    html += '<p>When you click on a chart element and open the detail view in a new tab, you can:</p>';
+    html += '<ul>';
+    html += '<li>Use the "Copy" button to copy data to clipboard</li>';
+    html += '<li>Use the "CSV" button to download as CSV</li>';
+    html += '<li>Use the search box to filter before exporting</li>';
+    html += '</ul>';
+    html += '<div class="tip"><strong>Tip:</strong> Filters applied to the main table affect what gets exported. Apply filters first, then export to get a focused dataset.</div>';
+    html += '</div>';
+    
+    html += '</div>'; // container
+    html += '</body></html>';
+    
+    var newTab = window.open('', '_blank');
+    newTab.document.write(html);
+    newTab.document.close();
+}}
+
+// Generic function to show resources in a new tab with filters
+function showChartResources(title, resources, filterContext) {{
+    if (!resources || resources.length === 0) {{
+        alert('No resources found');
+        return;
+    }}
+    
+    // Default filter context if not provided
+    filterContext = filterContext || {{}};
+    var selectedServices = filterContext.services || null;
+    var selectedAccounts = filterContext.accounts || null;
+    var selectedStatuses = filterContext.statuses || null;
+    
+    // Get unique values from resources for filter options
+    var allServices = [...new Set(resources.map(function(r) {{ return r.service; }}))].sort();
+    var allAccounts = [...new Set(resources.map(function(r) {{ return r.account; }}))].sort();
+    var allStatuses = ['supported', 'approaching', 'extended', 'out_of_support'];
+    
+    var statusColors = {{
+        'supported': {{ bg: '#c8e6c9', text: '#1b5e20' }},
+        'approaching': {{ bg: '#fff9c4', text: '#f57f17' }},
+        'extended': {{ bg: '#bbdefb', text: '#0d47a1' }},
+        'out_of_support': {{ bg: '#ffcdd2', text: '#b71c1c' }}
+    }};
+    
+    var statusLabels = {{
+        'supported': 'Supported',
+        'approaching': 'Approaching EOS',
+        'extended': 'Extended Support',
+        'out_of_support': 'Out of Support'
+    }};
+    
+    // Newline character for proper formatting
+    var nl = String.fromCharCode(10);
+    
+    var html = '<!DOCTYPE html><html><head>' + nl;
+    html += '<meta charset="UTF-8">' + nl;
+    html += '<title>' + title + '</title>' + nl;
+    html += '<style>' + nl;
+    html += 'body {{ font-family: "Segoe UI", Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}' + nl;
+    html += '.container {{ max-width: 1400px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}' + nl;
+    html += 'h1 {{ color: #232f3e; border-bottom: 3px solid #ff9900; padding-bottom: 10px; margin-bottom: 20px; }}' + nl;
+    html += '.summary {{ display: flex; gap: 15px; margin: 20px 0; flex-wrap: wrap; }}' + nl;
+    html += '.summary-item {{ padding: 10px 20px; border-radius: 6px; font-weight: 500; }}' + nl;
+    html += '.dt-buttons {{ margin-bottom: 10px; }}' + nl;
+    html += '.dt-button {{ background-color: #f5f5f5; border: 1px solid #ccc; border-radius: 4px; padding: 6px 12px; margin-right: 5px; cursor: pointer; font-size: 14px; }}' + nl;
+    html += '.dt-button:hover {{ background-color: #e0e0e0; }}' + nl;
+    html += '.copy-popup {{ position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #333; color: white; padding: 20px 40px; border-radius: 8px; font-size: 18px; z-index: 9999; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }}' + nl;
+    html += '.copy-popup h2 {{ margin: 0 0 10px 0; font-size: 20px; }}' + nl;
+    html += '.copy-popup p {{ margin: 0; font-size: 14px; opacity: 0.9; }}' + nl;
+    html += 'table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}' + nl;
+    html += 'th {{ background: #232f3e; color: white; padding: 12px; text-align: left; }}' + nl;
+    html += 'td {{ padding: 10px 12px; border-bottom: 1px solid #eee; }}' + nl;
+    html += 'tr:hover {{ background: #f9f9f9; }}' + nl;
+    html += 'tr.hidden {{ display: none; }}' + nl;
+    html += '.status-badge {{ padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }}' + nl;
+    html += '.toolbar {{ margin: 20px 0; padding: 15px; background: #f9f9f9; border-radius: 6px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }}' + nl;
+    html += '.toolbar input {{ padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 300px; }}' + nl;
+    html += '.filter-bar {{ background: #fff; padding: 15px; border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 20px; }}' + nl;
+    html += '.filter-row {{ display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }}' + nl;
+    html += '.filter-group {{ flex: 1; min-width: 200px; }}' + nl;
+    html += '.filter-group label {{ display: block; font-weight: 600; margin-bottom: 8px; color: #16191f; }}' + nl;
+    html += '.filter-options {{ display: flex; flex-wrap: wrap; gap: 6px; }}' + nl;
+    html += '.filter-chip {{ display: inline-flex; align-items: center; padding: 5px 10px; background: #e8f4fd; border: 2px solid #2074d5; border-radius: 16px; cursor: pointer; font-size: 12px; transition: all 0.2s; user-select: none; }}' + nl;
+    html += '.filter-chip:hover {{ background: #d0e8fc; }}' + nl;
+    html += '.filter-chip.selected {{ background: #2074d5; color: white; }}' + nl;
+    html += '.filter-chip.status-supported.selected {{ background: #43a047; border-color: #43a047; }}' + nl;
+    html += '.filter-chip.status-approaching.selected {{ background: #fb8c00; border-color: #fb8c00; }}' + nl;
+    html += '.filter-chip.status-extended.selected {{ background: #1976d2; border-color: #1976d2; }}' + nl;
+    html += '.filter-chip.status-out_of_support.selected {{ background: #e53935; border-color: #e53935; }}' + nl;
+    html += '.filter-actions {{ display: flex; gap: 10px; align-items: flex-end; padding-top: 24px; }}' + nl;
+    html += '.filter-btn {{ padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; }}' + nl;
+    html += '.apply-btn {{ background: #ff9900; color: white; }}' + nl;
+    html += '.apply-btn:hover {{ background: #ec7211; }}' + nl;
+    html += '.reset-btn {{ background: #f5f5f5; color: #545b64; border: 1px solid #ccc; }}' + nl;
+    html += '.reset-btn:hover {{ background: #e0e0e0; }}' + nl;
+    html += '</style>' + nl;
+    html += '</head><body>' + nl;
+    html += '<div class="container">' + nl;
+    html += '<h1>' + title + '</h1>' + nl;
+    
+    // Helper variable for single quotes in HTML attributes
+    var q = String.fromCharCode(39);
+    
+    // Build filter bar
+    html += '<div class="filter-bar">' + nl;
+    html += '<div class="filter-row">' + nl;
+    
+    // Service filter
+    html += '<div class="filter-group">';
+    html += '<label>Service</label>';
+    html += '<div class="filter-options" id="serviceFilters">';
+    allServices.forEach(function(svc) {{
+        var isSelected = selectedServices === null || selectedServices.indexOf(svc) > -1;
+        html += "<span class=" + q + "filter-chip" + (isSelected ? " selected" : "") + q + " data-filter=" + q + "service" + q + " data-value=" + q + svc + q + " onclick=" + q + "toggleFilterChip(this)" + q + ">" + svc + "</span>";
+    }});
+    html += '</div></div>';
+    
+    // Account filter
+    html += '<div class="filter-group">';
+    html += '<label>Account</label>';
+    html += '<div class="filter-options" id="accountFilters">';
+    allAccounts.forEach(function(acc) {{
+        var isSelected = selectedAccounts === null || selectedAccounts.indexOf(acc) > -1;
+        html += "<span class=" + q + "filter-chip" + (isSelected ? " selected" : "") + q + " data-filter=" + q + "account" + q + " data-value=" + q + acc + q + " onclick=" + q + "toggleFilterChip(this)" + q + ">" + acc + "</span>";
+    }});
+    html += '</div></div>';
+    
+    // Status filter
+    html += '<div class="filter-group">';
+    html += '<label>Status</label>';
+    html += '<div class="filter-options" id="statusFilters">';
+    allStatuses.forEach(function(st) {{
+        var isSelected = selectedStatuses === null || selectedStatuses.indexOf(st) > -1;
+        html += "<span class=" + q + "filter-chip status-" + st + (isSelected ? " selected" : "") + q + " data-filter=" + q + "status" + q + " data-value=" + q + st + q + " onclick=" + q + "toggleFilterChip(this)" + q + ">" + statusLabels[st] + "</span>";
+    }});
+    html += '</div></div>';
+    
+    // Filter actions
+    html += '<div class="filter-actions">';
+    html += "<button class=" + q + "filter-btn apply-btn" + q + " onclick=" + q + "applyFilters()" + q + ">Apply</button>";
+    html += "<button class=" + q + "filter-btn reset-btn" + q + " onclick=" + q + "resetFilters()" + q + ">Reset</button>";
+    html += '</div></div></div>';
+    
+    // Summary counts
+    html += '<div class="summary" id="summaryBar"></div>';
+    
+    // Toolbar
+    html += '<div class="toolbar">';
+    html += '<div class="dt-buttons">';
+    html += "<button class=" + q + "dt-button" + q + " onclick=" + q + "copyToClipboard()" + q + ">Copy</button>";
+    html += "<button class=" + q + "dt-button" + q + " onclick=" + q + "exportToCSV()" + q + ">CSV</button>";
+    html += '</div>';
+    html += '<input type="text" id="searchInput" placeholder="Search resources..." onkeyup="applyFilters()">';
+    html += '</div>';
+    
+    // Table
+    html += '<table id="resourceTable">';
+    html += '<thead><tr><th>Account</th><th>Service</th><th>Engine</th><th>Version</th><th>Resource</th><th>EOS Date</th><th>Status</th></tr></thead>';
+    html += '<tbody>';
+    
+    resources.forEach(function(r) {{
+        var colors = statusColors[r.status];
+        html += '<tr data-account="' + r.account + '" data-service="' + r.service + '" data-status="' + r.status + '">';
+        html += '<td>' + r.account + '</td>';
+        html += '<td>' + r.service + '</td>';
+        html += '<td>' + r.engine + '</td>';
+        html += '<td>' + r.version + '</td>';
+        html += '<td>' + r.resource + '</td>';
+        html += '<td>' + r.eos_date + '</td>';
+        html += '<td><span class="status-badge" style="background: ' + colors.bg + '; color: ' + colors.text + ';">' + statusLabels[r.status] + '</span></td>';
+        html += '</tr>';
+    }});
+    
+    html += '</tbody></table></div>' + nl;
+    
+    // JavaScript
+    html += '<scr' + 'ipt>' + nl;
+    html += 'var statusColors = ' + JSON.stringify(statusColors) + ';' + nl;
+    html += 'var statusLabels = ' + JSON.stringify(statusLabels) + ';' + nl;
+    html += 'function chr(c) {{ return String.fromCharCode(c); }}' + nl;
+    html += 'function toggleFilterChip(el) {{ el.classList.toggle("selected"); }}' + nl;
+    html += 'function getSelectedFilters() {{' + nl;
+    html += '  var s = [], a = [], st = [];' + nl;
+    html += '  document.querySelectorAll("#serviceFilters .filter-chip.selected").forEach(function(c) {{ s.push(c.dataset.value); }});' + nl;
+    html += '  document.querySelectorAll("#accountFilters .filter-chip.selected").forEach(function(c) {{ a.push(c.dataset.value); }});' + nl;
+    html += '  document.querySelectorAll("#statusFilters .filter-chip.selected").forEach(function(c) {{ st.push(c.dataset.value); }});' + nl;
+    html += '  return {{ services: s, accounts: a, statuses: st }};' + nl;
+    html += '}}' + nl;
+    html += 'function applyFilters() {{' + nl;
+    html += '  var f = getSelectedFilters();' + nl;
+    html += '  var search = document.getElementById("searchInput").value.toLowerCase();' + nl;
+    html += '  var rows = document.querySelectorAll("#resourceTable tbody tr");' + nl;
+    html += '  var counts = {{ total: 0, supported: 0, approaching: 0, extended: 0, out_of_support: 0 }};' + nl;
+    html += '  rows.forEach(function(row) {{' + nl;
+    html += '    var svc = row.dataset.service, acc = row.dataset.account, st = row.dataset.status;' + nl;
+    html += '    var text = row.textContent.toLowerCase();' + nl;
+    html += '    var ok = (f.services.length === 0 || f.services.indexOf(svc) > -1) && (f.accounts.length === 0 || f.accounts.indexOf(acc) > -1) && (f.statuses.length === 0 || f.statuses.indexOf(st) > -1) && (search === "" || text.indexOf(search) > -1);' + nl;
+    html += '    if (ok) {{ row.classList.remove("hidden"); counts.total++; counts[st]++; }}' + nl;
+    html += '    else {{ row.classList.add("hidden"); }}' + nl;
+    html += '  }});' + nl;
+    html += '  updateSummary(counts);' + nl;
+    html += '}}' + nl;
+    html += 'function resetFilters() {{' + nl;
+    html += '  document.querySelectorAll(".filter-chip").forEach(function(c) {{ c.classList.add("selected"); }});' + nl;
+    html += '  document.getElementById("searchInput").value = "";' + nl;
+    html += '  applyFilters();' + nl;
+    html += '}}' + nl;
+    html += 'function updateSummary(counts) {{' + nl;
+    html += '  var dq = String.fromCharCode(34);' + nl;
+    html += '  var h = "<div class=" + dq + "summary-item" + dq + " style=" + dq + "background: #232f3e; color: white;" + dq + ">Showing: " + counts.total + "</div>";' + nl;
+    html += '  for (var st in statusLabels) {{' + nl;
+    html += '    if (counts[st] > 0) {{' + nl;
+    html += '      var c = statusColors[st];' + nl;
+    html += '      h += "<div class=" + dq + "summary-item" + dq + " style=" + dq + "background: " + c.bg + "; color: " + c.text + ";" + dq + ">" + statusLabels[st] + ": " + counts[st] + "</div>";' + nl;
+    html += '    }}' + nl;
+    html += '  }}' + nl;
+    html += '  document.getElementById("summaryBar").innerHTML = h;' + nl;
+    html += '}}' + nl;
+    html += 'function exportToCSV() {{' + nl;
+    html += '  var rows = document.querySelectorAll("#resourceTable tr");' + nl;
+    html += '  var csv = [];' + nl;
+    html += '  for (var i = 0; i < rows.length; i++) {{' + nl;
+    html += '    if (rows[i].classList.contains("hidden")) continue;' + nl;
+    html += '    var cols = rows[i].querySelectorAll("td, th");' + nl;
+    html += '    var rd = [];' + nl;
+    html += '    for (var j = 0; j < cols.length; j++) {{ rd.push(chr(34) + cols[j].textContent.replace(/"/g, chr(34)+chr(34)) + chr(34)); }}' + nl;
+    html += '    csv.push(rd.join(","));' + nl;
+    html += '  }}' + nl;
+    html += '  var blob = new Blob([csv.join(String.fromCharCode(10))], {{type: "text/csv;charset=utf-8;"}});' + nl;
+    html += '  var link = document.createElement("a");' + nl;
+    html += '  link.href = URL.createObjectURL(blob);' + nl;
+    html += '  link.download = "resources.csv";' + nl;
+    html += '  document.body.appendChild(link);' + nl;
+    html += '  link.click();' + nl;
+    html += '  document.body.removeChild(link);' + nl;
+    html += '}}' + nl;
+    html += 'function copyToClipboard() {{' + nl;
+    html += '  var rows = document.querySelectorAll("#resourceTable tr");' + nl;
+    html += '  var text = [], cnt = 0;' + nl;
+    html += '  for (var i = 0; i < rows.length; i++) {{' + nl;
+    html += '    if (rows[i].classList.contains("hidden")) continue;' + nl;
+    html += '    var cols = rows[i].querySelectorAll("td, th");' + nl;
+    html += '    var rd = [];' + nl;
+    html += '    for (var j = 0; j < cols.length; j++) {{ rd.push(cols[j].textContent); }}' + nl;
+    html += '    text.push(rd.join(String.fromCharCode(9)));' + nl;
+    html += '    cnt++;' + nl;
+    html += '  }}' + nl;
+    html += '  var tc = text.join(String.fromCharCode(10));' + nl;
+    html += '  if (navigator.clipboard && navigator.clipboard.writeText) {{' + nl;
+    html += '    navigator.clipboard.writeText(tc).then(function() {{ showCopyPopup(cnt - 1); }}).catch(function() {{ fallbackCopy(tc, cnt - 1); }});' + nl;
+    html += '  }} else {{ fallbackCopy(tc, cnt - 1); }}' + nl;
+    html += '}}' + nl;
+    html += 'function showCopyPopup(count) {{' + nl;
+    html += '  var popup = document.createElement("div");' + nl;
+    html += '  popup.className = "copy-popup";' + nl;
+    html += '  popup.innerHTML = "<h2>Copy to clipboard</h2><p>Copied " + count + " rows to clipboard</p>";' + nl;
+    html += '  document.body.appendChild(popup);' + nl;
+    html += '  setTimeout(function() {{ document.body.removeChild(popup); }}, 1500);' + nl;
+    html += '}}' + nl;
+    html += 'function fallbackCopy(text, count) {{' + nl;
+    html += '  var ta = document.createElement("textarea");' + nl;
+    html += '  ta.value = text;' + nl;
+    html += '  ta.style.position = "fixed";' + nl;
+    html += '  ta.style.left = "-9999px";' + nl;
+    html += '  document.body.appendChild(ta);' + nl;
+    html += '  ta.select();' + nl;
+    html += '  try {{ document.execCommand("copy"); showCopyPopup(count); }}' + nl;
+    html += '  catch(e) {{ alert("Copy failed"); }}' + nl;
+    html += '  document.body.removeChild(ta);' + nl;
+    html += '}}' + nl;
+    html += 'document.addEventListener("DOMContentLoaded", function() {{ applyFilters(); }});' + nl;
+    html += '</scr' + 'ipt>';
+    
+    html += '</body></html>';
+    
+    var newTab = window.open('', '_blank');
+    newTab.document.write(html);
+    newTab.document.close();
+}}
+
 // Scroll to section
 function scrollToSection(event) {{
     event.preventDefault();
@@ -1188,7 +2244,7 @@ function getSelectedFilters() {{
     document.querySelectorAll('#service-filters .filter-option.selected').forEach(function(el) {{
         services.push(el.dataset.value);
     }});
-    document.querySelectorAll('#account-filters .filter-option.selected').forEach(function(el) {{
+    document.querySelectorAll('#account-items .dropdown-item.selected').forEach(function(el) {{
         accounts.push(el.dataset.value);
     }});
     document.querySelectorAll('#status-filters .filter-option.selected').forEach(function(el) {{
@@ -1334,6 +2390,9 @@ function resetFilters() {{
         option.querySelector('.checkmark').textContent = '✓';
     }});
     
+    // Reset account dropdown
+    selectAllAccounts();
+    
     // Clear DataTable filter and redraw
     const table = $('#resourcesDataTable').DataTable();
     $.fn.dataTable.ext.search.pop();
@@ -1384,6 +2443,67 @@ function resetFilters() {{
     }}
 }}
 
+// Account dropdown functions
+function toggleAccountDropdown() {{
+    const dropdown = document.getElementById('account-dropdown');
+    dropdown.classList.toggle('open');
+}}
+
+function filterAccountOptions() {{
+    const searchText = document.getElementById('account-search').value.toLowerCase();
+    const items = document.querySelectorAll('#account-items .dropdown-item');
+    
+    items.forEach(function(item) {{
+        const text = item.querySelector('.item-text').textContent.toLowerCase();
+        if (text.includes(searchText)) {{
+            item.classList.remove('hidden');
+        }} else {{
+            item.classList.add('hidden');
+        }}
+    }});
+}}
+
+function selectAllAccounts() {{
+    const items = document.querySelectorAll('#account-items .dropdown-item');
+    items.forEach(function(item) {{
+        item.classList.add('selected');
+    }});
+    updateAccountCount();
+}}
+
+function deselectAllAccounts() {{
+    const items = document.querySelectorAll('#account-items .dropdown-item');
+    items.forEach(function(item) {{
+        item.classList.remove('selected');
+    }});
+    updateAccountCount();
+}}
+
+function updateAccountCount() {{
+    const total = document.querySelectorAll('#account-items .dropdown-item').length;
+    const selected = document.querySelectorAll('#account-items .dropdown-item.selected').length;
+    document.getElementById('account-count').textContent = selected;
+}}
+
+function initAccountDropdown() {{
+    // Toggle item selection on click
+    document.querySelectorAll('#account-items .dropdown-item').forEach(function(item) {{
+        item.addEventListener('click', function(e) {{
+            e.stopPropagation();
+            this.classList.toggle('selected');
+            updateAccountCount();
+        }});
+    }});
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {{
+        const dropdown = document.getElementById('account-dropdown');
+        if (dropdown && !dropdown.contains(e.target)) {{
+            dropdown.classList.remove('open');
+        }}
+    }});
+}}
+
 // Loading state management
 var loadingSteps = 0;
 var totalSteps = 3;
@@ -1409,6 +2529,9 @@ function stepComplete() {{
 
 // Lazy load charts
 var chartsInitialized = false;
+var serviceLabelsArray = {service_labels};
+var accountLabelsArray = {account_labels};
+
 function initChartsLazy() {{
     if (chartsInitialized) return;
     chartsInitialized = true;
@@ -1425,7 +2548,31 @@ function initChartsLazy() {{
                     {{ label: 'Out of Support', data: {service_out}, backgroundColor: '#ef5350' }}
                 ]
             }},
-            options: {{ responsive: true, maintainAspectRatio: false, scales: {{ x: {{ stacked: true }}, y: {{ stacked: true, beginAtZero: true }} }} }}
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {{ x: {{ stacked: true }}, y: {{ stacked: true, beginAtZero: true }} }},
+                onClick: function(event, elements) {{
+                    if (elements.length > 0) {{
+                        var index = elements[0].index;
+                        var datasetIndex = elements[0].datasetIndex;
+                        var service = serviceLabelsArray[index];
+                        var allResources = serviceResourcesData[service] || [];
+                        var statusKey = statusLabelsMap[datasetIndex];
+                        // Filter resources by the clicked status
+                        var resources = allResources.filter(function(r) {{ return r.status === statusKey; }});
+                        var statusName = statusDisplayNames[statusKey];
+                        showChartResources(statusName + ' Resources for ' + service, resources, {{ services: [service], statuses: [statusKey] }});
+                    }}
+                }},
+                plugins: {{
+                    tooltip: {{
+                        callbacks: {{
+                            afterBody: function() {{ return 'Click to view resources'; }}
+                        }}
+                    }}
+                }}
+            }}
         }});
         
         new Chart(document.getElementById('accountChart'), {{
@@ -1439,7 +2586,31 @@ function initChartsLazy() {{
                     {{ label: 'Out of Support', data: {account_out}, backgroundColor: '#ef5350' }}
                 ]
             }},
-            options: {{ responsive: true, maintainAspectRatio: false, scales: {{ x: {{ stacked: true }}, y: {{ stacked: true, beginAtZero: true }} }} }}
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {{ x: {{ stacked: true }}, y: {{ stacked: true, beginAtZero: true }} }},
+                onClick: function(event, elements) {{
+                    if (elements.length > 0) {{
+                        var index = elements[0].index;
+                        var datasetIndex = elements[0].datasetIndex;
+                        var account = accountLabelsArray[index];
+                        var allResources = accountResourcesData[account] || [];
+                        var statusKey = statusLabelsMap[datasetIndex];
+                        // Filter resources by the clicked status
+                        var resources = allResources.filter(function(r) {{ return r.status === statusKey; }});
+                        var statusName = statusDisplayNames[statusKey];
+                        showChartResources(statusName + ' Resources for Account ' + account, resources, {{ accounts: [account], statuses: [statusKey] }});
+                    }}
+                }},
+                plugins: {{
+                    tooltip: {{
+                        callbacks: {{
+                            afterBody: function() {{ return 'Click to view resources'; }}
+                        }}
+                    }}
+                }}
+            }}
         }});
         
         new Chart(document.getElementById('statusPieChart'), {{
@@ -1448,7 +2619,25 @@ function initChartsLazy() {{
                 labels: ['Supported', 'Approaching EOS', 'Extended Support', 'Out of Support'],
                 datasets: [{{ data: {status_values}, backgroundColor: ['#66bb6a', '#ffa726', '#42a5f5', '#ef5350'] }}]
             }},
-            options: {{ responsive: true, maintainAspectRatio: false }}
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                onClick: function(event, elements) {{
+                    if (elements.length > 0) {{
+                        var index = elements[0].index;
+                        var statusKey = statusLabelsMap[index];
+                        var resources = statusResourcesData[statusKey] || [];
+                        showChartResources(statusDisplayNames[statusKey] + ' Resources', resources, {{ statuses: [statusKey] }});
+                    }}
+                }},
+                plugins: {{
+                    tooltip: {{
+                        callbacks: {{
+                            afterBody: function() {{ return 'Click to view resources'; }}
+                        }}
+                    }}
+                }}
+            }}
         }});
         
         new Chart(document.getElementById('servicePieChart'), {{
@@ -1457,7 +2646,25 @@ function initChartsLazy() {{
                 labels: {service_labels},
                 datasets: [{{ data: {service_totals}, backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b', '#38f9d7', '#fa709a', '#fee140', '#30cfd0', '#330867', '#a8edea', '#fed6e3', '#5ee7df'] }}]
             }},
-            options: {{ responsive: true, maintainAspectRatio: false }}
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                onClick: function(event, elements) {{
+                    if (elements.length > 0) {{
+                        var index = elements[0].index;
+                        var service = serviceLabelsArray[index];
+                        var resources = serviceResourcesData[service] || [];
+                        showChartResources('Resources for ' + service, resources, {{ services: [service] }});
+                    }}
+                }},
+                plugins: {{
+                    tooltip: {{
+                        callbacks: {{
+                            afterBody: function() {{ return 'Click to view resources'; }}
+                        }}
+                    }}
+                }}
+            }}
         }});
         
         stepComplete();
@@ -1467,6 +2674,7 @@ function initChartsLazy() {{
 // Initialize with progressive loading
 $(document).ready(function() {{
     initFilters();
+    initAccountDropdown();
     updateLoadingStatus('Initializing table...');
     
     // Initialize DataTable with deferred rendering

@@ -1,0 +1,4 @@
+# file: C:\Users\savely\Documents\Projects\KiroIDE\projects\EndOfSupportTool\src\main.py
+# hypothesis_version: 6.151.4
+
+[130, ', ', '--account', '--days-threshold', '--include-timeline', '--no-timeline', '--output-file', '--output-format', '--pivot-per-account', '--service', '--status', '-o', '=', 'ACCOUNT', 'Active filters:', 'DAYS', 'Done!', 'REPORT SUMMARY', 'SERVICE', 'STATUS', '__main__', 'accounts', 'append', 'approaching', 'approaching-eos', 'csv', 'eos-tool', 'excel', 'extended', 'extended-support', 'html', 'include_timeline', 'input_file', 'json', 'oos', 'out-of-support', 'services', 'statuses', 'store_false', 'store_true', 'supported', 'text', 'utf-8', 'w']

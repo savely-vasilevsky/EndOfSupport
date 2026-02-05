@@ -12,7 +12,7 @@ from .classifier import ResourceClassifier
 from .formatters import TextFormatter, CSVFormatter, JSONFormatter, ExcelFormatter, EXCEL_AVAILABLE
 from .html_formatter import HTMLFormatter
 from .generator import ReportGenerator
-from .models import ReportFilters, SupportStatus
+from .models import ReportFilters, SupportStatus, GenerationParameters
 from .parser import CSVParser, CSVParseError
 
 
@@ -287,6 +287,18 @@ def main(args: Optional[List[str]] = None) -> int:
         
         print_status("Classifying resources and generating report...")
         report = generator.generate(filters=filters)
+        
+        # Set generation parameters on the report
+        report.generation_params = GenerationParameters(
+            input_file=parsed_args.input_file,
+            output_format=parsed_args.output_format,
+            days_threshold=parsed_args.days_threshold,
+            status_filters=[s.value for s in status_filters] if status_filters else None,
+            account_filters=parsed_args.accounts,
+            service_filters=parsed_args.services,
+            pivot_per_account=parsed_args.pivot_per_account,
+            include_timeline=parsed_args.include_timeline,
+        )
         
         # Print summary to stderr
         print_summary(report)

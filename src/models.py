@@ -79,9 +79,52 @@ class AccountGroup:
 
 
 @dataclass
+class GenerationParameters:
+    """Parameters used to generate the report."""
+    input_file: str = ""
+    output_format: str = ""
+    days_threshold: int = 90
+    status_filters: Optional[List[str]] = None
+    account_filters: Optional[List[str]] = None
+    service_filters: Optional[List[str]] = None
+    pivot_per_account: bool = False
+    include_timeline: bool = True
+    
+    def to_display_string(self) -> str:
+        """Generate a human-readable string of the parameters."""
+        parts = []
+        
+        if self.input_file:
+            parts.append(f"Input: {self.input_file}")
+        
+        if self.output_format:
+            parts.append(f"Format: {self.output_format}")
+        
+        parts.append(f"Days Threshold: {self.days_threshold}")
+        
+        if self.status_filters:
+            parts.append(f"Status Filter: {', '.join(self.status_filters)}")
+        
+        if self.account_filters:
+            parts.append(f"Account Filter: {', '.join(self.account_filters)}")
+        
+        if self.service_filters:
+            parts.append(f"Service Filter: {', '.join(self.service_filters)}")
+        
+        if self.output_format == "excel":
+            if self.pivot_per_account:
+                parts.append("Pivot: Per Account")
+            if not self.include_timeline:
+                parts.append("Timeline: Excluded")
+        
+        return " | ".join(parts)
+
+
+@dataclass
 class Report:
     """Complete report with hierarchical grouping and totals."""
     accounts: Dict[str, AccountGroup] = field(default_factory=dict)
     total_counts: Dict[SupportStatus, int] = field(default_factory=dict)
     total_resources: int = 0
     generated_at: datetime = field(default_factory=datetime.now)
+    generation_params: Optional[GenerationParameters] = None

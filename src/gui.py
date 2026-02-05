@@ -509,34 +509,71 @@ class EndOfSupportGUI:
         self.root.after(0, update)
     
     def _show_help(self):
-        """Open the user guide in the default application."""
-        # Determine the path to USERGUIDE.md
+        """Show quick help dialog with option to open detailed guide."""
+        self._show_quick_help()
+    
+    def _open_detailed_guide(self):
+        """Open the detailed visual user guide."""
+        # Determine the base path for bundled resources
         if getattr(sys, 'frozen', False):
-            # Running as frozen executable
-            base_path = os.path.dirname(sys.executable)
+            # Running as frozen executable - use _MEIPASS for bundled files
+            base_path = sys._MEIPASS
         else:
             # Running as script
             base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         
-        userguide_path = os.path.join(base_path, "USERGUIDE.md")
+        # Try HTML user guide first (preferred)
+        html_guide_path = os.path.join(base_path, "docs", "USERGUIDE.html")
         
-        # Check if file exists
+        # Check if HTML guide exists
+        if not os.path.exists(html_guide_path):
+            # Try alternate locations for HTML guide
+            alt_html_paths = [
+                os.path.join(os.path.dirname(sys.executable), "docs", "USERGUIDE.html") if getattr(sys, 'frozen', False) else None,
+                os.path.join(os.path.dirname(__file__), "..", "docs", "USERGUIDE.html"),
+                os.path.join(os.getcwd(), "docs", "USERGUIDE.html"),
+            ]
+            for alt_path in alt_html_paths:
+                if alt_path and os.path.exists(alt_path):
+                    html_guide_path = os.path.abspath(alt_path)
+                    break
+            else:
+                html_guide_path = None
+        
+        # If HTML guide exists, open it in browser
+        if html_guide_path and os.path.exists(html_guide_path):
+            try:
+                import webbrowser
+                webbrowser.open(f"file:///{html_guide_path}")
+                return
+            except Exception:
+                pass  # Fall through to markdown version
+        
+        # Fall back to markdown user guide
+        userguide_path = os.path.join(base_path, "USERGUIDE_VISUAL.md")
+        
+        # Check if markdown file exists
         if not os.path.exists(userguide_path):
             # Try alternate locations
             alt_paths = [
-                os.path.join(os.path.dirname(__file__), "..", "USERGUIDE.md"),
-                os.path.join(os.getcwd(), "USERGUIDE.md"),
+                os.path.join(base_path, "USERGUIDE.md"),
+                os.path.join(os.path.dirname(__file__), "..", "USERGUIDE_VISUAL.md"),
+                os.path.join(os.getcwd(), "USERGUIDE_VISUAL.md"),
             ]
             for alt_path in alt_paths:
                 if os.path.exists(alt_path):
                     userguide_path = os.path.abspath(alt_path)
                     break
             else:
-                # Show built-in quick help if file not found
-                self._show_quick_help()
+                # Show error message
+                messagebox.showwarning(
+                    "User Guide Not Found",
+                    "The detailed user guide could not be found.\n\n"
+                    f"Searched in: {base_path}"
+                )
                 return
         
-        # Open the file with the default application
+        # Open the markdown file with the default application
         try:
             if sys.platform == "win32":
                 os.startfile(userguide_path)
@@ -545,11 +582,13 @@ class EndOfSupportGUI:
             else:
                 subprocess.run(["xdg-open", userguide_path], check=True)
         except Exception as e:
-            # Fall back to showing quick help
-            self._show_quick_help()
+            messagebox.showerror(
+                "Error Opening Guide",
+                f"Could not open user guide:\n{str(e)}"
+            )
     
     def _show_quick_help(self):
-        """Show a quick help dialog when user guide file is not available."""
+        """Show a quick help dialog with link to detailed guide."""
         help_text = """AWS End-of-Support Tool - Quick Help
 
 GETTING STARTED:
@@ -564,16 +603,6 @@ OUTPUT FORMATS:
 • Text: Human-readable console output
 • CSV: Flat table for spreadsheets
 • JSON: Structured data format
-
-HTML REPORT FEATURES:
-• Filter Bar: Multi-select filters for Service, Account, Status
-• Summary Dashboard: Visual cards with status counts
-• Charts: Stacked bar charts by Service/Account, doughnut/pie charts
-• Timeline View: Resources by End-of-Support month
-• DataTables: Searchable, sortable, exportable tables
-• Service Groups: Paginated tables per service with expand/collapse
-• Navigation: Sticky menu, smooth scroll, go-to-top button
-• Loading Indicator: Shows while data loads
 
 EXCEL OPTIONS:
 • Include Pivot Table: Creates interactive pivot
@@ -591,12 +620,13 @@ SUPPORT STATUS:
 🔵 Extended Support - May incur costs
 🔴 Out of Support - Immediate action needed
 
-For full documentation, see USERGUIDE.md in the project folder.
+📖 For detailed documentation with screenshots and step-by-step
+   instructions, click the button below.
 """
         # Create a help dialog
         help_window = tk.Toplevel(self.root)
         help_window.title("Help - AWS End-of-Support Tool")
-        help_window.geometry("500x450")
+        help_window.geometry("550x500")
         help_window.resizable(True, True)
         
         # Make it modal
@@ -617,9 +647,21 @@ For full documentation, see USERGUIDE.md in the project folder.
         text_widget.insert("1.0", help_text)
         text_widget.configure(state="disabled")
         
+        # Button frame
+        button_frame = ttk.Frame(help_window)
+        button_frame.pack(pady=10, fill=tk.X, padx=10)
+        
+        # Open detailed guide button
+        detailed_btn = ttk.Button(
+            button_frame, 
+            text="📖 Open Detailed Visual Guide",
+            command=lambda: [help_window.destroy(), self._open_detailed_guide()]
+        )
+        detailed_btn.pack(side=tk.LEFT, padx=5)
+        
         # Close button
-        close_btn = ttk.Button(help_window, text="Close", command=help_window.destroy)
-        close_btn.pack(pady=10)
+        close_btn = ttk.Button(button_frame, text="Close", command=help_window.destroy)
+        close_btn.pack(side=tk.RIGHT, padx=5)
         
         # Center the window
         help_window.update_idletasks()

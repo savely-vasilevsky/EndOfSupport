@@ -16,8 +16,10 @@ a = Analysis(
     datas=[
         # Include the pivot template
         (os.path.join(templates_path, 'pivot_template.xlsx'), 'src/templates'),
-        # Include user guide
-        ('USERGUIDE.md', '.'),
+        # Include HTML user guide
+        ('docs/USERGUIDE.html', 'docs'),
+        # Include markdown user guide as fallback
+        ('USERGUIDE_VISUAL.md', '.'),
         # Include all source files
         ('src/models.py', '.'),
         ('src/parser.py', '.'),

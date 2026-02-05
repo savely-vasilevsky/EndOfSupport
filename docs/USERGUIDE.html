@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS End-of-Support Tool - User Guide</title>
+    <style>
+        :root {
+            --aws-orange: #ff9900;
+            --aws-dark: #232f3e;
+            --aws-light: #f5f5f5;
+            --success-green: #2e7d32;
+            --warning-yellow: #f9a825;
+            --info-blue: #1565c0;
+            --danger-red: #c62828;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+            line-height: 1.7;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: var(--aws-dark);
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--aws-orange), #ffcc00, var(--aws-orange));
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+        
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .toc-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 30px 40px;
+            border-bottom: 3px solid var(--aws-orange);
+        }
+        
+        .toc-title {
+            font-size: 1.4em;
+            color: var(--aws-dark);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .toc-title::before {
+            content: '📑';
+            font-size: 1.2em;
+        }
+        
+        .toc-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+        }
+        
+        .toc-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: white;
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--aws-dark);
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .toc-item:hover {
+            background: var(--aws-dark);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .toc-icon {
+            font-size: 1.3em;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        h1 { display: none; }
+        
+        h2 {
+            color: var(--aws-dark);
+            font-size: 1.8em;
+            margin: 50px 0 25px 0;
+            padding: 15px 20px;
+            background: linear-gradient(90deg, var(--aws-dark) 0%, #37475a 100%);
+            color: white;
+            border-radius: 8px;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 20px;
+            width: 60px;
+            height: 4px;
+            background: var(--aws-orange);
+            border-radius: 2px;
+        }
+        
+        h2:first-of-type {
+            margin-top: 0;
+        }
+        
+        h3 {
+            color: var(--aws-dark);
+            font-size: 1.4em;
+            margin: 35px 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        h3::before {
+            content: '▸';
+            color: var(--aws-orange);
+            font-weight: bold;
+        }
+        
+        h4 {
+            color: #495057;
+            font-size: 1.15em;
+            margin: 25px 0 12px 0;
+            padding-left: 15px;
+            border-left: 4px solid var(--aws-orange);
+        }
+        
+        p {
+            margin-bottom: 16px;
+            line-height: 1.8;
+            color: #444;
+        }
+        
+        ul {
+            margin: 15px 0 20px 0;
+            padding-left: 0;
+            list-style: none;
+        }
+        
+        li {
+            margin-bottom: 10px;
+            padding: 8px 12px 8px 35px;
+            position: relative;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 3px solid var(--aws-orange);
+        }
+        
+        li::before {
+            content: '✓';
+            position: absolute;
+            left: 12px;
+            color: var(--success-green);
+            font-weight: bold;
+        }
+        
+        code {
+            background: #fff3e0;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            color: #e65100;
+            border: 1px solid #ffe0b2;
+        }
+        
+        pre {
+            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+            color: #d4d4d4;
+            padding: 25px;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin: 20px 0;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.3), 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid #444;
+        }
+        
+        pre.shell-block {
+            background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+            border: 1px solid #30363d;
+            position: relative;
+        }
+        
+        pre.shell-block::before {
+            content: 'Terminal';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(90deg, #238636, #2ea043);
+            color: white;
+            padding: 6px 15px;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-radius: 9px 9px 0 0;
+        }
+        
+        pre.shell-block code {
+            display: block;
+            margin-top: 25px;
+        }
+        
+        .shell-prompt {
+            color: #58a6ff;
+            font-weight: bold;
+            user-select: none;
+        }
+        
+        pre code {
+            background: none;
+            color: #9cdcfe;
+            padding: 0;
+            border: none;
+            font-size: 0.95em;
+        }
+        
+        pre.shell-block code {
+            color: #c9d1d9;
+        }
+        
+        a {
+            color: var(--info-blue);
+            text-decoration: none;
+            border-bottom: 1px dotted var(--info-blue);
+            transition: all 0.2s;
+        }
+        
+        a:hover {
+            color: var(--aws-orange);
+            border-bottom-color: var(--aws-orange);
+        }
+        
+        hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #dee2e6, transparent);
+            margin: 40px 0;
+        }
+        
+        .doc-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .doc-table th {
+            background: linear-gradient(135deg, var(--aws-dark) 0%, #37475a 100%);
+            color: white;
+            padding: 15px 20px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+        }
+        
+        .doc-table td {
+            padding: 14px 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .doc-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .doc-table tr:hover {
+            background: #fff3e0;
+        }
+        
+        /* Status badges */
+        .status-supported { color: var(--success-green); }
+        .status-approaching { color: var(--warning-yellow); }
+        .status-extended { color: var(--info-blue); }
+        .status-out { color: var(--danger-red); }
+        
+        /* Info boxes */
+        .info-box {
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 5px solid;
+        }
+        
+        .info-box.tip {
+            background: #e8f5e9;
+            border-color: var(--success-green);
+        }
+        
+        .info-box.warning {
+            background: #fff8e1;
+            border-color: var(--warning-yellow);
+        }
+        
+        .info-box.info {
+            background: #e3f2fd;
+            border-color: var(--info-blue);
+        }
+        
+        /* Footer */
+        .footer {
+            background: var(--aws-dark);
+            color: #adb5bd;
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9em;
+        }
+        
+        /* Back to top button */
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--aws-orange);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            font-size: 1.5em;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+            border: none;
+        }
+        
+        .back-to-top:hover {
+            background: var(--aws-dark);
+            transform: translateY(-3px);
+        }
+        
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Print styles */
+        @media print {
+            body { background: white; }
+            .container { box-shadow: none; }
+            .back-to-top { display: none; }
+            .header { background: white; color: black; }
+            h2 { background: none; color: black; border: 2px solid #333; }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header { padding: 20px; }
+            .header h1 { font-size: 1.8em; }
+            .content { padding: 20px; }
+            .toc-grid { grid-template-columns: 1fr; }
+            h2 { font-size: 1.4em; }
+        }
+        </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>AWS End-of-Support Tool</h1>
+            <div class="subtitle">📖 User Guide &amp; Documentation</div>
+        </div>
+        
+        <div class="toc-section">
+            <div class="toc-title">Quick Navigation</div>
+            <div class="toc-grid">
+                <a href="#table-of-contents" class="toc-item"><span class="toc-icon">📌</span>Table of Contents</a>
+<a href="#introduction" class="toc-item"><span class="toc-icon">📋</span>Introduction</a>
+<a href="#getting-started" class="toc-item"><span class="toc-icon">🚀</span>Getting Started</a>
+<a href="#using-the-gui" class="toc-item"><span class="toc-icon">🖥️</span>Using the GUI</a>
+<a href="#using-the-cli" class="toc-item"><span class="toc-icon">⌨️</span>Using the CLI</a>
+<a href="#understanding-support-status" class="toc-item"><span class="toc-icon">📊</span>Understanding Support Status</a>
+<a href="#output-formats" class="toc-item"><span class="toc-icon">📄</span>Output Formats</a>
+<a href="#excel-reports-and-pivot-tables" class="toc-item"><span class="toc-icon">📗</span>Excel Reports and Pivot Tables</a>
+<a href="#html-interactive-reports" class="toc-item"><span class="toc-icon">🌐</span>HTML Interactive Reports</a>
+<a href="#filtering-options" class="toc-item"><span class="toc-icon">🔍</span>Filtering Options</a>
+<a href="#troubleshooting" class="toc-item"><span class="toc-icon">🔧</span>Troubleshooting</a>
+<a href="#faq" class="toc-item"><span class="toc-icon">❓</span>FAQ</a>
+<a href="#keyboard-shortcuts" class="toc-item"><span class="toc-icon">⌨️</span>Keyboard Shortcuts</a>
+            </div>
+        </div>
+        
+        <div class="content">
+            <p>﻿# AWS End-of-Support Tool - User Guide</p>
+
+<p>Press F1 or click the Help button in the application to view this guide.</p>
+
+<h2 id="table-of-contents">Table of Contents</h2>
+
+<ul>
+<li>Introduction</li>
+<li>Getting Started</li>
+<li>Using the GUI</li>
+<li>Using the CLI</li>
+<li>Understanding Support Status</li>
+<li>Output Formats</li>
+<li>Excel Reports and Pivot Tables</li>
+<li>HTML Interactive Reports</li>
+<li>Filtering Options</li>
+<li>Troubleshooting</li>
+<li>FAQ</li>
+</ul>
+
+<hr>
+
+<h2 id="introduction">Introduction</h2>
+
+<p>The AWS End-of-Support Tool helps you analyze your AWS resource inventory and identify resources that are approaching or have reached their end-of-support dates.</p>
+
+<h3 id="key-benefits">Key Benefits</h3>
+
+<ul>
+<li>Proactive Planning: Identify resources needing upgrades before they lose support</li>
+<li>Risk Assessment: See at a glance which resources are out of support</li>
+<li>Executive Reporting: Generate professional Excel reports with pivot tables</li>
+<li>Multi-Account Support: Analyze resources across multiple AWS accounts</li>
+</ul>
+
+<hr>
+
+<h2 id="getting-started">Getting Started</h2>
+
+<h3 id="prerequisites">Prerequisites</h3>
+
+<ul>
+<li>Windows, macOS, or Linux</li>
+<li>Python 3.9+ (if running from source)</li>
+<li>Microsoft Excel (optional, for best pivot table experience)</li>
+</ul>
+
+<h3 id="installation-options">Installation Options</h3>
+
+<h4 id="option-1-windows-executable-recommended-for-windows-users">Option 1: Windows Executable (Recommended for Windows users)</h4>
+
+<ul>
+<li>Download EndOfSupportTool.exe from the releases</li>
+<li>Double-click to run - no installation required</li>
+</ul>
+
+<h4 id="option-2-run-from-source">Option 2: Run from Source</h4>
+
+<pre class="shell-block"><code class="language-bash"><span class="shell-prompt">$</span> git clone https://github.com/savelyvas/EndOfSupport.git
+<span class="shell-prompt">$</span> cd EndOfSupport
+<span class="shell-prompt">$</span> python -m venv .venv
+<span class="shell-prompt">$</span> .venv\Scripts\activate
+<span class="shell-prompt">$</span> pip install -e .
+<span class="shell-prompt">$</span> python -m src.gui</code></pre>
+
+<hr>
+
+<h2 id="using-the-gui">Using the GUI</h2>
+
+<h3 id="main-window-overview">Main Window Overview</h3>
+
+<p>The GUI provides an intuitive interface for generating reports with the following sections:</p>
+
+<ul>
+<li>Input file selection</li>
+<li>Output format and file selection</li>
+<li>Excel-specific options</li>
+<li>Status filters</li>
+<li>Generate button and results preview</li>
+</ul>
+
+<h3 id="step-by-step-guide">Step-by-Step Guide</h3>
+
+<h4 id="step-1-select-input-file">Step 1: Select Input File</h4>
+
+<ul>
+<li>Click the Browse button next to CSV File</li>
+<li>Navigate to your AWS inventory CSV file</li>
+<li>Select the file and click Open</li>
+</ul>
+
+<h4 id="step-2-choose-output-format">Step 2: Choose Output Format</h4>
+
+<p>Select from the Format dropdown:</p>
+
+<ul>
+<li>html: Interactive web report (recommended)</li>
+<li>excel: Professional report with pivot tables</li>
+<li>text: Human-readable console output</li>
+<li>csv: Flat table format</li>
+<li>json: Structured data format</li>
+</ul>
+
+<h4 id="step-3-set-output-file">Step 3: Set Output File</h4>
+
+<p>For Excel and HTML formats:</p>
+
+<ul>
+<li>Click Browse next to Output File</li>
+<li>Choose where to save your report</li>
+<li>Enter a filename</li>
+</ul>
+
+<h4 id="step-4-configure-excel-options-excel-format-only">Step 4: Configure Excel Options (Excel format only)</h4>
+
+<p>When you select excel format, additional options appear:</p>
+
+<ul>
+<li>Include Pivot Table: Creates an interactive pivot table sheet</li>
+<li>Pivot Method: auto (recommended), windows, or cross-platform</li>
+<li>Create Pivot per Account: Generates separate pivot tabs for each AWS account</li>
+<li>Include Timeline View: Adds a visual timeline sheet showing support events</li>
+</ul>
+
+<h4 id="step-5-apply-filters-optional">Step 5: Apply Filters (Optional)</h4>
+
+<p>Status Filters: Check boxes to include only specific statuses. Leave all unchecked to include all resources.</p>
+
+<p>Days Threshold: Resources within this many days of EOS are marked Approaching. Default is 90 days.</p>
+
+<h4 id="step-6-generate-report">Step 6: Generate Report</h4>
+
+<ul>
+<li>Click Generate Report</li>
+<li>Watch the progress bar</li>
+<li>View results in the preview area</li>
+</ul>
+
+<h4 id="step-7-view-results">Step 7: View Results</h4>
+
+<p>Results appear in the preview area at the bottom. For Excel/HTML files, the file is saved automatically.</p>
+
+<hr>
+
+<h2 id="using-the-cli">Using the CLI</h2>
+
+<p>The command-line interface is ideal for automation and scripting.</p>
+
+<h3 id="basic-syntax">Basic Syntax</h3>
+
+<pre class="shell-block"><code class="language-bash"><span class="shell-prompt">$</span> python -m src.main input.csv [options]</code></pre>
+
+<h3 id="common-examples">Common Examples</h3>
+
+<p>View report in console:</p>
+
+<pre class="shell-block"><code class="language-bash"><span class="shell-prompt">$</span> python -m src.main inventory.csv</code></pre>
+
+<p>Generate Excel report:</p>
+
+<pre class="shell-block"><code class="language-bash"><span class="shell-prompt">$</span> python -m src.main inventory.csv --output-format excel --output-file report.xlsx</code></pre>
+
+<p>Generate HTML report:</p>
+
+<pre class="shell-block"><code class="language-bash"><span class="shell-prompt">$</span> python -m src.main inventory.csv --output-format html --output-file report.html</code></pre>
+
+<p>Filter to only out-of-support resources:</p>
+
+<pre class="shell-block"><code class="language-bash"><span class="shell-prompt">$</span> python -m src.main inventory.csv --status out-of-support</code></pre>
+
+<p>Custom threshold (60 days instead of 90):</p>
+
+<pre class="shell-block"><code class="language-bash"><span class="shell-prompt">$</span> python -m src.main inventory.csv --days-threshold 60</code></pre>
+
+<h3 id="all-cli-options">All CLI Options</h3>
+
+<table class="doc-table"><thead><tr><th>Option</th><th>Description</th><th>Default</th></tr></thead><tbody><tr><td>--output-format</td><td>text, csv, json, excel, html</td><td>text</td></tr><tr><td>--output-file, -o</td><td>Path to save output</td><td>console</td></tr><tr><td>--status</td><td>Filter by status (can repeat)</td><td>all</td></tr><tr><td>--account</td><td>Filter by account name (can repeat)</td><td>all</td></tr><tr><td>--service</td><td>Filter by service name (can repeat)</td><td>all</td></tr><tr><td>--days-threshold</td><td>Days before EOS to mark approaching</td><td>90</td></tr><tr><td>--pivot-per-account</td><td>Create pivot per account (excel only)</td><td>single</td></tr><tr><td>--include-timeline</td><td>Include timeline visualization (excel)</td><td>enabled</td></tr><tr><td>--no-timeline</td><td>Exclude timeline from Excel output</td><td>-</td></tr></tbody></table>
+<hr>
+
+<h2 id="understanding-support-status">Understanding Support Status</h2>
+
+<p>The tool classifies each resource into one of four statuses:</p>
+
+<h3 id="supported">Supported</h3>
+
+<ul>
+<li>End-of-support date is more than the threshold days away</li>
+<li>Action: No action required</li>
+</ul>
+
+<h3 id="approaching-end-of-support">Approaching End-of-Support</h3>
+
+<ul>
+<li>End-of-support date is within the threshold (default: 90 days)</li>
+<li>Action: Plan upgrades soon</li>
+</ul>
+
+<h3 id="extended-support">Extended Support</h3>
+
+<ul>
+<li>Resource is in AWS Extended Support period</li>
+<li>May incur additional costs</li>
+<li>Action: Plan migration to supported version</li>
+</ul>
+
+<h3 id="out-of-support">Out of Support</h3>
+
+<ul>
+<li>End-of-support date has passed</li>
+<li>No longer receiving security updates</li>
+<li>Action: Immediate action recommended</li>
+</ul>
+
+<hr>
+
+<h2 id="output-formats">Output Formats</h2>
+
+<h3 id="text-format">Text Format</h3>
+
+<p>Best for quick console viewing - displays a formatted table in the terminal.</p>
+
+<h3 id="csv-format">CSV Format</h3>
+
+<p>Flat table with one row per resource. Ideal for importing into other tools or custom analysis.</p>
+
+<h3 id="json-format">JSON Format</h3>
+
+<p>Hierarchical structure preserving groupings - useful for programmatic processing.</p>
+
+<h3 id="excel-format">Excel Format</h3>
+
+<p>Professional spreadsheet with multiple sheets:</p>
+
+<ul>
+<li>Table of Contents - Clickable links to all sheets</li>
+<li>Support Status Report - All data with color coding</li>
+<li>Pivot - Interactive pivot table</li>
+<li>Timeline - Visual timeline of support events</li>
+<li>Pivot_AccountName - Per-account pivots (if enabled)</li>
+</ul>
+
+<h3 id="html-format">HTML Format</h3>
+
+<p>Interactive web-based report with filtering, charts, and data tables.</p>
+
+<hr>
+
+<h2 id="excel-reports-and-pivot-tables">Excel Reports and Pivot Tables</h2>
+
+<h3 id="sheet-structure">Sheet Structure</h3>
+
+<h4 id="table-of-contents">Table of Contents</h4>
+
+<p>Lists all sheets with descriptions and clickable links.</p>
+
+<h4 id="support-status-report">Support Status Report</h4>
+
+<p>Contains all resource data with color-coded rows based on status.</p>
+
+<h4 id="pivot-table">Pivot Table</h4>
+
+<p>Interactive summary showing:</p>
+
+<ul>
+<li>Rows: Service, Engine, Version (expandable)</li>
+<li>Values: Count of resources</li>
+<li>Filters: Account, Days to EOS</li>
+</ul>
+
+<h4 id="timeline-view">Timeline View</h4>
+
+<p>Visual Gantt-chart style timeline with:</p>
+
+<ul>
+<li>Row grouping by Service</li>
+<li>Column grouping: Months, Weeks, Days</li>
+<li>Color-coded periods and event markers</li>
+<li>Frozen panes for easy navigation</li>
+</ul>
+
+<p>Color Coding:</p>
+
+<ul>
+<li>Yellow: Approaching End-of-Support</li>
+<li>Light Blue: Extended Support period</li>
+<li>Light Red: Out of Support period</li>
+<li>Red marker: End of Support event</li>
+<li>Blue marker: Extended Support Start</li>
+<li>Dark Red marker: Extended Support End</li>
+<li>Gray: Weekend</li>
+<li>Gold border: Today</li>
+</ul>
+
+<h3 id="working-with-pivot-tables">Working with Pivot Tables</h3>
+
+<p>Expanding/Collapsing: Click the +/- buttons next to Service names or double-click a cell to drill down.</p>
+
+<p>Filtering: Use the dropdown arrows in filter area to select specific accounts or date ranges.</p>
+
+<p>Refreshing Data: Right-click pivot then Refresh, or use PivotTable Analyze then Refresh.</p>
+
+<hr>
+
+<h2 id="html-interactive-reports">HTML Interactive Reports</h2>
+
+<p>The HTML format creates a fully interactive web-based report.</p>
+
+<h3 id="key-features">Key Features</h3>
+
+<h4 id="filter-bar">Filter Bar</h4>
+
+<p>Multi-select filters at the top for Service, Account, and Status. Click Apply Filters to filter all data, or Reset All to restore defaults.</p>
+
+<h4 id="summary-dashboard">Summary Dashboard</h4>
+
+<p>Visual cards showing resource counts with gradient backgrounds.</p>
+
+<h4 id="status-breakdown-charts">Status Breakdown Charts</h4>
+
+<ul>
+<li>Stacked bar chart by Service</li>
+<li>Stacked bar chart by Account</li>
+<li>Doughnut chart for status distribution</li>
+<li>Pie chart for resources by service</li>
+</ul>
+
+<h4 id="all-resources-table">All Resources Table</h4>
+
+<p>Interactive DataTable with search, sortable columns, pagination, and export buttons (Copy, CSV, Excel).</p>
+
+<h4 id="timeline-view">Timeline View</h4>
+
+<p>Stacked bar chart by EOS month with scrollable list of upcoming events.</p>
+
+<h4 id="by-service-breakdown">By Service Breakdown</h4>
+
+<p>Collapsible accordion sections with paginated tables per service.</p>
+
+<h4 id="navigation">Navigation</h4>
+
+<p>Sticky menu bar with section links, smooth scroll, and go-to-top button.</p>
+
+<hr>
+
+<h2 id="filtering-options">Filtering Options</h2>
+
+<h3 id="status-filters">Status Filters</h3>
+
+<p>Filter to show only specific support statuses.</p>
+
+<h3 id="days-threshold">Days Threshold</h3>
+
+<p>Controls when resources are marked Approaching EOS. Default is 90 days. Lower value means fewer resources marked as approaching, higher value means more advance warning.</p>
+
+<h3 id="accountservice-filters-cli-only">Account/Service Filters (CLI only)</h3>
+
+<p>Single account:</p>
+
+<pre class="shell-block"><code class="language-bash"><span class="shell-prompt">$</span> python -m src.main data.csv --account "Production"</code></pre>
+
+<p>Multiple accounts:</p>
+
+<pre class="shell-block"><code class="language-bash"><span class="shell-prompt">$</span> python -m src.main data.csv --account "Prod" --account "Dev"</code></pre>
+
+<p>Filter by service:</p>
+
+<pre class="shell-block"><code class="language-bash"><span class="shell-prompt">$</span> python -m src.main data.csv --service "RDS" --service "Lambda"</code></pre>
+
+<hr>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+
+<h3 id="common-issues">Common Issues</h3>
+
+<h4 id="csv-parse-error">CSV Parse Error</h4>
+
+<ul>
+<li>Cause: CSV file format does not match expected columns</li>
+<li>Solution: Verify your CSV has the required columns</li>
+</ul>
+
+<h4 id="excel-output-requires-openpyxl">Excel output requires openpyxl</h4>
+
+<ul>
+<li>Cause: openpyxl library not installed</li>
+<li>Solution: Run the following command:</li>
+</ul>
+
+<pre class="shell-block"><code class="language-bash"><span class="shell-prompt">$</span> pip install openpyxl</code></pre>
+
+<h4 id="pivot-table-is-empty">Pivot table is empty</h4>
+
+<ul>
+<li>Cause: Pivot needs to refresh after opening</li>
+<li>Solution: Right-click pivot then Refresh</li>
+</ul>
+
+<h4 id="windows-method-not-available">Windows method not available</h4>
+
+<ul>
+<li>Cause: Excel not installed or pywin32 not available</li>
+<li>Solution: Use cross-platform pivot method instead</li>
+</ul>
+
+<h4 id="dates-not-parsing-correctly">Dates not parsing correctly</h4>
+
+<ul>
+<li>Cause: Unsupported date format</li>
+<li>Supported formats: DD-MMM-YY, DD MMM YYYY, MMM-YY, MMM YYYY</li>
+</ul>
+
+<hr>
+
+<h2 id="faq">FAQ</h2>
+
+<p>Q: Can I analyze multiple CSV files at once?</p>
+<p>A: Currently, the tool processes one file at a time. Combine your CSVs first, or run the tool multiple times.</p>
+
+<p>Q: How do I automate report generation?</p>
+<p>A: Use the CLI with a batch script or scheduled task.</p>
+
+<p>Q: Why are some resources showing Unknown status?</p>
+<p>A: The resource may be missing an End-of-Support date in the CSV, or the date format is not recognized.</p>
+
+<p>Q: Can I customize the Excel colors?</p>
+<p>A: Not through the UI, but you can modify STATUS_COLORS in formatters.py.</p>
+
+<p>Q: Does the tool send data anywhere?</p>
+<p>A: No. All processing is done locally. No data is transmitted over the network.</p>
+
+<p>Q: What is the difference between Extended Support and Out of Support?</p>
+<p>A: Extended Support means AWS still provides updates but may charge extra. Out of Support means no updates are available.</p>
+
+<hr>
+
+<h2 id="keyboard-shortcuts">Keyboard Shortcuts</h2>
+
+<table class="doc-table"><thead><tr><th>Shortcut</th><th>Action</th></tr></thead><tbody><tr><td>F1</td><td>Open this help guide</td></tr><tr><td>Ctrl+O</td><td>Browse for input file</td></tr><tr><td>Ctrl+S</td><td>Browse for output file</td></tr><tr><td>Enter</td><td>Generate Report (when input is focused)</td></tr></tbody></table>
+<hr>
+
+<p>Last updated: February 2026</p>
+
+        </div>
+        
+        <div class="footer">
+            AWS End-of-Support Tool &bull; Last updated: February 2026
+        </div>
+    </div>
+    
+    <a href="#" class="back-to-top" title="Back to top">↑</a>
+</body>
+</html>
