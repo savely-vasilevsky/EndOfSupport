@@ -19,7 +19,7 @@ a = Analysis(
         # Include HTML user guide
         ('docs/USERGUIDE.html', 'docs'),
         # Include markdown user guide as fallback
-        ('USERGUIDE_VISUAL.md', '.'),
+        ('USERGUIDE.md', '.'),
         # Include all source files
         ('src/models.py', '.'),
         ('src/parser.py', '.'),
