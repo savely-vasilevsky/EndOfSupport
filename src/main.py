@@ -127,6 +127,14 @@ def create_parser() -> argparse.ArgumentParser:
         help="Exclude timeline visualization sheet from Excel output",
     )
     
+    parser.add_argument(
+        "--include-version-details",
+        action="store_true",
+        default=False,
+        help="Include hidden version detail tabs for each Service+Engine combination "
+             "with hyperlinks from the main report (Excel format only)",
+    )
+    
     return parser
 
 
@@ -316,7 +324,8 @@ def main(args: Optional[List[str]] = None) -> int:
                     report, 
                     parsed_args.output_file,
                     pivot_per_account=parsed_args.pivot_per_account,
-                    include_timeline=parsed_args.include_timeline
+                    include_timeline=parsed_args.include_timeline,
+                    include_version_details=parsed_args.include_version_details
                 )
                 print_status(f"Report written to: {parsed_args.output_file}")
             except IOError as e:

@@ -4,6 +4,7 @@ Provides a graphical interface for analyzing AWS resource inventory CSV files
 and generating support status reports.
 """
 
+import logging
 import os
 import sys
 import subprocess
@@ -12,6 +13,16 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import webbrowser
 from typing import Optional, List
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # Handle imports for both package and frozen executable modes
 try:
@@ -59,6 +70,7 @@ class EndOfSupportGUI:
         self.pivot_method = tk.StringVar(value="auto")
         self.pivot_per_account = tk.BooleanVar(value=False)
         self.include_timeline = tk.BooleanVar(value=True)
+        self.include_version_details = tk.BooleanVar(value=False)
         
         # Build UI
         self._create_widgets()
@@ -141,6 +153,14 @@ class EndOfSupportGUI:
             variable=self.include_timeline
         )
         self.timeline_checkbox.grid(row=3, column=0, columnspan=2, sticky="w", pady=(5, 0))
+        
+        # Version details checkbox
+        self.version_details_checkbox = ttk.Checkbutton(
+            self.excel_options_frame,
+            text="Include Version Details (hidden tabs with links)",
+            variable=self.include_version_details
+        )
+        self.version_details_checkbox.grid(row=4, column=0, columnspan=2, sticky="w", pady=(5, 0))
         
         # Initially hide Excel options
         self.excel_options_frame.grid_remove()
@@ -325,6 +345,7 @@ class EndOfSupportGUI:
         self.pivot_method.set("auto")
         self.pivot_per_account.set(False)
         self.include_timeline.set(True)
+        self.include_version_details.set(False)
         self.pivot_method_combo.configure(state="readonly")
         self.pivot_per_account_checkbox.configure(state="normal")
         self._update_pivot_method_info()
@@ -381,8 +402,10 @@ class EndOfSupportGUI:
         try:
             # Parse CSV
             self._update_status("Parsing CSV file...")
+            logger.info(f"Parsing CSV file: {input_path}")
             parser = CSVParser(input_path)
             resources = parser.parse()
+            logger.info(f"Parsed {len(resources)} resources")
             
             # Get filters
             status_filters = self._get_status_filters()
@@ -404,14 +427,18 @@ class EndOfSupportGUI:
                 pivot_method = self.pivot_method.get() if include_pivot else None
                 pivot_per_account = self.pivot_per_account.get() if include_pivot else False
                 include_timeline = self.include_timeline.get()
+                include_version_details = self.include_version_details.get()
+                logger.info(f"Excel options: include_pivot={include_pivot}, pivot_method={pivot_method}, pivot_per_account={pivot_per_account}, include_timeline={include_timeline}, include_version_details={include_version_details}")
                 formatter.format_to_file(
                     report, 
                     output_path, 
                     include_pivot=include_pivot, 
                     pivot_method=pivot_method,
                     pivot_per_account=pivot_per_account,
-                    include_timeline=include_timeline
+                    include_timeline=include_timeline,
+                    include_version_details=include_version_details
                 )
+                logger.info(f"Excel report saved to: {output_path}")
                 output_text = f"Excel report saved to: {output_path}\n\n"
                 if include_pivot:
                     output_text += self._get_pivot_status(pivot_method, pivot_per_account) + "\n\n"
@@ -435,8 +462,10 @@ class EndOfSupportGUI:
             self._show_results(output_text, report, output_path)
             
         except CSVParseError as e:
+            logger.error(f"CSV Parse Error: {e}", exc_info=True)
             self._show_error(f"CSV Parse Error: {e}")
         except Exception as e:
+            logger.error(f"Error: {e}", exc_info=True)
             self._show_error(f"Error: {e}")
         finally:
             self._finish_generation()

@@ -41,6 +41,7 @@ if __name__ == "__main__":
     classifier = load_module('classifier', os.path.join(src_dir, 'classifier.py'))
     generator = load_module('generator', os.path.join(src_dir, 'generator.py'))
     formatters = load_module('formatters', os.path.join(src_dir, 'formatters.py'))
+    html_formatter = load_module('html_formatter', os.path.join(src_dir, 'html_formatter.py'))
     
     # Now load and run GUI
     gui = load_module('gui', os.path.join(src_dir, 'gui.py'))

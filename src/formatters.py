@@ -6,12 +6,16 @@ reports in different output formats.
 
 import csv
 import json
+import logging
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import date, timedelta
 from io import StringIO
 from typing import Any, Dict, List, Optional, Tuple
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Handle imports for both package and frozen executable modes
 try:
@@ -1321,7 +1325,8 @@ class ExcelFormatter(BaseFormatter):
         pivot_method: str = "auto", 
         pivot_per_account: bool = False,
         include_timeline: bool = True,
-        days_threshold: int = 90
+        days_threshold: int = 90,
+        include_version_details: bool = False
     ) -> None:
         """Format report and save directly to Excel file.
         
@@ -1336,8 +1341,16 @@ class ExcelFormatter(BaseFormatter):
             pivot_per_account: If True, create a separate pivot tab for each account.
             include_timeline: Whether to include the timeline visualization sheet.
             days_threshold: Days before EOS to mark as "approaching" in timeline.
+            include_version_details: If True, create hidden tabs for each Service+Engine
+                combination and add hyperlinks in the main report.
         """
         wb = Workbook()
+        
+        # Determine headers based on version details option
+        headers = list(self.HEADERS)
+        if include_version_details:
+            # Append "Version Details" at the end so pivot can exclude it
+            headers.append("Version Details")
         
         # Create Table of Contents as first sheet
         toc_sheet = wb.active
@@ -1358,7 +1371,7 @@ class ExcelFormatter(BaseFormatter):
         )
         
         # Write header row
-        for col_idx, header in enumerate(self.HEADERS, start=1):
+        for col_idx, header in enumerate(headers, start=1):
             cell = ws.cell(row=1, column=col_idx, value=header)
             cell.font = header_font
             cell.fill = header_fill
@@ -1367,6 +1380,11 @@ class ExcelFormatter(BaseFormatter):
         
         # Freeze header row
         ws.freeze_panes = "A2"
+        
+        # Collect Service+Engine combinations for version detail sheets
+        service_engine_map = {}  # (service, engine) -> sheet_name
+        if include_version_details:
+            service_engine_map = self._collect_service_engine_combinations(report)
         
         # Write data rows
         row_idx = 2
@@ -1378,21 +1396,38 @@ class ExcelFormatter(BaseFormatter):
                             row_data = self._resource_to_row(resource)
                             status_fill = self._get_status_fill(resource.status)
                             
+                            # If version details enabled, append the link column at the end
+                            if include_version_details:
+                                key = (service_name, engine_name or "")
+                                sheet_name = service_engine_map.get(key, "")
+                                row_data = list(row_data)
+                                # Use HYPERLINK formula with meaningful text like "See Lambda_python tab"
+                                if sheet_name:
+                                    link_text = f"See {sheet_name} tab"
+                                    hyperlink_formula = f'=HYPERLINK("#\'{sheet_name}\'!A1","{link_text}")'
+                                    row_data.append(hyperlink_formula)
+                                else:
+                                    row_data.append("")
+                            
                             for col_idx, value in enumerate(row_data, start=1):
                                 cell = ws.cell(row=row_idx, column=col_idx, value=value)
                                 cell.border = thin_border
                                 if status_fill:
                                     cell.fill = status_fill
+                                
+                                # Style the hyperlink formula column (last column when version details enabled)
+                                if include_version_details and col_idx == len(row_data):
+                                    cell.font = Font(color="0563C1", underline="single")
                             
                             row_idx += 1
         
         # Auto-adjust column widths
-        self._auto_adjust_columns(ws)
+        self._auto_adjust_columns(ws, headers)
         
         # Add autofilter
         data_row_count = row_idx - 1
         if data_row_count > 1:
-            ws.auto_filter.ref = f"A1:{get_column_letter(len(self.HEADERS))}{data_row_count}"
+            ws.auto_filter.ref = f"A1:{get_column_letter(len(headers))}{data_row_count}"
         
         # Create pivot table/summary
         # Track sheet names for TOC
@@ -1448,24 +1483,45 @@ class ExcelFormatter(BaseFormatter):
             timeline_generator.generate(timeline_ws)
             sheet_info.append(("Timeline", "Visual timeline of support events by engine-version"))
         
+        # Create version detail sheets if requested
+        version_detail_sheets = []
+        if include_version_details:
+            version_detail_sheets = self._create_version_detail_sheets(wb, report, service_engine_map)
+            for sheet_name, description in version_detail_sheets:
+                sheet_info.append((sheet_name, description))
+        
         # Populate Table of Contents
         self._create_table_of_contents(toc_sheet, sheet_info, report)
         
         # Save workbook first
+        logger.info(f"Saving initial workbook to {filepath}")
         wb.save(filepath)
+        logger.info(f"Initial workbook saved with sheets: {wb.sheetnames}")
         
         # Now handle pivot creation that requires post-save processing
         if include_pivot:
             use_windows = (pivot_method == "windows") or (pivot_method == "auto" and WIN32COM_AVAILABLE)
+            logger.info(f"Pivot creation: include_pivot={include_pivot}, pivot_method={pivot_method}, use_windows={use_windows}, WIN32COM_AVAILABLE={WIN32COM_AVAILABLE}")
+            
+            # Include all columns in pivot source (including Version Details)
+            # The Version Details column shows "See X tab" text which is meaningful in drill-down
+            pivot_col_count = len(headers)
             
             if use_windows and WIN32COM_AVAILABLE:
                 # Create real pivot tables with win32com
-                self._create_real_pivot_table_with_per_account(filepath, report, data_row_count, pivot_per_account, days_threshold)
+                logger.info(f"Creating real pivot table with win32com: data_row_count={data_row_count}, col_count={pivot_col_count}")
+                self._create_real_pivot_table_with_per_account(
+                    filepath, report, data_row_count, pivot_per_account, days_threshold, 
+                    pivot_col_count, None
+                )
             else:
                 # Cross-platform: use template for real pivot if available
                 template_path = os.path.join(TEMPLATE_DIR, "pivot_template.xlsx")
+                logger.info(f"Cross-platform pivot: template_path={template_path}, exists={os.path.exists(template_path)}")
                 if os.path.exists(template_path):
-                    self._create_pivot_from_template(filepath, data_row_count, template_path)
+                    self._create_pivot_from_template(filepath, data_row_count, template_path, pivot_col_count)
+        else:
+            logger.info("Pivot creation skipped: include_pivot=False")
     
     def _create_pivot_summary_sheet(self, wb: Workbook, report: Report) -> None:
         """Create a styled pivot-like summary sheet (cross-platform).
@@ -1844,7 +1900,7 @@ class ExcelFormatter(BaseFormatter):
         finally:
             pythoncom.CoUninitialize()
     
-    def _create_real_pivot_table_with_per_account(self, filepath: str, report: Report, data_row_count: int, pivot_per_account: bool, days_threshold: int = 90) -> None:
+    def _create_real_pivot_table_with_per_account(self, filepath: str, report: Report, data_row_count: int, pivot_per_account: bool, days_threshold: int = 90, col_count: int = None, service_engine_map: Dict[Tuple[str, str], str] = None) -> None:
         """Create real Excel PivotTables using win32com - main pivot and optionally per-account.
         
         Args:
@@ -1853,39 +1909,67 @@ class ExcelFormatter(BaseFormatter):
             data_row_count: Number of data rows in the source sheet.
             pivot_per_account: Whether to also create per-account pivot tables.
             days_threshold: Days threshold for filtering "Days to EOS" (default 90).
+            col_count: Number of columns in the data sheet (default: len(self.HEADERS)).
+            service_engine_map: If provided, re-apply hyperlinks in "Version Details" column after save.
         """
         import pythoncom
+        import time
+        logger.info("Starting _create_real_pivot_table_with_per_account")
         pythoncom.CoInitialize()
         
+        excel = None
+        wb = None
         try:
-            excel = win32com.client.Dispatch("Excel.Application")
-            excel.Visible = False
-            excel.DisplayAlerts = False
+            # Try to dispatch Excel with retry logic
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    logger.info(f"Dispatching Excel.Application (attempt {attempt + 1}/{max_retries})")
+                    excel = win32com.client.Dispatch("Excel.Application")
+                    excel.Visible = False
+                    excel.DisplayAlerts = False
+                    logger.info("Excel.Application dispatched successfully")
+                    break
+                except Exception as e:
+                    logger.warning(f"Failed to dispatch Excel (attempt {attempt + 1}): {e}")
+                    if attempt < max_retries - 1:
+                        time.sleep(1)  # Wait before retry
+                    else:
+                        raise
             
             abs_path = os.path.abspath(filepath)
+            logger.info(f"Opening workbook: {abs_path}")
             wb = excel.Workbooks.Open(abs_path)
+            logger.info("Workbook opened successfully")
             
-            last_col = get_column_letter(len(self.HEADERS))
+            # Use provided column count or default to HEADERS length
+            actual_col_count = col_count if col_count else len(self.HEADERS)
+            last_col = get_column_letter(actual_col_count)
             source_range = f"'Support Status Report'!A1:{last_col}{data_row_count}"
+            logger.info(f"Source range for pivot: {source_range}")
             
             # Create pivot cache once
+            logger.info("Creating pivot cache")
             pivot_cache = wb.PivotCaches().Create(
                 SourceType=1,  # xlDatabase
                 SourceData=source_range
             )
             
             # Create main Pivot sheet (insert after Support Status Report)
+            logger.info("Creating Pivot sheet")
             data_sheet = wb.Sheets("Support Status Report")
             pivot_sheet = wb.Sheets.Add(After=data_sheet)
             pivot_sheet.Name = "Pivot"
             
             # Create main pivot table
+            logger.info("Creating main pivot table")
             pivot_table = pivot_cache.CreatePivotTable(
                 TableDestination=pivot_sheet.Range("A4"),
                 TableName="SupportStatusPivot"
             )
             
             # Add row fields (Service -> Engine -> Version hierarchy)
+            logger.info("Adding row fields to pivot table")
             pivot_table.PivotFields("Service").Orientation = 1  # xlRowField
             pivot_table.PivotFields("Service").Position = 1
             
@@ -1896,12 +1980,14 @@ class ExcelFormatter(BaseFormatter):
             pivot_table.PivotFields("Version").Position = 3
             
             # Add data field (count of resources)
+            logger.info("Adding data field to pivot table")
             data_field = pivot_table.PivotFields("Resource Name")
             data_field.Orientation = 4  # xlDataField
             data_field.Function = -4112  # xlCount
             data_field.Name = "Resources"
             
             # Add page filters (report filters)
+            logger.info("Adding page filters to pivot table")
             days_to_eos_field = pivot_table.PivotFields("Days to EOS")
             days_to_eos_field.Orientation = 3  # xlPageField
             
@@ -1995,25 +2081,40 @@ class ExcelFormatter(BaseFormatter):
                     # Apply pivot table style
                     account_pivot_table.TableStyle2 = "PivotStyleMedium2"
             
+            # Note: Hyperlinks are not added when using win32com because:
+            # 1. Adding 10,000+ hyperlinks via COM is too slow and causes disconnection
+            # 2. The pivot table is the priority feature
+            # Users who need hyperlinks can use cross-platform mode (no real pivot table)
+            
             # Ensure Table of Contents is the first (leftmost) tab
+            logger.info("Moving Table of Contents to first position")
             toc_sheet = wb.Sheets("Table of Contents")
             toc_sheet.Move(Before=wb.Sheets(1))
             
+            logger.info("Saving workbook with pivot tables")
             wb.Save()
+            logger.info("Closing workbook")
             wb.Close()
+            wb = None
+            logger.info("Quitting Excel")
             excel.Quit()
+            excel = None
+            logger.info("Pivot table creation completed successfully")
             
         except Exception as e:
+            logger.error(f"Error creating pivot table: {e}", exc_info=True)
             try:
-                wb.Close(SaveChanges=False)
-                excel.Quit()
-            except:
-                pass
+                if wb:
+                    wb.Close(SaveChanges=False)
+                if excel:
+                    excel.Quit()
+            except Exception as cleanup_error:
+                logger.warning(f"Error during cleanup: {cleanup_error}")
             raise e
         finally:
             pythoncom.CoUninitialize()
     
-    def _create_pivot_from_template(self, filepath: str, data_row_count: int, template_path: str) -> None:
+    def _create_pivot_from_template(self, filepath: str, data_row_count: int, template_path: str, col_count: int = None) -> None:
         """Create a real pivot table by copying from a template file.
         
         This method loads a template Excel file that contains a pre-configured
@@ -2025,8 +2126,12 @@ class ExcelFormatter(BaseFormatter):
             filepath: Path to the output Excel file (already contains data).
             data_row_count: Number of data rows in the source sheet.
             template_path: Path to the template file with pre-configured pivot.
+            col_count: Number of columns in the data sheet (default: len(self.HEADERS)).
         """
         from copy import copy
+        
+        # Use provided column count or default to HEADERS length
+        actual_col_count = col_count if col_count else len(self.HEADERS)
         
         try:
             # Load the output workbook (with data)
@@ -2071,7 +2176,7 @@ class ExcelFormatter(BaseFormatter):
                     # Update the pivot cache source range to match our data
                     if pivot.cache and pivot.cache.cacheSource:
                         # Update source range to match our data
-                        last_col = get_column_letter(len(self.HEADERS))
+                        last_col = get_column_letter(actual_col_count)
                         
                         if pivot.cache.cacheSource.worksheetSource:
                             pivot.cache.cacheSource.worksheetSource.ref = f"A1:{last_col}{data_row_count}"
@@ -2217,13 +2322,17 @@ class ExcelFormatter(BaseFormatter):
             return PatternFill(start_color=color, end_color=color, fill_type="solid")
         return None
     
-    def _auto_adjust_columns(self, ws) -> None:
+    def _auto_adjust_columns(self, ws, headers: List[str] = None) -> None:
         """Auto-adjust column widths based on content.
         
         Args:
             ws: Worksheet to adjust.
+            headers: List of header names (uses self.HEADERS if not provided).
         """
-        for col_idx, header in enumerate(self.HEADERS, start=1):
+        if headers is None:
+            headers = self.HEADERS
+            
+        for col_idx, header in enumerate(headers, start=1):
             max_length = len(header)
             column_letter = get_column_letter(col_idx)
             
@@ -2235,3 +2344,309 @@ class ExcelFormatter(BaseFormatter):
             
             # Add some padding
             ws.column_dimensions[column_letter].width = max_length + 2
+    
+    def _collect_service_engine_combinations(self, report: Report) -> Dict[Tuple[str, str], str]:
+        """Collect unique Service+Engine combinations and generate sheet names.
+        
+        Args:
+            report: Report object with hierarchical data.
+            
+        Returns:
+            Dictionary mapping (service, engine) tuples to sheet names.
+        """
+        combinations = set()
+        
+        for account_name, account_group in report.accounts.items():
+            for service_name, service_group in account_group.services.items():
+                for engine_name, engine_group in service_group.engines.items():
+                    combinations.add((service_name, engine_name or ""))
+        
+        # Generate unique sheet names (Excel limits to 31 chars)
+        result = {}
+        for service, engine in sorted(combinations):
+            # Create a readable sheet name
+            if engine and engine != "Unknown":
+                base_name = f"{service}_{engine}"
+            else:
+                base_name = service
+            
+            # Sanitize for Excel sheet name (remove invalid chars)
+            safe_name = base_name.replace("/", "-").replace("\\", "-").replace(":", "-")
+            safe_name = safe_name.replace("*", "").replace("?", "").replace("[", "").replace("]", "")
+            
+            # Truncate to 31 chars (Excel limit)
+            if len(safe_name) > 31:
+                safe_name = safe_name[:31]
+            
+            # Ensure uniqueness
+            final_name = safe_name
+            counter = 1
+            while final_name in [v for v in result.values()]:
+                suffix = f"_{counter}"
+                final_name = safe_name[:31 - len(suffix)] + suffix
+                counter += 1
+            
+            result[(service, engine)] = final_name
+        
+        return result
+    
+    def _create_version_detail_sheets(
+        self, 
+        wb: Workbook, 
+        report: Report, 
+        service_engine_map: Dict[Tuple[str, str], str]
+    ) -> List[Tuple[str, str]]:
+        """Create hidden version detail sheets for each Service+Engine combination.
+        
+        Args:
+            wb: Workbook to add sheets to.
+            report: Report object with hierarchical data.
+            service_engine_map: Mapping of (service, engine) to sheet names.
+            
+        Returns:
+            List of (sheet_name, description) tuples for TOC.
+        """
+        # Style definitions
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        thin_border = Border(
+            left=Side(style="thin"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
+        )
+        title_font = Font(bold=True, size=14, color="4472C4")
+        back_link_font = Font(color="0563C1", underline="single")
+        
+        sheet_info = []
+        
+        # Aggregate data by (service, engine) -> versions -> resources
+        aggregated_data: Dict[Tuple[str, str], Dict[str, List[Resource]]] = {}
+        
+        for account_name, account_group in report.accounts.items():
+            for service_name, service_group in account_group.services.items():
+                for engine_name, engine_group in service_group.engines.items():
+                    key = (service_name, engine_name or "")
+                    if key not in aggregated_data:
+                        aggregated_data[key] = {}
+                    
+                    for version_name, version_group in engine_group.versions.items():
+                        if version_name not in aggregated_data[key]:
+                            aggregated_data[key][version_name] = []
+                        aggregated_data[key][version_name].extend(version_group.resources)
+        
+        # Create a sheet for each Service+Engine combination
+        for (service, engine), sheet_name in sorted(service_engine_map.items()):
+            ws = wb.create_sheet(sheet_name)
+            
+            # Title row
+            display_name = f"{service} - {engine}" if engine and engine != "Unknown" else service
+            title_cell = ws.cell(row=1, column=1, value=display_name)
+            title_cell.font = title_font
+            ws.merge_cells("A1:F1")
+            
+            # Back link to main report
+            back_cell = ws.cell(row=2, column=1, value="← Back to Support Status Report")
+            back_cell.hyperlink = "#'Support Status Report'!A1"
+            back_cell.font = back_link_font
+            
+            # Version detail headers (row 4)
+            detail_headers = ["Version", "Resource Count", "End of Support", "Extended Support Start", 
+                            "Extended Support End", "Status Summary"]
+            for col_idx, header in enumerate(detail_headers, start=1):
+                cell = ws.cell(row=4, column=col_idx, value=header)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = header_alignment
+                cell.border = thin_border
+            
+            # Get version data for this service+engine
+            versions_data = aggregated_data.get((service, engine), {})
+            
+            # Write version rows
+            row_idx = 5
+            for version_name in sorted(versions_data.keys()):
+                resources = versions_data[version_name]
+                
+                # Aggregate data for this version
+                resource_count = len(resources)
+                eos_dates = [r.end_of_support for r in resources if r.end_of_support]
+                ext_start_dates = [r.extended_support_start for r in resources if r.extended_support_start]
+                ext_end_dates = [r.extended_support_end for r in resources if r.extended_support_end]
+                
+                # Get earliest/latest dates
+                eos_date = min(eos_dates).isoformat() if eos_dates else ""
+                ext_start = min(ext_start_dates).isoformat() if ext_start_dates else ""
+                ext_end = max(ext_end_dates).isoformat() if ext_end_dates else ""
+                
+                # Status summary
+                status_counts = {}
+                for r in resources:
+                    if r.status:
+                        status_counts[r.status.value] = status_counts.get(r.status.value, 0) + 1
+                status_summary = ", ".join([f"{k}: {v}" for k, v in sorted(status_counts.items())])
+                
+                # Write row
+                row_data = [version_name, resource_count, eos_date, ext_start, ext_end, status_summary]
+                for col_idx, value in enumerate(row_data, start=1):
+                    cell = ws.cell(row=row_idx, column=col_idx, value=value)
+                    cell.border = thin_border
+                
+                row_idx += 1
+            
+            # Auto-adjust column widths
+            for col_idx, header in enumerate(detail_headers, start=1):
+                col_letter = get_column_letter(col_idx)
+                ws.column_dimensions[col_letter].width = max(len(header) + 2, 15)
+            
+            # Freeze header row
+            ws.freeze_panes = "A5"
+            
+            # Set tab color to blue (visible tabs)
+            ws.sheet_properties.tabColor = "0563C1"
+            
+            # Add to sheet info
+            description = f"Version details for {display_name}"
+            sheet_info.append((sheet_name, description))
+        
+        return sheet_info
+
+    def _reapply_version_detail_hyperlinks(
+        self, 
+        filepath: str, 
+        report: Report, 
+        service_engine_map: Dict[Tuple[str, str], str]
+    ) -> None:
+        """Re-apply hyperlinks in the 'Version Details' column after win32com processing.
+        
+        Win32com strips openpyxl hyperlinks when it saves the file. This method
+        uses win32com to re-apply the hyperlinks to preserve the pivot tables.
+        
+        Args:
+            filepath: Path to the Excel file.
+            report: Report object with hierarchical data.
+            service_engine_map: Mapping of (service, engine) to sheet names.
+        """
+        import pythoncom
+        pythoncom.CoInitialize()
+        
+        excel = None
+        wb = None
+        try:
+            logger.info("Re-applying hyperlinks using win32com")
+            excel = win32com.client.Dispatch("Excel.Application")
+            excel.Visible = False
+            excel.DisplayAlerts = False
+            
+            abs_path = os.path.abspath(filepath)
+            wb = excel.Workbooks.Open(abs_path)
+            
+            self._add_hyperlinks_win32com_optimized(wb, report, service_engine_map)
+            
+            wb.Save()
+            wb.Close()
+            wb = None
+            excel.Quit()
+            excel = None
+            logger.info("Hyperlinks re-applied successfully")
+            
+        except Exception as e:
+            logger.error(f"Error re-applying hyperlinks: {e}", exc_info=True)
+            try:
+                if wb:
+                    wb.Close(SaveChanges=False)
+                if excel:
+                    excel.Quit()
+            except:
+                pass
+            raise e
+        finally:
+            pythoncom.CoUninitialize()
+
+    def _add_hyperlinks_win32com(
+        self,
+        wb,
+        report: Report,
+        service_engine_map: Dict[Tuple[str, str], str]
+    ) -> None:
+        """Add hyperlinks to the 'Version Details' column using win32com.
+        
+        Args:
+            wb: Win32com workbook object.
+            report: Report object with hierarchical data.
+            service_engine_map: Mapping of (service, engine) to sheet names.
+        """
+        ws = wb.Sheets("Support Status Report")
+        
+        # Iterate through data rows and add hyperlinks in column 5 (Version Details)
+        row_idx = 2  # Start after header
+        for account_name, account_group in sorted(report.accounts.items()):
+            for service_name, service_group in sorted(account_group.services.items()):
+                for engine_name, engine_group in sorted(service_group.engines.items()):
+                    for version_name, version_group in sorted(engine_group.versions.items()):
+                        for resource in version_group.resources:
+                            key = (service_name, engine_name or "")
+                            sheet_name = service_engine_map.get(key, "")
+                            if sheet_name:
+                                cell = ws.Cells(row_idx, 5)
+                                # Add hyperlink to the cell
+                                ws.Hyperlinks.Add(
+                                    Anchor=cell,
+                                    Address="",
+                                    SubAddress=f"'{sheet_name}'!A1",
+                                    TextToDisplay="View Details"
+                                )
+                            row_idx += 1
+        
+        logger.info(f"Added hyperlinks to {row_idx - 2} rows")
+
+    def _add_hyperlinks_win32com_optimized(
+        self,
+        wb,
+        report: Report,
+        service_engine_map: Dict[Tuple[str, str], str]
+    ) -> None:
+        """Add hyperlinks using HYPERLINK formula for better performance.
+        
+        This method uses Excel's HYPERLINK formula instead of actual hyperlinks,
+        which is much faster for large datasets.
+        
+        Args:
+            wb: Win32com workbook object.
+            report: Report object with hierarchical data.
+            service_engine_map: Mapping of (service, engine) to sheet names.
+        """
+        ws = wb.Sheets("Support Status Report")
+        
+        # Build a list of formulas to apply
+        formulas = []
+        row_idx = 2  # Start after header
+        for account_name, account_group in sorted(report.accounts.items()):
+            for service_name, service_group in sorted(account_group.services.items()):
+                for engine_name, engine_group in sorted(service_group.engines.items()):
+                    for version_name, version_group in sorted(engine_group.versions.items()):
+                        for resource in version_group.resources:
+                            key = (service_name, engine_name or "")
+                            sheet_name = service_engine_map.get(key, "")
+                            if sheet_name:
+                                # Use HYPERLINK formula
+                                formula = f'=HYPERLINK("#\'{sheet_name}\'!A1","View Details")'
+                                formulas.append((row_idx, formula))
+                            row_idx += 1
+        
+        # Apply formulas in batches for better performance
+        logger.info(f"Applying {len(formulas)} hyperlink formulas")
+        
+        # Disable screen updating for performance
+        wb.Application.ScreenUpdating = False
+        wb.Application.Calculation = -4135  # xlCalculationManual
+        
+        try:
+            for row, formula in formulas:
+                ws.Cells(row, 5).Formula = formula
+        finally:
+            wb.Application.Calculation = -4105  # xlCalculationAutomatic
+            wb.Application.ScreenUpdating = True
+        
+        logger.info(f"Applied hyperlink formulas to {len(formulas)} rows")
