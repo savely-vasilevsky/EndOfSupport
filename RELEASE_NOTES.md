@@ -1,3 +1,52 @@
+# Release Notes - v2.3.0
+
+## 🎉 What's New in v2.3.0
+
+### Chart Click-Through Filtering
+- **Chart clicks now respect page filters** - When you click on any chart (Service, Account, Status Pie, Service Pie), the popup window now shows only resources that match the current page filters
+- **Timeline chart clicks filtered** - Clicking on timeline chart bars now shows only resources matching current filters
+- **Summary card clicks filtered** - Clicking on summary dashboard cards (Total, Supported, etc.) now respects active filters
+- **Consistent filtering experience** - All interactive elements now work together with the filter bar
+
+### ARN Column in HTML Report
+- **New ARN column** - The All Resources table now includes an ARN column between Resource and End of Support
+- **Truncated display** - Long ARNs are truncated with ellipsis for cleaner display
+- **Full ARN on hover** - Hover over any ARN to see the complete value in a tooltip
+
+### Timeline Chart Filtering Fix
+- **Fixed timeline chart not updating** - Resolved issue where the Support Timeline chart wasn't updating when filters were applied
+- **Global variable scope fix** - Timeline variables are now properly accessible across script blocks
+
+### Summary Dashboard Tooltip Filtering
+- **Filtered tooltip counts** - When hovering on summary cards, the service breakdown tooltip now shows counts based on current filters
+- **"(filtered)" indicator** - Tooltip title indicates when showing filtered counts
+
+---
+
+# Release Notes - v2.2.0
+
+## 🎉 What's New in v2.2.0
+
+### Version Details Feature (HTML)
+- **New "Version Details by Service" section** - Accordion-style cards for each Service+Engine combination showing version breakdown
+- **Clickable links in resources table** - "Version Details" column with links that scroll to the relevant service card
+- **Summary statistics per card** - Total resources, version count, and status breakdown for each Service+Engine
+- **Expand/Collapse All buttons** - Quickly expand or collapse all version detail cards
+- **Version detail tables** - Each card contains a table with Version, Resource Count, EOS dates, and Status Summary
+
+### Enhanced Filter Functionality
+- **Filters now update ALL widgets** - When applying filters, all charts (Service, Account, Status Pie, Service Pie) are updated to reflect filtered data
+- **Timeline chart filtered** - The Support Timeline chart now updates based on Service and Status filters
+- **Timeline list filtered** - The "Upcoming End-of-Support Events" list now shows/hides items based on Service and Status filters
+- **Version Details cards filtered** - Service filter now hides/shows version detail cards accordingly
+- **Summary cards updated** - Counts in summary cards reflect filtered data
+- **Reset restores all** - Reset button now properly restores all charts, timeline, and lists to original state
+
+### Navigation Improvements
+- **New "Version Details" menu link** - Quick navigation to the Version Details section from the menu bar
+
+---
+
 # Release Notes - v2.1.0
 
 ## 🎉 What's New in v2.1.0

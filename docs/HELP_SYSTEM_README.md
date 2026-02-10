@@ -265,4 +265,4 @@ For questions or issues with the help system:
 
 ---
 
-*Last updated: February 4, 2026*
+*Last updated: February 10, 2026*

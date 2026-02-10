@@ -95,21 +95,18 @@ class GenerationParameters:
         parts = []
         
         if self.input_file:
-            parts.append(f"Input: {self.input_file}")
+            parts.append(f"Source: {self.input_file}")
         
-        if self.output_format:
-            parts.append(f"Format: {self.output_format}")
-        
-        parts.append(f"Days Threshold: {self.days_threshold}")
+        parts.append(f"EOS Threshold: {self.days_threshold} days")
         
         if self.status_filters:
-            parts.append(f"Status Filter: {', '.join(self.status_filters)}")
+            parts.append(f"Status: {', '.join(self.status_filters)}")
         
         if self.account_filters:
-            parts.append(f"Account Filter: {', '.join(self.account_filters)}")
+            parts.append(f"Accounts: {', '.join(self.account_filters)}")
         
         if self.service_filters:
-            parts.append(f"Service Filter: {', '.join(self.service_filters)}")
+            parts.append(f"Services: {', '.join(self.service_filters)}")
         
         if self.output_format == "excel":
             if self.pivot_per_account:

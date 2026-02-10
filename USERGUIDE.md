@@ -54,7 +54,14 @@ python -m src.gui       # Launch GUI
 
 ### Preparing Your Data
 
-Export your AWS resource inventory as a CSV file. The tool expects these columns:
+**Step 1: Generate the CSV file using the End-of-Support Script**
+
+Run the End-of-Support Script from Command Center to generate the input CSV file:
+- [End-of-Support Script Runner](http://command-center.support.aws.a2z.com/troubleshooting#/script-runner/End-of-Support-Tool_contributionmodelasset_End-of-Support-Tool?_inputParameters=%7B%7D)
+
+**Step 2: Download the generated CSV file**
+
+The script will generate a CSV file with these columns:
 - Account, Payer ID, Service, Resource Type
 - Resource ARN, Resource Name, Regions / AZs
 - Engine, Version, End-of-Support
@@ -278,18 +285,22 @@ Interactive web-based report that can be opened in any browser. Styled similar t
   - **Service Filter**: Select/deselect services to show (all selected by default)
   - **Account Filter**: Select/deselect accounts to show (all selected by default)
   - **Status Filter**: Select/deselect statuses (Supported, Approaching EOS, Extended Support, Out of Support)
-  - **Apply Filters**: Click to apply selected filters to all sections
+  - **Apply Filters**: Click to apply selected filters to ALL sections including charts, timeline, and tables
   - **Reset All**: Restore all filters to default (all selected)
-  - Filters update: Summary counts, Resources table, By Service section
+  - Filters update: Summary counts, All charts, Resources table, Timeline, By Service section, Version Details
 
 - **Summary Dashboard** - Visual cards showing total resources and status counts with gradient backgrounds
   - Cards update dynamically when filters are applied
+  - **Click any card** to open a popup with matching resources (respects current filters)
+  - **Hover on cards** to see service breakdown tooltip (shows filtered counts)
 
 - **Status Breakdown Charts**:
   - Stacked bar chart by Service (shows all statuses per service)
   - Stacked bar chart by Account (shows all statuses per account)
   - Doughnut chart for overall status distribution
   - Pie chart for resources by service
+  - **Click any chart segment** to view resources (respects current filters)
+  - Charts update when filters are applied
   - Collapsible section (click −/+ button)
 
 - **All Resources Table** - Interactive DataTable with:
@@ -298,13 +309,25 @@ Interactive web-based report that can be opened in any browser. Styled similar t
   - Pagination (25 rows per page default)
   - Export buttons: Copy, CSV, Excel
   - Color-coded status badges
+  - **ARN column** with truncated display and full ARN tooltip on hover
+  - **Version Details column** with links to service detail cards
   - Responds to filter bar selections
 
 - **Timeline View**:
   - Stacked bar chart showing resources by End-of-Support month
   - Color-coded by status (red=Out of Support, blue=Extended, yellow=Approaching, green=Supported)
+  - **Click chart bars** to view resources for that month (respects current filters)
+  - **Chart updates with filters** - Timeline chart reflects current Service/Account/Status filters
   - Scrollable list of upcoming EOS events with service/engine/version details
+  - **List items filtered** - Events list shows/hides based on current filters
+  - Date range filter with Apply/Reset buttons
   - Collapsible section
+
+- **Version Details by Service** - Accordion-style cards for each Service+Engine:
+  - Summary statistics (total resources, version count, status breakdown)
+  - Expand/Collapse All buttons
+  - Version detail tables with counts and EOS dates
+  - Cards filtered based on Service filter selection
 
 - **By Service Breakdown** - Collapsible accordion sections:
   - Click service header to expand/collapse
@@ -317,7 +340,7 @@ Interactive web-based report that can be opened in any browser. Styled similar t
   - Resource counts update based on active filters
 
 - **Navigation**:
-  - Sticky menu bar with section links (Summary, Status Breakdown, All Resources, Timeline, By Service)
+  - Sticky menu bar with section links (Summary, Status Breakdown, All Resources, Timeline, Version Details, By Service)
   - Smooth scroll to sections when clicking menu links
   - Go-to-top button (appears after scrolling down 300px)
   - Collapsible sections with −/+ buttons
@@ -325,8 +348,14 @@ Interactive web-based report that can be opened in any browser. Styled similar t
 **Using the Filter Bar**:
 1. Click filter options to toggle selection (checkmark = selected)
 2. Click "Apply Filters" to filter all data
-3. Summary cards, tables, and service groups update accordingly
+3. Summary cards, ALL charts, timeline, tables, and service groups update accordingly
 4. Click "Reset All" to restore all selections
+
+**Chart Click-Through**:
+1. Click on any chart segment (bar, pie slice, etc.)
+2. A new browser tab opens with matching resources
+3. Resources shown respect current page filters
+4. The popup includes its own filter bar for further refinement
 
 **Generating HTML Reports**:
 ```bash
@@ -532,4 +561,4 @@ A: Extended Support means AWS still provides updates but may charge extra. Out o
 
 ---
 
-*Last updated: February 4, 2026*
+*Last updated: February 10, 2026*

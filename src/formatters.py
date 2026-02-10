@@ -28,6 +28,7 @@ try:
         EngineGroup,
         VersionGroup,
     )
+    from . import __version__
 except ImportError:
     from models import (
         Report,
@@ -38,6 +39,7 @@ except ImportError:
         EngineGroup,
         VersionGroup,
     )
+    __version__ = "2.3.0"
 
 # Optional Excel support
 try:
@@ -793,7 +795,7 @@ class TextFormatter(BaseFormatter):
         
         # Header
         lines.append("=" * 80)
-        lines.append("AWS Resource Support Status Report")
+        lines.append(f"AWS Resource Support Status Report v{__version__}")
         lines.append(f"Generated: {report.generated_at.isoformat()}")
         
         # Generation parameters
@@ -1037,7 +1039,7 @@ class CSVFormatter(BaseFormatter):
         writer = csv.writer(output)
         
         # Write generation info as comment rows
-        output.write(f"# AWS End-of-Support Report\n")
+        output.write(f"# AWS End-of-Support Report v{__version__}\n")
         output.write(f"# Generated: {report.generated_at.isoformat()}\n")
         if report.generation_params:
             output.write(f"# Parameters: {report.generation_params.to_display_string()}\n")
@@ -1123,6 +1125,7 @@ class JSONFormatter(BaseFormatter):
             Dictionary representation of the report.
         """
         result = {
+            "tool_version": __version__,
             "generated_at": report.generated_at.isoformat(),
             "total_resources": report.total_resources,
             "total_counts": self._status_counts_to_dict(report.total_counts),
@@ -1304,6 +1307,24 @@ class ExcelFormatter(BaseFormatter):
                 "Excel support requires openpyxl. Install with: pip install openpyxl"
             )
     
+    def _is_file_locked(self, filepath: str) -> bool:
+        """Check if a file is locked by another process.
+        
+        Args:
+            filepath: Path to the file to check.
+            
+        Returns:
+            True if the file is locked, False otherwise.
+        """
+        if not os.path.exists(filepath):
+            return False
+        try:
+            with open(filepath, 'a'):
+                pass
+            return False
+        except (IOError, PermissionError):
+            return True
+    
     def format(self, report: Report) -> str:
         """Not used for Excel - use format_to_file instead.
         
@@ -1344,6 +1365,10 @@ class ExcelFormatter(BaseFormatter):
             include_version_details: If True, create hidden tabs for each Service+Engine
                 combination and add hyperlinks in the main report.
         """
+        # Check if file is locked before starting
+        if self._is_file_locked(filepath):
+            raise IOError(f"Cannot write to '{filepath}' - file is open in another application. Please close it and try again.")
+        
         wb = Workbook()
         
         # Determine headers based on version details option
@@ -1661,8 +1686,8 @@ class ExcelFormatter(BaseFormatter):
             bottom=Side(style="thin"),
         )
         
-        # Title
-        ws.cell(row=1, column=1, value="AWS End-of-Support Report").font = title_font
+        # Title with version
+        ws.cell(row=1, column=1, value=f"AWS End-of-Support Report v{__version__}").font = title_font
         ws.merge_cells("A1:C1")
         
         # Subtitle with generation info
@@ -2091,15 +2116,48 @@ class ExcelFormatter(BaseFormatter):
             toc_sheet = wb.Sheets("Table of Contents")
             toc_sheet.Move(Before=wb.Sheets(1))
             
+            # Log sheet names before save
+            sheet_names = [wb.Sheets(i).Name for i in range(1, wb.Sheets.Count + 1)]
+            logger.info(f"Sheets before save: {sheet_names}")
+            
             logger.info("Saving workbook with pivot tables")
             wb.Save()
+            logger.info("Workbook saved successfully")
+            
+            # Verify pivot sheet exists after save
+            pivot_exists = any(wb.Sheets(i).Name == "Pivot" for i in range(1, wb.Sheets.Count + 1))
+            logger.info(f"Pivot sheet exists after save: {pivot_exists}")
+            
             logger.info("Closing workbook")
-            wb.Close()
+            wb.Close(SaveChanges=True)  # Explicitly save on close
             wb = None
+            logger.info("Workbook closed")
+            
+            # Give Excel time to fully release the file
+            time.sleep(0.5)
+            
             logger.info("Quitting Excel")
             excel.Quit()
             excel = None
+            
+            # Force garbage collection to release COM objects
+            import gc
+            gc.collect()
+            
             logger.info("Pivot table creation completed successfully")
+            
+            # Final verification: check file with openpyxl
+            time.sleep(0.5)  # Give filesystem time to sync
+            try:
+                from openpyxl import load_workbook as verify_load
+                verify_wb = verify_load(filepath, read_only=True)
+                verify_sheets = verify_wb.sheetnames
+                logger.info(f"Final verification - sheets in file: {verify_sheets}")
+                verify_wb.close()
+                if "Pivot" not in verify_sheets:
+                    logger.error("CRITICAL: Pivot sheet missing after save!")
+            except Exception as verify_error:
+                logger.warning(f"Could not verify file: {verify_error}")
             
         except Exception as e:
             logger.error(f"Error creating pivot table: {e}", exc_info=True)

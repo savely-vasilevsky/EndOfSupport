@@ -24,6 +24,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Version
+try:
+    from . import __version__
+except ImportError:
+    __version__ = "2.3.0"
+
 # Handle imports for both package and frozen executable modes
 try:
     # Try relative imports first (when running as package)
@@ -31,7 +37,7 @@ try:
     from .formatters import TextFormatter, CSVFormatter, JSONFormatter, ExcelFormatter, EXCEL_AVAILABLE, WIN32COM_AVAILABLE, TEMPLATE_DIR
     from .html_formatter import HTMLFormatter
     from .generator import ReportGenerator
-    from .models import ReportFilters, SupportStatus
+    from .models import ReportFilters, SupportStatus, GenerationParameters
     from .parser import CSVParser, CSVParseError
 except ImportError:
     # Fall back to absolute imports (when running as frozen executable or standalone)
@@ -39,7 +45,7 @@ except ImportError:
     from formatters import TextFormatter, CSVFormatter, JSONFormatter, ExcelFormatter, EXCEL_AVAILABLE, WIN32COM_AVAILABLE, TEMPLATE_DIR
     from html_formatter import HTMLFormatter
     from generator import ReportGenerator
-    from models import ReportFilters, SupportStatus
+    from models import ReportFilters, SupportStatus, GenerationParameters
     from parser import CSVParser, CSVParseError
 
 
@@ -49,7 +55,7 @@ class EndOfSupportGUI:
     def __init__(self):
         """Initialize the GUI application."""
         self.root = tk.Tk()
-        self.root.title("AWS End-of-Support Tool")
+        self.root.title(f"AWS End-of-Support Tool v{__version__}")
         self.root.geometry("800x600")
         self.root.minsize(700, 500)
         
@@ -157,7 +163,7 @@ class EndOfSupportGUI:
         # Version details checkbox
         self.version_details_checkbox = ttk.Checkbutton(
             self.excel_options_frame,
-            text="Include Version Details (hidden tabs with links)",
+            text="Include Version Details",
             variable=self.include_version_details
         )
         self.version_details_checkbox.grid(row=4, column=0, columnspan=2, sticky="w", pady=(5, 0))
@@ -419,6 +425,14 @@ class EndOfSupportGUI:
             generator = ReportGenerator(resources, classifier)
             report = generator.generate(filters=filters)
             
+            # Set generation parameters for display in reports
+            report.generation_params = GenerationParameters(
+                input_file=os.path.basename(input_path),
+                output_format=fmt,
+                days_threshold=self.days_threshold.get(),
+                status_filters=[s.value for s in status_filters] if status_filters else None,
+            )
+            
             # Format output
             self._update_status("Formatting report...")
             if fmt == "excel":
@@ -441,7 +455,21 @@ class EndOfSupportGUI:
                 logger.info(f"Excel report saved to: {output_path}")
                 output_text = f"Excel report saved to: {output_path}\n\n"
                 if include_pivot:
-                    output_text += self._get_pivot_status(pivot_method, pivot_per_account) + "\n\n"
+                    output_text += self._get_pivot_status(pivot_method, pivot_per_account) + "\n"
+                    # Verify pivot was created
+                    try:
+                        from openpyxl import load_workbook
+                        verify_wb = load_workbook(output_path, read_only=True)
+                        sheets = verify_wb.sheetnames
+                        verify_wb.close()
+                        if "Pivot" in sheets:
+                            output_text += f"Verification: Pivot sheet confirmed in file\n"
+                            output_text += f"Sheets: {', '.join(sheets)}\n\n"
+                        else:
+                            output_text += f"WARNING: Pivot sheet NOT found in file!\n"
+                            output_text += f"Sheets: {', '.join(sheets)}\n\n"
+                    except Exception as e:
+                        output_text += f"Could not verify file: {e}\n\n"
                 output_text += self._get_summary(report)
             else:
                 formatters = {
@@ -618,13 +646,18 @@ class EndOfSupportGUI:
     
     def _show_quick_help(self):
         """Show a quick help dialog with link to detailed guide."""
-        help_text = """AWS End-of-Support Tool - Quick Help
+        help_text = f"""AWS End-of-Support Tool v{__version__} - Quick Help
+
+DATA SOURCE:
+To generate the input CSV file, run the End-of-Support Script:
+🔗 Command Center Script Runner (internal link)
 
 GETTING STARTED:
-1. Click 'Browse...' to select your AWS inventory CSV file
-2. Choose an output format (html, excel, text, csv, json)
-3. For Excel/HTML: specify an output file path
-4. Click 'Generate Report'
+1. Run the End-of-Support Script to generate the CSV file
+2. Click 'Browse...' to select the generated CSV file
+3. Choose an output format (html, excel, text, csv, json)
+4. For Excel/HTML: specify an output file path
+5. Click 'Generate Report'
 
 OUTPUT FORMATS:
 • HTML: Interactive web report with charts & filters (recommended)
@@ -633,11 +666,20 @@ OUTPUT FORMATS:
 • CSV: Flat table for spreadsheets
 • JSON: Structured data format
 
+HTML FEATURES:
+• Filter Bar: Filter by Service, Account, Status - updates ALL widgets
+• Charts: Click any chart to view resources (respects filters)
+• Timeline: Chart & list update with filters, click to drill down
+• Summary Cards: Click to view resources, hover for breakdown
+• Resizable Columns: Drag column edges to resize
+• Version Details: Service+Engine breakdown with AWS docs links
+
 EXCEL OPTIONS:
 • Include Pivot Table: Creates interactive pivot
 • Pivot Method: auto/windows/cross-platform
 • Pivot per Account: Separate pivot for each account
 • Include Timeline: Visual Gantt-style timeline view
+• Include Version Details: Tabs for each Service+Engine
 
 FILTERS:
 • Status Filters: Show only specific statuses
@@ -652,10 +694,13 @@ SUPPORT STATUS:
 📖 For detailed documentation with screenshots and step-by-step
    instructions, click the button below.
 """
+        # Data source URL
+        data_source_url = "http://command-center.support.aws.a2z.com/troubleshooting#/script-runner/End-of-Support-Tool_contributionmodelasset_End-of-Support-Tool?_inputParameters=%7B%7D"
+        
         # Create a help dialog
         help_window = tk.Toplevel(self.root)
         help_window.title("Help - AWS End-of-Support Tool")
-        help_window.geometry("550x500")
+        help_window.geometry("550x550")
         help_window.resizable(True, True)
         
         # Make it modal
@@ -679,6 +724,18 @@ SUPPORT STATUS:
         # Button frame
         button_frame = ttk.Frame(help_window)
         button_frame.pack(pady=10, fill=tk.X, padx=10)
+        
+        # Open data source script button
+        def open_data_source():
+            import webbrowser
+            webbrowser.open(data_source_url)
+        
+        data_source_btn = ttk.Button(
+            button_frame, 
+            text="🔗 Open End-of-Support Script", 
+            command=open_data_source
+        )
+        data_source_btn.pack(side=tk.LEFT, padx=5)
         
         # Open detailed guide button
         detailed_btn = ttk.Button(

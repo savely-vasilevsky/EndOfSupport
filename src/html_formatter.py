@@ -10,8 +10,10 @@ from typing import List, Dict, Any, Optional
 # Handle imports for both package and frozen executable modes
 try:
     from .models import Report, Resource, SupportStatus
+    from . import __version__
 except ImportError:
     from models import Report, Resource, SupportStatus
+    __version__ = "2.3.0"
 
 
 class HTMLFormatter:
@@ -39,6 +41,80 @@ class HTMLFormatter:
         SupportStatus.EXTENDED_SUPPORT: "Extended Support",
         SupportStatus.OUT_OF_SUPPORT: "Out of Support",
     }
+    
+    # AWS Documentation links for each service
+    # Maps service name (as it appears in the report) to documentation URL and description
+    AWS_DOCS_LINKS = {
+        # Compute Services
+        "Lambda": {
+            "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html",
+            "title": "Runtime Deprecation Policy",
+            "description": "All runtimes with deprecation dates and block function create/update dates"
+        },
+        "EKS": {
+            "url": "https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html",
+            "title": "Kubernetes Versions",
+            "description": "Standard support (14 months) and extended support (12 months) dates"
+        },
+        # Database Services
+        "RDS": {
+            "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/extended-support-versions.html",
+            "title": "Extended Support Versions",
+            "description": "RDS Extended Support dates by engine"
+        },
+        "Aurora": {
+            "url": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.VersionPolicy.html",
+            "title": "Aurora Version Policy",
+            "description": "Long-term support (LTS) versions and Extended Support information"
+        },
+        "DocumentDB": {
+            "url": "https://docs.aws.amazon.com/documentdb/latest/developerguide/document-db-support-dates.html",
+            "title": "Engine Version Support Dates",
+            "description": "Standard and extended support dates with pricing information"
+        },
+        "Neptune": {
+            "url": "https://docs.aws.amazon.com/neptune/latest/userguide/engine-releases.html",
+            "title": "Engine Releases",
+            "description": "Complete list of releases with end-of-life dates"
+        },
+        "ElastiCache": {
+            "url": "https://docs.aws.amazon.com/AmazonElastiCache/latest/dg/engine-versions.html",
+            "title": "Engine Versions and Upgrading",
+            "description": "Version information for Valkey, Redis OSS, and Memcached"
+        },
+        # Analytics & Search Services
+        "OpenSearch": {
+            "url": "https://docs.aws.amazon.com/opensearch-service/latest/developerguide/version-migration.html",
+            "title": "Upgrading Domains",
+            "description": "Version upgrade paths and supported versions"
+        },
+        "OpenSearch Service": {
+            "url": "https://docs.aws.amazon.com/opensearch-service/latest/developerguide/version-migration.html",
+            "title": "Upgrading Domains",
+            "description": "Version upgrade paths and supported versions"
+        },
+        # Messaging Services
+        "MSK": {
+            "url": "https://docs.aws.amazon.com/msk/latest/developerguide/supported-kafka-versions.html",
+            "title": "Supported Kafka Versions",
+            "description": "List of supported Apache Kafka versions"
+        },
+        "Managed Streaming for Apache Kafka": {
+            "url": "https://docs.aws.amazon.com/msk/latest/developerguide/supported-kafka-versions.html",
+            "title": "Supported Kafka Versions",
+            "description": "List of supported Apache Kafka versions"
+        },
+        "MQ": {
+            "url": "https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/activemq-version-management.html",
+            "title": "ActiveMQ Version Management",
+            "description": "Engine versions with end-of-support dates and automatic upgrade policy"
+        },
+        "Amazon MQ": {
+            "url": "https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/activemq-version-management.html",
+            "title": "ActiveMQ Version Management",
+            "description": "Engine versions with end-of-support dates and automatic upgrade policy"
+        },
+    }
 
     def format(self, report: Report) -> str:
         """Format the report as an HTML string.
@@ -62,8 +138,9 @@ class HTMLFormatter:
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(html_content)
 
-    def _generate_html(self, report: Report) -> str:
+    def _generate_html(self, report: Report, include_version_details: bool = True) -> str:
         """Generate the complete HTML document."""
+        version_details_section = self._generate_version_details_section(report) if include_version_details else ""
         return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -76,14 +153,15 @@ class HTMLFormatter:
 </head>
 <body>
     {self._generate_header(report)}
-    {self._generate_menu()}
+    {self._generate_menu(include_version_details)}
     {self._generate_filter_bar(report)}
     <div class="container">
         {self._generate_summary_section(report)}
         {self._generate_status_breakdown_section(report)}
-        {self._generate_resources_table(report)}
+        {self._generate_resources_table(report, include_version_details)}
         {self._generate_timeline_section(report)}
         {self._generate_by_service_section(report)}
+        {version_details_section}
     </div>
     {self._generate_footer()}
     <!-- Load scripts at end for faster initial render -->
@@ -149,23 +227,25 @@ body {
     font-weight: 400;
 }
 
-.header .subtitle {
+.header .header-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
     margin-left: 20px;
+}
+
+.header .subtitle {
     color: #aab7b8;
     font-size: 14px;
 }
 
 .header .generation-params {
-    margin-left: 20px;
     padding: 4px 12px;
-    background: rgba(255, 153, 0, 0.15);
+    background: rgba(255, 153, 0, 0.2);
     border-radius: 4px;
-    color: #d4a259;
+    color: #ffb84d;
     font-size: 12px;
-    max-width: 600px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-weight: 500;
 }
 
 .header .loading-status {
@@ -368,6 +448,7 @@ body {
 table.dataTable {
     width: 100% !important;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
 table.dataTable thead th {
@@ -376,11 +457,35 @@ table.dataTable thead th {
     padding: 12px 8px;
     text-align: left;
     font-weight: 600;
+    position: relative;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Column resizer handle */
+table.dataTable thead th .col-resizer {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+    background: transparent;
+    z-index: 10;
+}
+
+table.dataTable thead th .col-resizer:hover,
+table.dataTable thead th .col-resizer.resizing {
+    background: #ff9900;
 }
 
 table.dataTable tbody td {
     padding: 10px 8px;
     border-bottom: 1px solid #eee;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 table.dataTable tbody tr:hover {
@@ -791,6 +896,167 @@ table.dataTable tbody tr:hover {
         width: 100%;
     }
 }
+
+/* Version Details Section Styles */
+.version-details-link {
+    color: #0563C1;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.version-details-link:hover {
+    text-decoration: underline;
+}
+
+.version-details-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.version-details-controls button {
+    padding: 8px 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #f5f5f5;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.version-details-controls button:hover {
+    background: #e0e0e0;
+}
+
+.version-detail-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+}
+
+.version-detail-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.version-detail-header {
+    background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+    padding: 15px 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.version-detail-header:hover {
+    background: linear-gradient(135deg, #e8e8e8 0%, #ddd 100%);
+}
+
+.version-detail-header h3 {
+    margin: 0;
+    color: #232f3e;
+    font-size: 16px;
+}
+
+.aws-docs-link {
+    font-size: 12px;
+    font-weight: normal;
+    color: #0073bb;
+    text-decoration: none;
+    margin-left: 10px;
+    padding: 3px 8px;
+    background: #e8f4fc;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.aws-docs-link:hover {
+    background: #d1e8f7;
+    text-decoration: underline;
+}
+
+.version-detail-header .stats {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.version-detail-header .stat-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.version-detail-header .expand-icon {
+    font-size: 18px;
+    color: #666;
+    transition: transform 0.2s;
+}
+
+.version-detail-card.expanded .expand-icon {
+    transform: rotate(180deg);
+}
+
+.version-detail-content {
+    padding: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+}
+
+.version-detail-card.expanded .version-detail-content {
+    padding: 20px;
+    max-height: 2000px;
+}
+
+.version-detail-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.version-detail-summary .summary-item {
+    background: #f9f9f9;
+    padding: 12px;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.version-detail-summary .summary-item .count {
+    font-size: 24px;
+    font-weight: bold;
+    color: #232f3e;
+}
+
+.version-detail-summary .summary-item .label {
+    font-size: 12px;
+    color: #666;
+}
+
+.version-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.version-detail-table th {
+    background: #f5f5f5;
+    padding: 10px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid #ddd;
+}
+
+.version-detail-table td {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.version-detail-table tr:hover {
+    background: #f9f9f9;
+}
 </style>"""
 
     def _generate_header(self, report: Report) -> str:
@@ -802,26 +1068,30 @@ table.dataTable tbody tr:hover {
             params_html = f'<div class="generation-params">{params_str}</div>'
         
         return f"""<div class="header">
-    <h1>🔧 AWS End-of-Support Report</h1>
-    <span class="subtitle">Generated: {report.generated_at.strftime('%Y-%m-%d %H:%M:%S')}</span>
-    {params_html}
+    <h1>🔧 AWS End-of-Support Report <span style="font-size: 14px; font-weight: normal; opacity: 0.8;">v{__version__}</span></h1>
+    <div class="header-info">
+        <span class="subtitle">Generated: {report.generated_at.strftime('%Y-%m-%d %H:%M:%S')}</span>
+        {params_html}
+    </div>
     <div class="loading-status">
         <span id="loading-text">Loading...</span>
         <div id="header-spinner" class="header-spinner"></div>
     </div>
 </div>"""
 
-    def _generate_menu(self) -> str:
+    def _generate_menu(self, include_version_details: bool = True) -> str:
         """Generate the navigation menu."""
-        return """<ul id="menuBar">
+        version_details_link = '<li><a href="#version-details-section" onclick="scrollToSection(event)">Version Details</a></li>' if include_version_details else ""
+        return f"""<ul id="menuBar">
     <li><a href="#summary-section" onclick="scrollToSection(event)">Summary</a></li>
     <li><a href="#status-breakdown" onclick="scrollToSection(event)">Status Breakdown</a></li>
     <li><a href="#resources-table" onclick="scrollToSection(event)">All Resources</a></li>
     <li><a href="#timeline-section" onclick="scrollToSection(event)">Timeline</a></li>
     <li><a href="#by-service-section" onclick="scrollToSection(event)">By Service</a></li>
+    {version_details_link}
     <li><a href="#" onclick="showReportHelp(event)" style="color: #ff9900;">Help</a></li>
 </ul>
-<button class="go-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">↑</button>"""
+<button class="go-to-top" onclick="window.scrollTo({{top: 0, behavior: 'smooth'}})">↑</button>"""
 
     def _generate_filter_bar(self, report: Report) -> str:
         """Generate the filter bar with Service, Account, and Status filters."""
@@ -1018,7 +1288,7 @@ table.dataTable tbody tr:hover {
         }
         return mapping.get(status, 'supported')
 
-    def _generate_resources_table(self, report: Report) -> str:
+    def _generate_resources_table(self, report: Report, include_version_details: bool = True) -> str:
         """Generate the main resources data table."""
         rows = []
         for account_name, account_group in report.accounts.items():
@@ -1030,19 +1300,34 @@ table.dataTable tbody tr:hover {
                             status_label = self.STATUS_LABELS.get(resource.status, "Unknown")
                             eos_date = resource.end_of_support.strftime('%Y-%m-%d') if resource.end_of_support else 'N/A'
                             days_to_eos = resource.days_to_eos if resource.days_to_eos is not None else 'N/A'
+                            resource_arn = resource.resource_arn or 'N/A'
+                            
+                            # Generate version details link
+                            version_details_cell = ""
+                            if include_version_details:
+                                anchor_id = self._get_version_details_anchor_id(service_name, engine_name)
+                                display_name = f"{service_name}_{engine_name}" if engine_name and engine_name != "N/A" else service_name
+                                # Sanitize display name for HTML
+                                display_name = display_name.replace(" ", "_").replace("/", "_")[:30]
+                                version_details_cell = f'<td><a href="#version-detail-{anchor_id}" class="version-details-link" onclick="scrollToVersionDetail(event, \'{anchor_id}\')">See {display_name}</a></td>'
                             
                             rows.append(f"""<tr>
                                 <td>{self._escape_html(account_name)}</td>
                                 <td>{self._escape_html(service_name)}</td>
                                 <td>{self._escape_html(engine_name or 'N/A')}</td>
                                 <td>{self._escape_html(version_name)}</td>
-                                <td>{self._escape_html(resource.resource_name or resource.resource_arn or 'N/A')}</td>
+                                <td>{self._escape_html(resource.resource_name or 'N/A')}</td>
+                                <td title="{self._escape_html(resource_arn)}" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{self._escape_html(resource_arn)}</td>
                                 <td>{eos_date}</td>
                                 <td>{days_to_eos}</td>
                                 <td><span class="status-badge {status_class}">{status_label}</span></td>
+                                {version_details_cell}
                             </tr>""")
         
         rows_html = '\n'.join(rows)
+        
+        # Add Version Details column header if enabled
+        version_details_header = "<th>Version Details</th>" if include_version_details else ""
         
         return f"""<div id="resources-table" class="section">
     <h2>All Resources
@@ -1057,9 +1342,11 @@ table.dataTable tbody tr:hover {
                     <th>Engine</th>
                     <th>Version</th>
                     <th>Resource</th>
+                    <th>ARN</th>
                     <th>End of Support</th>
                     <th>Days to EOS</th>
                     <th>Status</th>
+                    {version_details_header}
                 </tr>
             </thead>
             <tbody>
@@ -1068,6 +1355,14 @@ table.dataTable tbody tr:hover {
         </table>
     </div>
 </div>"""
+    
+    def _get_version_details_anchor_id(self, service_name: str, engine_name: str) -> str:
+        """Generate a safe anchor ID for version details section."""
+        engine = engine_name if engine_name and engine_name != "N/A" else ""
+        combined = f"{service_name}_{engine}" if engine else service_name
+        # Sanitize for HTML ID: lowercase, replace spaces and special chars
+        safe_id = combined.lower().replace(" ", "-").replace("/", "-").replace(".", "-").replace(":", "-")
+        return safe_id[:50]  # Limit length
 
     def _get_status_class(self, status: SupportStatus) -> str:
         """Get CSS class for status."""
@@ -1089,6 +1384,20 @@ table.dataTable tbody tr:hover {
                 .replace('>', '&gt;')
                 .replace('"', '&quot;')
                 .replace("'", '&#39;'))
+
+    def _get_aws_docs_link_html(self, service: str) -> str:
+        """Generate HTML for AWS documentation link if available for the service.
+        
+        Args:
+            service: Service name to look up documentation for.
+            
+        Returns:
+            HTML string with documentation link, or empty string if not available.
+        """
+        docs_info = self.AWS_DOCS_LINKS.get(service)
+        if docs_info:
+            return f''' <a href="{docs_info["url"]}" target="_blank" class="aws-docs-link" onclick="event.stopPropagation();" title="{docs_info["description"]}">📖 {docs_info["title"]}</a>'''
+        return ''
 
     def _generate_timeline_section(self, report: Report) -> str:
         """Generate the timeline visualization section with Chart.js timeline."""
@@ -1161,12 +1470,16 @@ table.dataTable tbody tr:hover {
             monthly_service_summary[month] = dict(service_counts)
         monthly_service_summary_json = json.dumps(monthly_service_summary)
         
-        # Generate timeline list HTML
+        # Prepare timeline items JSON for JavaScript filtering
+        timeline_items_json = json.dumps(timeline_items)
+        
+        # Generate timeline list HTML with data attributes for filtering
         timeline_list_html = []
         for item in timeline_items[:100]:  # Limit to 100 items
             status_class = f"status-{item['status'].replace('_', '-')}"
+            status_label = {'supported': 'Supported', 'approaching': 'Approaching EOS', 'extended': 'Extended Support', 'out_of_support': 'Out of Support'}.get(item['status'], item['status'])
             timeline_list_html.append(f"""
-                <div class="timeline-item" style="display: flex; align-items: center; padding: 8px 12px; margin: 4px 0; border-radius: 4px; background-color: #f9f9f9;">
+                <div class="timeline-item" data-service="{self._escape_html(item['service'])}" data-status="{status_label}" style="display: flex; align-items: center; padding: 8px 12px; margin: 4px 0; border-radius: 4px; background-color: #f9f9f9;">
                     <span class="status-badge {status_class}" style="min-width: 120px; text-align: center;">{item['eos_date']}</span>
                     <span style="margin-left: 15px; flex: 1;">
                         <strong>{self._escape_html(item['service'])}</strong> - 
@@ -1224,22 +1537,24 @@ table.dataTable tbody tr:hover {
             <canvas id="timelineChart"></canvas>
         </div>
         <script>
-            var timelineResourcesData = {monthly_resources_json};
-            var timelineServiceSummary = {monthly_service_summary_json};
-            var timelineMonths = {chart_labels};
-            var allTimelineMonths = {chart_labels};
-            var allTimelineData = {{
+            // Make timeline variables global for access from other scripts
+            window.timelineResourcesData = {monthly_resources_json};
+            window.timelineServiceSummary = {monthly_service_summary_json};
+            window.timelineMonths = {chart_labels};
+            window.allTimelineMonths = {chart_labels};
+            window.allTimelineResourcesData = {monthly_resources_json};
+            window.allTimelineData = {{
                 out_of_support: {chart_out_of_support},
                 extended: {chart_extended},
                 approaching: {chart_approaching},
                 supported: {chart_supported}
             }};
-            var timelineChartInstance = null;
+            window.timelineChartInstance = null;
             
             function initTimelineChart() {{
                 var timelineCtx = document.getElementById('timelineChart');
-                if (timelineCtx && !timelineChartInstance) {{
-                    timelineChartInstance = new Chart(timelineCtx, {{
+                if (timelineCtx && !window.timelineChartInstance) {{
+                    window.timelineChartInstance = new Chart(timelineCtx, {{
                         type: 'bar',
                         data: {{
                             labels: {chart_labels},
@@ -1304,43 +1619,49 @@ table.dataTable tbody tr:hover {
                 }}
                 
                 var filteredIndices = [];
-                for (var i = 0; i < allTimelineMonths.length; i++) {{
-                    var month = allTimelineMonths[i];
+                for (var i = 0; i < window.allTimelineMonths.length; i++) {{
+                    var month = window.allTimelineMonths[i];
                     if (month >= startDate && month <= endDate) {{
                         filteredIndices.push(i);
                     }}
                 }}
                 
-                var filteredMonths = filteredIndices.map(function(i) {{ return allTimelineMonths[i]; }});
-                var filteredOutOfSupport = filteredIndices.map(function(i) {{ return allTimelineData.out_of_support[i]; }});
-                var filteredExtended = filteredIndices.map(function(i) {{ return allTimelineData.extended[i]; }});
-                var filteredApproaching = filteredIndices.map(function(i) {{ return allTimelineData.approaching[i]; }});
-                var filteredSupported = filteredIndices.map(function(i) {{ return allTimelineData.supported[i]; }});
+                var filteredMonths = filteredIndices.map(function(i) {{ return window.allTimelineMonths[i]; }});
+                var filteredOutOfSupport = filteredIndices.map(function(i) {{ return window.allTimelineData.out_of_support[i]; }});
+                var filteredExtended = filteredIndices.map(function(i) {{ return window.allTimelineData.extended[i]; }});
+                var filteredApproaching = filteredIndices.map(function(i) {{ return window.allTimelineData.approaching[i]; }});
+                var filteredSupported = filteredIndices.map(function(i) {{ return window.allTimelineData.supported[i]; }});
                 
-                timelineChartInstance.data.labels = filteredMonths;
-                timelineChartInstance.data.datasets[0].data = filteredOutOfSupport;
-                timelineChartInstance.data.datasets[1].data = filteredExtended;
-                timelineChartInstance.data.datasets[2].data = filteredApproaching;
-                timelineChartInstance.data.datasets[3].data = filteredSupported;
-                timelineChartInstance.update();
+                window.timelineChartInstance.data.labels = filteredMonths;
+                window.timelineChartInstance.data.datasets[0].data = filteredOutOfSupport;
+                window.timelineChartInstance.data.datasets[1].data = filteredExtended;
+                window.timelineChartInstance.data.datasets[2].data = filteredApproaching;
+                window.timelineChartInstance.data.datasets[3].data = filteredSupported;
+                window.timelineChartInstance.update();
             }}
             
             function resetTimelineDateFilter() {{
-                document.getElementById('timelineStartDate').value = allTimelineMonths[0] || '';
-                document.getElementById('timelineEndDate').value = allTimelineMonths[allTimelineMonths.length - 1] || '';
+                document.getElementById('timelineStartDate').value = window.allTimelineMonths[0] || '';
+                document.getElementById('timelineEndDate').value = window.allTimelineMonths[window.allTimelineMonths.length - 1] || '';
                 
-                timelineChartInstance.data.labels = allTimelineMonths;
-                timelineChartInstance.data.datasets[0].data = allTimelineData.out_of_support;
-                timelineChartInstance.data.datasets[1].data = allTimelineData.extended;
-                timelineChartInstance.data.datasets[2].data = allTimelineData.approaching;
-                timelineChartInstance.data.datasets[3].data = allTimelineData.supported;
-                timelineChartInstance.update();
+                window.timelineChartInstance.data.labels = window.allTimelineMonths;
+                window.timelineChartInstance.data.datasets[0].data = window.allTimelineData.out_of_support;
+                window.timelineChartInstance.data.datasets[1].data = window.allTimelineData.extended;
+                window.timelineChartInstance.data.datasets[2].data = window.allTimelineData.approaching;
+                window.timelineChartInstance.data.datasets[3].data = window.allTimelineData.supported;
+                window.timelineChartInstance.update();
             }}
             
             function showMonthResources(month) {{
-                var resources = timelineResourcesData[month] || [];
+                var resources = window.timelineResourcesData[month] || [];
                 if (resources.length === 0) {{
                     alert('No resources found for ' + month);
+                    return;
+                }}
+                // Apply current page filters
+                resources = filterResourcesByCurrentFilters(resources);
+                if (resources.length === 0) {{
+                    alert('No resources match current filters for ' + month);
                     return;
                 }}
                 showChartResources('Resources with End-of-Support in ' + month, resources, {{}});
@@ -1464,10 +1785,171 @@ table.dataTable tbody tr:hover {
     </div>
 </div>"""
 
+    def _generate_version_details_section(self, report: Report) -> str:
+        """Generate the Version Details section with accordion-style cards for each Service+Engine."""
+        import json
+        from collections import defaultdict
+        
+        # Aggregate data by (service, engine) -> versions -> resources
+        aggregated_data: Dict[tuple, Dict[str, list]] = {}
+        
+        for account_name, account_group in report.accounts.items():
+            for service_name, service_group in account_group.services.items():
+                for engine_name, engine_group in service_group.engines.items():
+                    key = (service_name, engine_name or "")
+                    if key not in aggregated_data:
+                        aggregated_data[key] = {}
+                    
+                    for version_name, version_group in engine_group.versions.items():
+                        if version_name not in aggregated_data[key]:
+                            aggregated_data[key][version_name] = []
+                        aggregated_data[key][version_name].extend(version_group.resources)
+        
+        # Generate cards for each Service+Engine combination
+        cards_html = []
+        
+        for (service, engine), versions_data in sorted(aggregated_data.items()):
+            anchor_id = self._get_version_details_anchor_id(service, engine)
+            display_name = f"{service} - {engine}" if engine and engine != "Unknown" and engine != "" else service
+            
+            # Calculate totals for this service+engine
+            total_resources = 0
+            status_counts = {'supported': 0, 'approaching': 0, 'extended': 0, 'out_of_support': 0}
+            
+            for version_name, resources in versions_data.items():
+                total_resources += len(resources)
+                for r in resources:
+                    status_key = self._status_to_key(r.status)
+                    status_counts[status_key] += 1
+            
+            # Generate version rows
+            version_rows = []
+            for version_name in sorted(versions_data.keys()):
+                resources = versions_data[version_name]
+                resource_count = len(resources)
+                
+                # Get dates
+                eos_dates = [r.end_of_support for r in resources if r.end_of_support]
+                ext_start_dates = [r.extended_support_start for r in resources if r.extended_support_start]
+                ext_end_dates = [r.extended_support_end for r in resources if r.extended_support_end]
+                
+                eos_date = min(eos_dates).strftime('%Y-%m-%d') if eos_dates else 'N/A'
+                ext_start = min(ext_start_dates).strftime('%Y-%m-%d') if ext_start_dates else 'N/A'
+                ext_end = max(ext_end_dates).strftime('%Y-%m-%d') if ext_end_dates else 'N/A'
+                
+                # Status summary
+                version_status_counts = {}
+                for r in resources:
+                    status_label = self.STATUS_LABELS.get(r.status, "Unknown")
+                    version_status_counts[status_label] = version_status_counts.get(status_label, 0) + 1
+                status_summary = ", ".join([f"{k}: {v}" for k, v in sorted(version_status_counts.items())])
+                
+                version_rows.append(f"""
+                    <tr>
+                        <td>{self._escape_html(version_name)}</td>
+                        <td>{resource_count}</td>
+                        <td>{eos_date}</td>
+                        <td>{ext_start}</td>
+                        <td>{ext_end}</td>
+                        <td>{status_summary}</td>
+                    </tr>
+                """)
+            
+            version_rows_html = '\n'.join(version_rows)
+            
+            # Generate status badges for header
+            status_badges = []
+            if status_counts['supported'] > 0:
+                status_badges.append(f'<span class="stat-badge status-supported">{status_counts["supported"]} Supported</span>')
+            if status_counts['approaching'] > 0:
+                status_badges.append(f'<span class="stat-badge status-approaching">{status_counts["approaching"]} Approaching</span>')
+            if status_counts['extended'] > 0:
+                status_badges.append(f'<span class="stat-badge status-extended">{status_counts["extended"]} Extended</span>')
+            if status_counts['out_of_support'] > 0:
+                status_badges.append(f'<span class="stat-badge status-out-of-support">{status_counts["out_of_support"]} Out of Support</span>')
+            
+            status_badges_html = ' '.join(status_badges)
+            
+            # Generate AWS documentation link if available
+            docs_link_html = self._get_aws_docs_link_html(service)
+            
+            card_html = f"""
+            <div class="version-detail-card" id="version-detail-{anchor_id}" data-service="{self._escape_html(service)}" data-engine="{self._escape_html(engine)}">
+                <div class="version-detail-header" onclick="toggleVersionDetailCard('{anchor_id}')">
+                    <h3>{self._escape_html(display_name)}{docs_link_html}</h3>
+                    <div class="stats">
+                        <span style="color: #666; margin-right: 10px;">{total_resources} resources, {len(versions_data)} versions</span>
+                        {status_badges_html}
+                        <span class="expand-icon">▼</span>
+                    </div>
+                </div>
+                <div class="version-detail-content">
+                    <div class="version-detail-summary">
+                        <div class="summary-item">
+                            <div class="count">{total_resources}</div>
+                            <div class="label">Total Resources</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="count">{len(versions_data)}</div>
+                            <div class="label">Versions</div>
+                        </div>
+                        <div class="summary-item" style="background: #c8e6c9;">
+                            <div class="count" style="color: #1b5e20;">{status_counts['supported']}</div>
+                            <div class="label">Supported</div>
+                        </div>
+                        <div class="summary-item" style="background: #fff9c4;">
+                            <div class="count" style="color: #f57f17;">{status_counts['approaching']}</div>
+                            <div class="label">Approaching EOS</div>
+                        </div>
+                        <div class="summary-item" style="background: #bbdefb;">
+                            <div class="count" style="color: #0d47a1;">{status_counts['extended']}</div>
+                            <div class="label">Extended Support</div>
+                        </div>
+                        <div class="summary-item" style="background: #ffcdd2;">
+                            <div class="count" style="color: #b71c1c;">{status_counts['out_of_support']}</div>
+                            <div class="label">Out of Support</div>
+                        </div>
+                    </div>
+                    <table class="version-detail-table">
+                        <thead>
+                            <tr>
+                                <th>Version</th>
+                                <th>Resource Count</th>
+                                <th>End of Support</th>
+                                <th>Extended Support Start</th>
+                                <th>Extended Support End</th>
+                                <th>Status Summary</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {version_rows_html}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            """
+            cards_html.append(card_html)
+        
+        cards_html_str = '\n'.join(cards_html)
+        
+        return f"""<div id="version-details-section" class="section">
+    <h2>Version Details by Service
+        <button class="collapse-btn" onclick="toggleSection('version-details-content')">−</button>
+    </h2>
+    <div id="version-details-content" class="collapsible-content">
+        <p>Detailed version information for each Service+Engine combination. Click on a card to expand.</p>
+        <div class="version-details-controls">
+            <button onclick="expandAllVersionDetails()">Expand All</button>
+            <button onclick="collapseAllVersionDetails()">Collapse All</button>
+        </div>
+        {cards_html_str if cards_html else '<p>No version details available.</p>'}
+    </div>
+</div>"""
+
     def _generate_footer(self) -> str:
         """Generate the page footer."""
-        return """<div class="footer">
-    <p>Generated by AWS End-of-Support Tool | 
+        return f"""<div class="footer">
+    <p>Generated by AWS End-of-Support Tool v{__version__} | 
        <a href="https://github.com/savelyvas/EndOfSupport" target="_blank">GitHub</a>
     </p>
 </div>"""
@@ -1578,9 +2060,32 @@ var statusDisplayNames = {{
     'out_of_support': 'Out of Support'
 }};
 
+// Helper function to filter resources based on current page filters
+function filterResourcesByCurrentFilters(resources) {{
+    var filters = getSelectedFilters();
+    
+    return resources.filter(function(r) {{
+        // Check service filter
+        if (filters.services.length > 0 && !filters.services.includes(r.service)) return false;
+        
+        // Check account filter
+        if (filters.accounts.length > 0 && !filters.accounts.includes(r.account)) return false;
+        
+        // Check status filter (filters.statuses contains display names like "Supported")
+        if (filters.statuses.length > 0) {{
+            var statusLabel = statusDisplayNames[r.status];
+            if (!filters.statuses.includes(statusLabel)) return false;
+        }}
+        
+        return true;
+    }});
+}}
+
 // Show resources for a specific status (from summary card click)
 function showStatusResources(statusKey) {{
     var resources = statusResourcesData[statusKey] || [];
+    // Apply current page filters
+    resources = filterResourcesByCurrentFilters(resources);
     var title = statusDisplayNames[statusKey] + ' Resources';
     showChartResources(title, resources, {{ statuses: [statusKey] }});
 }}
@@ -1591,6 +2096,8 @@ function showAllResources() {{
     for (var status in statusResourcesData) {{
         allResources = allResources.concat(statusResourcesData[status]);
     }}
+    // Apply current page filters
+    allResources = filterResourcesByCurrentFilters(allResources);
     showChartResources('All Resources', allResources, {{}});
 }}
 
@@ -1598,13 +2105,42 @@ function showAllResources() {{
 var summaryTooltip = null;
 
 function showSummaryTooltip(event, statusKey) {{
-    var services = statusServiceSummary[statusKey] || {{}};
-    var serviceList = Object.keys(services);
+    // Get current filters
+    var filters = getSelectedFilters();
+    
+    // Calculate filtered service counts based on current filters
+    var filteredServiceCounts = {{}};
+    
+    // Iterate through all resources and count by service (respecting filters)
+    for (var service in serviceResourcesData) {{
+        // Check service filter
+        if (filters.services.length > 0 && !filters.services.includes(service)) continue;
+        
+        var resources = serviceResourcesData[service];
+        resources.forEach(function(r) {{
+            // Check account filter
+            if (filters.accounts.length > 0 && !filters.accounts.includes(r.account)) return;
+            
+            // Check status filter
+            var statusLabel = statusDisplayNames[r.status];
+            if (filters.statuses.length > 0 && !filters.statuses.includes(statusLabel)) return;
+            
+            // For 'total', count all; otherwise count only matching status
+            if (statusKey === 'total' || r.status === statusKey) {{
+                if (!filteredServiceCounts[service]) {{
+                    filteredServiceCounts[service] = 0;
+                }}
+                filteredServiceCounts[service]++;
+            }}
+        }});
+    }}
+    
+    var serviceList = Object.keys(filteredServiceCounts);
     
     if (serviceList.length === 0) return;
     
     // Sort by count descending
-    serviceList.sort(function(a, b) {{ return services[b] - services[a]; }});
+    serviceList.sort(function(a, b) {{ return filteredServiceCounts[b] - filteredServiceCounts[a]; }});
     
     // Create tooltip element if not exists
     if (!summaryTooltip) {{
@@ -1615,7 +2151,7 @@ function showSummaryTooltip(event, statusKey) {{
     
     // Build tooltip content
     var title = statusKey === 'total' ? 'All Resources' : statusDisplayNames[statusKey];
-    var html = '<div class="tooltip-title">Resources by Service</div>';
+    var html = '<div class="tooltip-title">Resources by Service (filtered)</div>';
     
     var maxShow = 5;
     var shown = Math.min(serviceList.length, maxShow);
@@ -1624,7 +2160,7 @@ function showSummaryTooltip(event, statusKey) {{
         var svc = serviceList[i];
         html += '<div class="tooltip-row">';
         html += '<span class="tooltip-service">' + svc + '</span>';
-        html += '<span class="tooltip-count">' + services[svc] + '</span>';
+        html += '<span class="tooltip-count">' + filteredServiceCounts[svc] + '</span>';
         html += '</div>';
     }}
     
@@ -2217,6 +2753,58 @@ window.addEventListener('scroll', function() {{
     }}
 }});
 
+// Column resizing functionality
+function initColumnResizers(tableSelector) {{
+    const table = document.querySelector(tableSelector);
+    if (!table) return;
+    
+    const headers = table.querySelectorAll('thead th');
+    
+    headers.forEach(function(th, index) {{
+        // Skip last column (no resizer needed)
+        if (index === headers.length - 1) return;
+        
+        // Create resizer element
+        const resizer = document.createElement('div');
+        resizer.className = 'col-resizer';
+        th.appendChild(resizer);
+        
+        let startX, startWidth, nextStartWidth;
+        const nextTh = headers[index + 1];
+        
+        resizer.addEventListener('mousedown', function(e) {{
+            e.preventDefault();
+            e.stopPropagation();
+            
+            startX = e.pageX;
+            startWidth = th.offsetWidth;
+            if (nextTh) nextStartWidth = nextTh.offsetWidth;
+            
+            resizer.classList.add('resizing');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        }});
+        
+        function onMouseMove(e) {{
+            const diff = e.pageX - startX;
+            const newWidth = Math.max(50, startWidth + diff);
+            th.style.width = newWidth + 'px';
+            th.style.minWidth = newWidth + 'px';
+        }}
+        
+        function onMouseUp() {{
+            resizer.classList.remove('resizing');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        }}
+    }});
+}}
+
 // Filter functionality - initialize on DOM ready
 function initFilters() {{
     document.querySelectorAll('.filter-option').forEach(function(option) {{
@@ -2268,7 +2856,7 @@ function applyFilters() {{
         
         const account = data[0];
         const service = data[1];
-        const statusCell = data[7];
+        const statusCell = data[8];
         
         // Extract status text from the cell
         const statusMatch = statusCell.match(/>([^<]+)</);
@@ -2349,8 +2937,199 @@ function applyFilters() {{
         }}
     }});
     
+    // Filter version detail cards
+    filterVersionDetailCards(filters);
+    
     // Update summary counts based on visible rows
     updateSummaryCounts(table);
+    
+    // Update charts based on filters
+    updateChartsWithFilters(filters);
+}}
+
+// Filter version detail cards based on selected filters
+function filterVersionDetailCards(filters) {{
+    document.querySelectorAll('.version-detail-card').forEach(function(card) {{
+        const service = card.dataset.service;
+        
+        // Check if service matches filter
+        if (filters.services.length > 0 && !filters.services.includes(service)) {{
+            card.style.display = 'none';
+        }} else {{
+            card.style.display = '';
+        }}
+    }});
+}}
+
+// Update charts based on filters
+function updateChartsWithFilters(filters) {{
+    // Recalculate chart data based on filtered resources
+    var filteredServiceData = {{}};
+    var filteredAccountData = {{}};
+    var filteredStatusTotals = {{ supported: 0, approaching: 0, extended: 0, out_of_support: 0 }};
+    
+    // Get all resources and filter them
+    for (var service in serviceResourcesData) {{
+        if (filters.services.length > 0 && !filters.services.includes(service)) continue;
+        
+        var resources = serviceResourcesData[service];
+        resources.forEach(function(r) {{
+            // Check account filter
+            if (filters.accounts.length > 0 && !filters.accounts.includes(r.account)) return;
+            
+            // Check status filter
+            var statusLabel = statusDisplayNames[r.status];
+            if (filters.statuses.length > 0 && !filters.statuses.includes(statusLabel)) return;
+            
+            // Count for service chart
+            if (!filteredServiceData[service]) {{
+                filteredServiceData[service] = {{ supported: 0, approaching: 0, extended: 0, out_of_support: 0 }};
+            }}
+            filteredServiceData[service][r.status]++;
+            
+            // Count for account chart
+            if (!filteredAccountData[r.account]) {{
+                filteredAccountData[r.account] = {{ supported: 0, approaching: 0, extended: 0, out_of_support: 0 }};
+            }}
+            filteredAccountData[r.account][r.status]++;
+            
+            // Count for status totals
+            filteredStatusTotals[r.status]++;
+        }});
+    }}
+    
+    // Update service chart
+    var serviceChart = Chart.getChart('serviceChart');
+    if (serviceChart) {{
+        var filteredServiceLabels = Object.keys(filteredServiceData).sort();
+        serviceChart.data.labels = filteredServiceLabels;
+        serviceChart.data.datasets[0].data = filteredServiceLabels.map(function(s) {{ return filteredServiceData[s].supported; }});
+        serviceChart.data.datasets[1].data = filteredServiceLabels.map(function(s) {{ return filteredServiceData[s].approaching; }});
+        serviceChart.data.datasets[2].data = filteredServiceLabels.map(function(s) {{ return filteredServiceData[s].extended; }});
+        serviceChart.data.datasets[3].data = filteredServiceLabels.map(function(s) {{ return filteredServiceData[s].out_of_support; }});
+        serviceChart.update();
+    }}
+    
+    // Update account chart
+    var accountChart = Chart.getChart('accountChart');
+    if (accountChart) {{
+        var filteredAccountLabels = Object.keys(filteredAccountData).sort();
+        accountChart.data.labels = filteredAccountLabels;
+        accountChart.data.datasets[0].data = filteredAccountLabels.map(function(a) {{ return filteredAccountData[a].supported; }});
+        accountChart.data.datasets[1].data = filteredAccountLabels.map(function(a) {{ return filteredAccountData[a].approaching; }});
+        accountChart.data.datasets[2].data = filteredAccountLabels.map(function(a) {{ return filteredAccountData[a].extended; }});
+        accountChart.data.datasets[3].data = filteredAccountLabels.map(function(a) {{ return filteredAccountData[a].out_of_support; }});
+        accountChart.update();
+    }}
+    
+    // Update status pie chart
+    var statusPieChart = Chart.getChart('statusPieChart');
+    if (statusPieChart) {{
+        statusPieChart.data.datasets[0].data = [
+            filteredStatusTotals.supported,
+            filteredStatusTotals.approaching,
+            filteredStatusTotals.extended,
+            filteredStatusTotals.out_of_support
+        ];
+        statusPieChart.update();
+    }}
+    
+    // Update service pie chart
+    var servicePieChart = Chart.getChart('servicePieChart');
+    if (servicePieChart) {{
+        var filteredServiceLabels = Object.keys(filteredServiceData).sort();
+        servicePieChart.data.labels = filteredServiceLabels;
+        servicePieChart.data.datasets[0].data = filteredServiceLabels.map(function(s) {{
+            var d = filteredServiceData[s];
+            return d.supported + d.approaching + d.extended + d.out_of_support;
+        }});
+        servicePieChart.update();
+    }}
+    
+    // Update timeline chart and list
+    updateTimelineWithFilters(filters);
+}}
+
+// Update timeline chart and list based on filters
+function updateTimelineWithFilters(filters) {{
+    // Check if timeline data is available
+    if (typeof window.allTimelineResourcesData === 'undefined' || !window.allTimelineResourcesData) {{
+        return;
+    }}
+    
+    // Filter timeline resources data
+    var filteredMonthlyData = {{}};
+    
+    for (var month in window.allTimelineResourcesData) {{
+        if (!window.allTimelineResourcesData.hasOwnProperty(month)) continue;
+        var resources = window.allTimelineResourcesData[month];
+        if (!resources || !Array.isArray(resources)) continue;
+        
+        var filteredResources = resources.filter(function(r) {{
+            // Check service filter
+            if (filters.services.length > 0 && filters.services.indexOf(r.service) === -1) return false;
+            
+            // Check account filter
+            if (filters.accounts.length > 0 && filters.accounts.indexOf(r.account) === -1) return false;
+            
+            // Check status filter
+            var statusLabel = statusDisplayNames[r.status];
+            if (filters.statuses.length > 0 && filters.statuses.indexOf(statusLabel) === -1) return false;
+            
+            return true;
+        }});
+        
+        if (filteredResources.length > 0) {{
+            filteredMonthlyData[month] = {{
+                supported: 0,
+                approaching: 0,
+                extended: 0,
+                out_of_support: 0
+            }};
+            filteredResources.forEach(function(r) {{
+                filteredMonthlyData[month][r.status]++;
+            }});
+        }}
+    }}
+    
+    // Update timeline chart
+    if (typeof window.timelineChartInstance !== 'undefined' && window.timelineChartInstance) {{
+        var filteredMonths = Object.keys(filteredMonthlyData).sort();
+        
+        // Apply date range filter if set
+        var startDate = document.getElementById('timelineStartDate').value;
+        var endDate = document.getElementById('timelineEndDate').value;
+        if (startDate && endDate) {{
+            filteredMonths = filteredMonths.filter(function(m) {{
+                return m >= startDate && m <= endDate;
+            }});
+        }}
+        
+        window.timelineChartInstance.data.labels = filteredMonths;
+        window.timelineChartInstance.data.datasets[0].data = filteredMonths.map(function(m) {{ return filteredMonthlyData[m] ? filteredMonthlyData[m].out_of_support : 0; }});
+        window.timelineChartInstance.data.datasets[1].data = filteredMonths.map(function(m) {{ return filteredMonthlyData[m] ? filteredMonthlyData[m].extended : 0; }});
+        window.timelineChartInstance.data.datasets[2].data = filteredMonths.map(function(m) {{ return filteredMonthlyData[m] ? filteredMonthlyData[m].approaching : 0; }});
+        window.timelineChartInstance.data.datasets[3].data = filteredMonths.map(function(m) {{ return filteredMonthlyData[m] ? filteredMonthlyData[m].supported : 0; }});
+        window.timelineChartInstance.update();
+    }}
+    
+    // Update timeline list (Upcoming End-of-Support Events)
+    var timelineItems = document.querySelectorAll('.timeline-item');
+    timelineItems.forEach(function(item) {{
+        var service = item.getAttribute('data-service') || '';
+        var status = item.getAttribute('data-status') || '';
+        
+        // Service filter: if no services selected, show all; otherwise check if service is in selected list
+        var serviceMatch = filters.services.length === 0 || filters.services.indexOf(service) !== -1;
+        // Status filter: if no statuses selected, show all; otherwise check if status is in selected list
+        var statusMatch = filters.statuses.length === 0 || filters.statuses.indexOf(status) !== -1;
+        
+        if (serviceMatch && statusMatch) {{
+            item.style.display = '';
+        }} else {{
+            item.style.display = 'none';
+        }}
+    }});
 }}
 
 function updateSummaryCounts(table) {{
@@ -2363,7 +3142,7 @@ function updateSummaryCounts(table) {{
     table.rows({{ search: 'applied' }}).every(function() {{
         total++;
         const data = this.data();
-        const statusCell = data[7];
+        const statusCell = data[8];
         
         if (statusCell.includes('status-supported')) supported++;
         else if (statusCell.includes('status-approaching')) approaching++;
@@ -2440,6 +3219,64 @@ function resetFilters() {{
         cards[2].textContent = '{report.total_counts.get(SupportStatus.APPROACHING_EOS, 0)}';
         cards[3].textContent = '{report.total_counts.get(SupportStatus.EXTENDED_SUPPORT, 0)}';
         cards[4].textContent = '{report.total_counts.get(SupportStatus.OUT_OF_SUPPORT, 0)}';
+    }}
+    
+    // Reset version detail cards visibility
+    document.querySelectorAll('.version-detail-card').forEach(function(card) {{
+        card.style.display = '';
+    }});
+    
+    // Reset timeline list items visibility
+    document.querySelectorAll('.timeline-item').forEach(function(item) {{
+        item.style.display = '';
+    }});
+    
+    // Reset timeline chart to show all data
+    if (typeof window.timelineChartInstance !== 'undefined' && window.timelineChartInstance && typeof resetTimelineDateFilter === 'function') {{
+        resetTimelineDateFilter();
+    }}
+    
+    // Reset all charts to original data
+    resetChartsToOriginal();
+}}
+
+// Reset all charts to their original unfiltered data
+function resetChartsToOriginal() {{
+    // Reset service chart
+    var serviceChart = Chart.getChart('serviceChart');
+    if (serviceChart) {{
+        serviceChart.data.labels = serviceLabelsArray;
+        serviceChart.data.datasets[0].data = {service_supported};
+        serviceChart.data.datasets[1].data = {service_approaching};
+        serviceChart.data.datasets[2].data = {service_extended};
+        serviceChart.data.datasets[3].data = {service_out};
+        serviceChart.update();
+    }}
+    
+    // Reset account chart
+    var accountChart = Chart.getChart('accountChart');
+    if (accountChart) {{
+        accountChart.data.labels = accountLabelsArray;
+        accountChart.data.datasets[0].data = {account_supported};
+        accountChart.data.datasets[1].data = {account_approaching};
+        accountChart.data.datasets[2].data = {account_extended};
+        accountChart.data.datasets[3].data = {account_out};
+        accountChart.update();
+    }}
+    
+    // Reset status pie chart
+    var statusPieChart = Chart.getChart('statusPieChart');
+    if (statusPieChart) {{
+        statusPieChart.data.datasets[0].data = {status_values};
+        statusPieChart.update();
+    }}
+    
+    // Reset service pie chart
+    var servicePieChart = Chart.getChart('servicePieChart');
+    if (servicePieChart) {{
+        servicePieChart.data.labels = serviceLabelsArray;
+        servicePieChart.data.datasets[0].data = {service_totals};
+        servicePieChart.update();
     }}
 }}
 
@@ -2561,6 +3398,8 @@ function initChartsLazy() {{
                         var statusKey = statusLabelsMap[datasetIndex];
                         // Filter resources by the clicked status
                         var resources = allResources.filter(function(r) {{ return r.status === statusKey; }});
+                        // Apply current page filters (account filter)
+                        resources = filterResourcesByCurrentFilters(resources);
                         var statusName = statusDisplayNames[statusKey];
                         showChartResources(statusName + ' Resources for ' + service, resources, {{ services: [service], statuses: [statusKey] }});
                     }}
@@ -2599,6 +3438,8 @@ function initChartsLazy() {{
                         var statusKey = statusLabelsMap[datasetIndex];
                         // Filter resources by the clicked status
                         var resources = allResources.filter(function(r) {{ return r.status === statusKey; }});
+                        // Apply current page filters (service filter)
+                        resources = filterResourcesByCurrentFilters(resources);
                         var statusName = statusDisplayNames[statusKey];
                         showChartResources(statusName + ' Resources for Account ' + account, resources, {{ accounts: [account], statuses: [statusKey] }});
                     }}
@@ -2627,6 +3468,8 @@ function initChartsLazy() {{
                         var index = elements[0].index;
                         var statusKey = statusLabelsMap[index];
                         var resources = statusResourcesData[statusKey] || [];
+                        // Apply current page filters (service and account filters)
+                        resources = filterResourcesByCurrentFilters(resources);
                         showChartResources(statusDisplayNames[statusKey] + ' Resources', resources, {{ statuses: [statusKey] }});
                     }}
                 }},
@@ -2654,6 +3497,8 @@ function initChartsLazy() {{
                         var index = elements[0].index;
                         var service = serviceLabelsArray[index];
                         var resources = serviceResourcesData[service] || [];
+                        // Apply current page filters (account and status filters)
+                        resources = filterResourcesByCurrentFilters(resources);
                         showChartResources('Resources for ' + service, resources, {{ services: [service] }});
                     }}
                 }},
@@ -2671,6 +3516,37 @@ function initChartsLazy() {{
     }});
 }}
 
+// Version Details functions
+function toggleVersionDetailCard(anchorId) {{
+    var card = document.getElementById('version-detail-' + anchorId);
+    if (card) {{
+        card.classList.toggle('expanded');
+    }}
+}}
+
+function expandAllVersionDetails() {{
+    document.querySelectorAll('.version-detail-card').forEach(function(card) {{
+        card.classList.add('expanded');
+    }});
+}}
+
+function collapseAllVersionDetails() {{
+    document.querySelectorAll('.version-detail-card').forEach(function(card) {{
+        card.classList.remove('expanded');
+    }});
+}}
+
+function scrollToVersionDetail(event, anchorId) {{
+    event.preventDefault();
+    var card = document.getElementById('version-detail-' + anchorId);
+    if (card) {{
+        // Expand the card
+        card.classList.add('expanded');
+        // Scroll to it
+        card.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
+    }}
+}}
+
 // Initialize with progressive loading
 $(document).ready(function() {{
     initFilters();
@@ -2685,7 +3561,11 @@ $(document).ready(function() {{
             dom: 'Bfrtip',
             buttons: ['copy', 'csv', 'excel'],
             deferRender: true,
-            language: {{ search: "Search:", lengthMenu: "Show _MENU_ entries" }}
+            language: {{ search: "Search:", lengthMenu: "Show _MENU_ entries" }},
+            initComplete: function() {{
+                // Add column resizers after DataTable init
+                initColumnResizers('#resourcesDataTable');
+            }}
         }});
         stepComplete();
         

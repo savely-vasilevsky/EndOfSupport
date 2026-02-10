@@ -737,8 +737,9 @@ class TestHTMLFormatterResourcesTable:
         table = soup.find('table', id='resourcesDataTable')
         headers = table.find('thead').find_all('th')
         
+        # Version Details column is now included by default, ARN column added
         expected_headers = ['Account', 'Service', 'Engine', 'Version', 
-                          'Resource', 'End of Support', 'Days to EOS', 'Status']
+                          'Resource', 'ARN', 'End of Support', 'Days to EOS', 'Status', 'Version Details']
         header_texts = [h.text for h in headers]
         
         assert header_texts == expected_headers
@@ -1442,7 +1443,7 @@ class TestHTMLFormatterTimeline:
         
         html = formatter.format(report)
         
-        assert "var timelineResourcesData" in html
+        assert "window.timelineResourcesData" in html
     
     def test_timeline_service_summary_data(self):
         """Test that timelineServiceSummary variable is defined for tooltips."""
@@ -1451,7 +1452,7 @@ class TestHTMLFormatterTimeline:
         
         html = formatter.format(report)
         
-        assert "var timelineServiceSummary" in html
+        assert "window.timelineServiceSummary" in html
     
     def test_show_month_resources_function(self):
         """Test that showMonthResources function is defined."""
@@ -2335,7 +2336,7 @@ class TestHTMLFormatterChartInteraction:
         
         html = formatter.format(report)
         
-        assert "var timelineResourcesData" in html
+        assert "window.timelineResourcesData" in html
 
 
 # ============================================================================
@@ -2596,7 +2597,7 @@ class TestHTMLFormatterGenerationParameters:
         
         html = formatter.format(report)
         
-        assert "Days Threshold: 60" in html
+        assert "EOS Threshold: 60 days" in html
     
     def test_generation_params_contains_filters(self):
         """Test that generation params shows filters when set."""
@@ -2614,8 +2615,8 @@ class TestHTMLFormatterGenerationParameters:
         
         html = formatter.format(report)
         
-        assert "Status Filter:" in html
-        assert "Account Filter:" in html
+        assert "Status:" in html
+        assert "Accounts:" in html
     
     def test_generation_params_css_exists(self):
         """Test that CSS for generation-params exists."""
@@ -2637,3 +2638,458 @@ class TestHTMLFormatterGenerationParameters:
         
         params_div = soup.find('div', class_='generation-params')
         assert params_div is None
+
+
+class TestHTMLFormatterVersionDetails:
+    """Tests for Version Details section in HTML formatter."""
+    
+    def test_version_details_section_exists(self):
+        """Test that version details section exists in HTML output."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        assert 'id="version-details-section"' in html
+        assert 'Version Details by Service' in html
+    
+    def test_version_details_menu_link_exists(self):
+        """Test that navigation menu includes Version Details link."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        assert 'href="#version-details-section"' in html
+        assert 'Version Details</a>' in html
+    
+    def test_version_details_cards_exist(self):
+        """Test that version detail cards are generated for each service+engine."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        assert 'class="version-detail-card"' in html
+        assert 'version-detail-header' in html
+        assert 'version-detail-content' in html
+    
+    def test_version_details_expand_collapse_buttons(self):
+        """Test that expand/collapse all buttons exist."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        assert 'expandAllVersionDetails()' in html
+        assert 'collapseAllVersionDetails()' in html
+        assert 'Expand All' in html
+        assert 'Collapse All' in html
+    
+    def test_version_details_table_headers(self):
+        """Test that version detail tables have correct headers."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        version_tables = soup.find_all('table', class_='version-detail-table')
+        assert len(version_tables) > 0
+        
+        # Check headers of first table
+        headers = version_tables[0].find('thead').find_all('th')
+        header_texts = [h.text for h in headers]
+        
+        expected = ['Version', 'Resource Count', 'End of Support', 
+                   'Extended Support Start', 'Extended Support End', 'Status Summary']
+        assert header_texts == expected
+    
+    def test_version_details_link_in_resources_table(self):
+        """Test that resources table has Version Details links."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        assert 'class="version-details-link"' in html
+        assert 'scrollToVersionDetail' in html
+    
+    def test_version_details_javascript_functions(self):
+        """Test that version details JavaScript functions exist."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        assert 'function toggleVersionDetailCard' in html
+        assert 'function expandAllVersionDetails' in html
+        assert 'function collapseAllVersionDetails' in html
+        assert 'function scrollToVersionDetail' in html
+    
+    def test_version_details_css_styles(self):
+        """Test that version details CSS styles are defined."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        assert '.version-detail-card' in html
+        assert '.version-detail-header' in html
+        assert '.version-detail-content' in html
+        assert '.version-details-link' in html
+    
+    def test_version_details_cards_have_data_attributes(self):
+        """Test that version detail cards have data-service and data-engine attributes."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        cards = soup.find_all('div', class_='version-detail-card')
+        assert len(cards) > 0
+        
+        for card in cards:
+            assert card.has_attr('data-service')
+
+
+class TestHTMLFormatterFilterUpdatesCharts:
+    """Tests for filter functionality updating all widgets including charts."""
+    
+    def test_apply_filters_updates_charts(self):
+        """Test that applyFilters function includes chart update logic."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        assert 'updateChartsWithFilters' in html
+        assert 'function updateChartsWithFilters(filters)' in html
+    
+    def test_filter_updates_service_chart(self):
+        """Test that filter updates service chart."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        assert "Chart.getChart('serviceChart')" in html
+        assert 'serviceChart.update()' in html
+    
+    def test_filter_updates_account_chart(self):
+        """Test that filter updates account chart."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        assert "Chart.getChart('accountChart')" in html
+        assert 'accountChart.update()' in html
+    
+    def test_filter_updates_status_pie_chart(self):
+        """Test that filter updates status pie chart."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        assert "Chart.getChart('statusPieChart')" in html
+        assert 'statusPieChart.update()' in html
+    
+    def test_filter_updates_service_pie_chart(self):
+        """Test that filter updates service pie chart."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        assert "Chart.getChart('servicePieChart')" in html
+        assert 'servicePieChart.update()' in html
+    
+    def test_filter_updates_version_details_cards(self):
+        """Test that filter updates version details cards visibility."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        assert 'filterVersionDetailCards' in html
+        assert 'function filterVersionDetailCards(filters)' in html
+
+
+class TestHTMLFormatterTimelineFiltering:
+    """Tests for timeline filtering functionality."""
+    
+    def test_timeline_items_have_data_attributes(self):
+        """Test that timeline items have data-service and data-status attributes."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        timeline_items = soup.find_all('div', class_='timeline-item')
+        if timeline_items:  # Only test if there are timeline items
+            for item in timeline_items:
+                assert item.has_attr('data-service')
+                assert item.has_attr('data-status')
+    
+    def test_update_timeline_with_filters_function_exists(self):
+        """Test that updateTimelineWithFilters function exists."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        assert 'function updateTimelineWithFilters' in html
+    
+    def test_all_timeline_resources_data_variable_exists(self):
+        """Test that allTimelineResourcesData variable is defined for filtering."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        assert 'window.allTimelineResourcesData' in html
+    
+    def test_apply_filters_calls_timeline_update(self):
+        """Test that applyFilters calls updateTimelineWithFilters."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        assert 'updateTimelineWithFilters(filters)' in html
+    
+    def test_reset_filters_resets_timeline(self):
+        """Test that resetFilters resets timeline items visibility."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        # Check that reset shows all timeline items
+        assert "document.querySelectorAll('.timeline-item').forEach" in html
+    
+    def test_reset_charts_to_original_function_exists(self):
+        """Test that resetChartsToOriginal function exists."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        assert 'function resetChartsToOriginal' in html
+
+
+# ============================================================================
+# Chart Click Filter Tests
+# ============================================================================
+
+class TestHTMLFormatterChartClickFiltering:
+    """Tests for chart click filtering functionality."""
+    
+    def test_filter_resources_by_current_filters_function_exists(self):
+        """Test that filterResourcesByCurrentFilters function exists."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        assert 'function filterResourcesByCurrentFilters(resources)' in html
+    
+    def test_filter_resources_function_checks_service_filter(self):
+        """Test that filterResourcesByCurrentFilters checks service filter."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        # Should check service filter
+        assert "filters.services.length > 0" in html
+        assert "filters.services.includes(r.service)" in html
+    
+    def test_filter_resources_function_checks_account_filter(self):
+        """Test that filterResourcesByCurrentFilters checks account filter."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        # Should check account filter
+        assert "filters.accounts.length > 0" in html
+        assert "filters.accounts.includes(r.account)" in html
+    
+    def test_filter_resources_function_checks_status_filter(self):
+        """Test that filterResourcesByCurrentFilters checks status filter."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        # Should check status filter
+        assert "filters.statuses.length > 0" in html
+        assert "filters.statuses.includes(statusLabel)" in html
+    
+    def test_show_status_resources_applies_filters(self):
+        """Test that showStatusResources applies current page filters."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        # showStatusResources should call filterResourcesByCurrentFilters
+        assert "function showStatusResources(statusKey)" in html
+        # Check that it applies filters before showing
+        assert "resources = filterResourcesByCurrentFilters(resources)" in html
+    
+    def test_show_all_resources_applies_filters(self):
+        """Test that showAllResources applies current page filters."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        # showAllResources should call filterResourcesByCurrentFilters
+        assert "function showAllResources()" in html
+        # Check that it applies filters before showing
+        assert "allResources = filterResourcesByCurrentFilters(allResources)" in html
+    
+    def test_service_chart_click_applies_filters(self):
+        """Test that service chart click applies current page filters."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        # Service chart onClick should apply filters
+        # Check for comment indicating filter application
+        assert "Apply current page filters (account filter)" in html
+    
+    def test_account_chart_click_applies_filters(self):
+        """Test that account chart click applies current page filters."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        # Account chart onClick should apply filters
+        # Check for comment indicating filter application
+        assert "Apply current page filters (service filter)" in html
+    
+    def test_status_pie_chart_click_applies_filters(self):
+        """Test that status pie chart click applies current page filters."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        # Status pie chart onClick should apply filters
+        # Check for comment indicating filter application
+        assert "Apply current page filters (service and account filters)" in html
+    
+    def test_service_pie_chart_click_applies_filters(self):
+        """Test that service pie chart click applies current page filters."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        # Service pie chart onClick should apply filters
+        # Check for comment indicating filter application
+        assert "Apply current page filters (account and status filters)" in html
+    
+    def test_timeline_show_month_resources_applies_filters(self):
+        """Test that showMonthResources applies current page filters."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        # showMonthResources should apply filters
+        assert "function showMonthResources(month)" in html
+        # Check for the filter application in the function
+        assert "No resources match current filters for" in html
+
+
+# ============================================================================
+# AWS Documentation Links Tests
+# ============================================================================
+
+class TestHTMLFormatterAWSDocsLinks:
+    """Tests for AWS documentation links in version details section."""
+    
+    def test_aws_docs_links_mapping_exists(self):
+        """Test that AWS_DOCS_LINKS mapping exists in HTMLFormatter."""
+        formatter = HTMLFormatter()
+        
+        assert hasattr(formatter, 'AWS_DOCS_LINKS')
+        assert isinstance(formatter.AWS_DOCS_LINKS, dict)
+        assert len(formatter.AWS_DOCS_LINKS) > 0
+    
+    def test_aws_docs_links_have_required_fields(self):
+        """Test that each AWS docs link entry has required fields."""
+        formatter = HTMLFormatter()
+        
+        for service, info in formatter.AWS_DOCS_LINKS.items():
+            assert 'url' in info, f"Missing 'url' for {service}"
+            assert 'title' in info, f"Missing 'title' for {service}"
+            assert 'description' in info, f"Missing 'description' for {service}"
+            assert info['url'].startswith('http'), f"Invalid URL for {service}"
+    
+    def test_lambda_docs_link_exists(self):
+        """Test that Lambda documentation link exists."""
+        formatter = HTMLFormatter()
+        
+        assert 'Lambda' in formatter.AWS_DOCS_LINKS
+        assert 'lambda-runtimes' in formatter.AWS_DOCS_LINKS['Lambda']['url']
+    
+    def test_rds_docs_link_exists(self):
+        """Test that RDS documentation link exists."""
+        formatter = HTMLFormatter()
+        
+        assert 'RDS' in formatter.AWS_DOCS_LINKS
+    
+    def test_elasticache_docs_link_exists(self):
+        """Test that ElastiCache documentation link exists."""
+        formatter = HTMLFormatter()
+        
+        assert 'ElastiCache' in formatter.AWS_DOCS_LINKS
+        assert 'engine-versions' in formatter.AWS_DOCS_LINKS['ElastiCache']['url']
+    
+    def test_get_aws_docs_link_html_returns_link_for_known_service(self):
+        """Test that _get_aws_docs_link_html returns link for known service."""
+        formatter = HTMLFormatter()
+        
+        link_html = formatter._get_aws_docs_link_html('Lambda')
+        
+        assert 'href=' in link_html
+        assert 'aws-docs-link' in link_html
+        assert 'target="_blank"' in link_html
+        assert '📖' in link_html
+    
+    def test_get_aws_docs_link_html_returns_empty_for_unknown_service(self):
+        """Test that _get_aws_docs_link_html returns empty for unknown service."""
+        formatter = HTMLFormatter()
+        
+        link_html = formatter._get_aws_docs_link_html('UnknownService123')
+        
+        assert link_html == ''
+    
+    def test_aws_docs_link_css_styles_exist(self):
+        """Test that AWS docs link CSS styles are defined."""
+        report = create_sample_report()
+        formatter = HTMLFormatter()
+        
+        html = formatter.format(report)
+        
+        assert '.aws-docs-link' in html
+        assert '.aws-docs-link:hover' in html
+    
+    def test_aws_docs_link_prevents_card_toggle(self):
+        """Test that AWS docs link has onclick stopPropagation to prevent card toggle."""
+        formatter = HTMLFormatter()
+        
+        link_html = formatter._get_aws_docs_link_html('Lambda')
+        
+        assert 'event.stopPropagation()' in link_html

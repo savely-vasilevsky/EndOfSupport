@@ -336,19 +336,22 @@ class TestFilterBarInteraction:
         
         # Deselect some filters using JavaScript to avoid click issues
         page.evaluate("document.querySelector('#service-filters .filter-option').click()")
-        page.evaluate("document.querySelector('#account-filters .filter-option').click()")
+        # Account filter is now a dropdown - click on a dropdown item
+        page.evaluate("document.querySelector('#account-dropdown').classList.add('open')")
+        page.wait_for_timeout(100)
+        page.evaluate("document.querySelector('#account-items .dropdown-item').click()")
         page.wait_for_timeout(100)
         
         # Click Reset All
         page.click(".reset-btn")
         page.wait_for_timeout(300)
         
-        # All filter options should be selected again
-        all_options = page.locator(".filter-option")
-        count = all_options.count()
+        # All service filter options should be selected again
+        service_options = page.locator("#service-filters .filter-option")
+        count = service_options.count()
         
         for i in range(count):
-            option = all_options.nth(i)
+            option = service_options.nth(i)
             expect(option).to_have_class(re.compile(r"selected"))
     
     def test_filter_by_account(self, page: Page, html_report_path: str):
@@ -357,9 +360,12 @@ class TestFilterBarInteraction:
         page.wait_for_load_state("networkidle")
         page.wait_for_timeout(600)
         
-        # Deselect all accounts except Production
-        page.click("#account-filters .filter-option:has-text('Development')")
-        page.click("#account-filters .filter-option:has-text('Staging')")
+        # Open account dropdown and deselect Development and Staging
+        page.evaluate("document.querySelector('#account-dropdown').classList.add('open')")
+        page.wait_for_timeout(100)
+        page.evaluate("document.querySelector('#account-items .dropdown-item[data-value=\"Development\"]').click()")
+        page.wait_for_timeout(100)
+        page.evaluate("document.querySelector('#account-items .dropdown-item[data-value=\"Staging\"]').click()")
         page.wait_for_timeout(100)
         
         # Apply filters
@@ -623,9 +629,12 @@ class TestSummaryCardsUpdate:
         # Get initial total count
         initial_total = page.locator(".summary-card.total .count").text_content()
         
-        # Deselect some accounts
-        page.click("#account-filters .filter-option:has-text('Development')")
-        page.click("#account-filters .filter-option:has-text('Staging')")
+        # Open account dropdown and deselect Development and Staging
+        page.evaluate("document.querySelector('#account-dropdown').classList.add('open')")
+        page.wait_for_timeout(100)
+        page.evaluate("document.querySelector('#account-items .dropdown-item[data-value=\"Development\"]').click()")
+        page.wait_for_timeout(100)
+        page.evaluate("document.querySelector('#account-items .dropdown-item[data-value=\"Staging\"]').click()")
         page.wait_for_timeout(100)
         
         # Apply filters
@@ -647,8 +656,12 @@ class TestSummaryCardsUpdate:
         # Get initial total
         initial_total = page.locator(".summary-card.total .count").text_content()
         
-        # Apply some filters
-        page.click("#account-filters .filter-option:has-text('Development')")
+        # Open account dropdown and deselect Development
+        page.evaluate("document.querySelector('#account-dropdown').classList.add('open')")
+        page.wait_for_timeout(100)
+        page.evaluate("document.querySelector('#account-items .dropdown-item[data-value=\"Development\"]').click()")
+        page.wait_for_timeout(100)
+        
         page.click(".apply-btn")
         page.wait_for_timeout(500)
         
@@ -748,9 +761,12 @@ class TestServiceGroupFilterIntegration:
         first_group = page.locator(".service-group").first
         initial_count_text = first_group.locator(".service-count").text_content()
         
-        # Filter by account (this should reduce counts in service groups)
-        page.click("#account-filters .filter-option:has-text('Development')")
-        page.click("#account-filters .filter-option:has-text('Staging')")
+        # Open account dropdown and deselect Development and Staging
+        page.evaluate("document.querySelector('#account-dropdown').classList.add('open')")
+        page.wait_for_timeout(100)
+        page.evaluate("document.querySelector('#account-items .dropdown-item[data-value=\"Development\"]').click()")
+        page.wait_for_timeout(100)
+        page.evaluate("document.querySelector('#account-items .dropdown-item[data-value=\"Staging\"]').click()")
         page.wait_for_timeout(100)
         
         # Apply filters
