@@ -41,6 +41,7 @@ def create_resource(
         auto_minor_version_upgrade=None,
         extended_support_start=extended_support_start,
         extended_support_year1_start=None,
+        extended_support_year2_start=None,
         extended_support_year3_start=None,
         extended_support_end=extended_support_end,
         insights="Test resource",

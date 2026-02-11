@@ -10,7 +10,9 @@ class SupportStatus(Enum):
     """Classification of a resource's support state."""
     SUPPORTED = "Supported"
     APPROACHING_EOS = "Approaching End-of-Support"
-    EXTENDED_SUPPORT = "In Extended Support"
+    EXTENDED_SUPPORT_YEAR_1 = "Extended Support Y1"
+    EXTENDED_SUPPORT_YEAR_2 = "Extended Support Y2"
+    EXTENDED_SUPPORT_YEAR_3 = "Extended Support Y3"
     OUT_OF_SUPPORT = "Out of Support"
 
 
@@ -31,6 +33,7 @@ class Resource:
     auto_minor_version_upgrade: Optional[bool]
     extended_support_start: Optional[date]
     extended_support_year1_start: Optional[date]
+    extended_support_year2_start: Optional[date]
     extended_support_year3_start: Optional[date]
     extended_support_end: Optional[date]
     insights: str

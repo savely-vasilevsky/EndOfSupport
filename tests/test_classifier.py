@@ -76,7 +76,7 @@ class TestResourceClassifierBasic:
         
         status = classifier.classify(resource)
         
-        assert status == SupportStatus.EXTENDED_SUPPORT
+        assert status == SupportStatus.EXTENDED_SUPPORT_YEAR_1
     
     def test_classify_approaching_eos(self):
         """Test classification when approaching end of support."""
@@ -246,6 +246,7 @@ def _create_resource(
     auto_minor_version_upgrade: bool = None,
     extended_support_start: date = None,
     extended_support_year1_start: date = None,
+    extended_support_year2_start: date = None,
     extended_support_year3_start: date = None,
     extended_support_end: date = None,
     insights: str = "Supported"
@@ -266,6 +267,7 @@ def _create_resource(
         auto_minor_version_upgrade=auto_minor_version_upgrade,
         extended_support_start=extended_support_start,
         extended_support_year1_start=extended_support_year1_start,
+        extended_support_year2_start=extended_support_year2_start,
         extended_support_year3_start=extended_support_year3_start,
         extended_support_end=extended_support_end,
         insights=insights,

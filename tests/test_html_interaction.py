@@ -63,6 +63,7 @@ def create_resource(
         auto_minor_version_upgrade=None,
         extended_support_start=None,
         extended_support_year1_start=None,
+        extended_support_year2_start=None,
         extended_support_year3_start=None,
         extended_support_end=None,
         insights="Test resource",
@@ -158,7 +159,7 @@ def create_test_report() -> Report:
             engine="redis",
             version="6.0",
             end_of_support=date.today() + timedelta(days=60),
-            status=SupportStatus.EXTENDED_SUPPORT,
+            status=SupportStatus.EXTENDED_SUPPORT_YEAR_1,
             days_to_eos=60,
         ),
         # Staging account - RDS
@@ -315,7 +316,9 @@ class TestFilterBarInteraction:
         # Deselect all status filters except "Out of Support"
         page.click("#status-filters .filter-option:has-text('Supported')")
         page.click("#status-filters .filter-option:has-text('Approaching EOS')")
-        page.click("#status-filters .filter-option:has-text('Extended Support')")
+        page.click("#status-filters .filter-option:has-text('Extended Support Y1')")
+        page.click("#status-filters .filter-option:has-text('Extended Support Y2')")
+        page.click("#status-filters .filter-option:has-text('Extended Support Y3')")
         page.wait_for_timeout(100)
         
         # Click Apply Filters
@@ -590,8 +593,13 @@ class TestDataTableInteraction:
         # Get first row's account before sorting
         first_row_before = page.locator("#resourcesDataTable tbody tr").first.text_content()
         
-        # Click on Account header to sort
-        page.click("#resourcesDataTable thead th:first-child")
+        # Click on Account header to sort (with scrollX, headers are in dataTables_scrollHead)
+        # Try the scroll head first, fall back to regular header
+        scroll_header = page.locator(".dataTables_scrollHead th:first-child")
+        if scroll_header.count() > 0:
+            scroll_header.first.click()
+        else:
+            page.click("#resourcesDataTable thead th:first-child")
         page.wait_for_timeout(300)
         
         # Get first row's account after sorting

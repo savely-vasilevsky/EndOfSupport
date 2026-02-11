@@ -1,3 +1,28 @@
+# Release Notes - v2.3.1
+
+## 🎉 What's New in v2.3.1
+
+### Extended Support Year Classification (Y1/Y2/Y3)
+- **6-status classification system** - Resources are now classified into 6 statuses: Supported, Approaching EOS, Extended Support Y1, Extended Support Y2, Extended Support Y3, and Out of Support
+- **Automatic Year 2 calculation** - Year 2 is automatically calculated as the period between Year 1 end and Year 3 start (since CSV doesn't include Year 2 column)
+- **Extended support takes precedence** - Resources with extended support dates are correctly classified even if insights say "Out of support"
+- **Shortened labels** - Display labels use "Y1", "Y2", "Y3" instead of "Year 1", "Year 2", "Year 3" for cleaner UI
+
+### HTML Report Improvements
+- **Horizontal scrolling** - Tables now support horizontal scrolling when content is wider than the viewport
+- **Column resizing fixed** - Column resizing no longer triggers table re-sorting
+- **Updated filter checkboxes** - GUI filter checkboxes updated for the 3 extended support year statuses
+
+### Excel Report Improvements
+- **Pivot table fallback** - If Windows COM pivot creation fails, automatically falls back to cross-platform summary pivot
+- **Better error handling** - Pivot creation errors no longer cause the entire report generation to fail
+
+### Bug Fixes
+- **Fixed column resize sorting issue** - Resizing columns no longer triggers DataTables sorting
+- **Fixed extended support classification** - Resources are now correctly classified into Y1/Y2/Y3 based on dates
+
+---
+
 # Release Notes - v2.3.0
 
 ## 🎉 What's New in v2.3.0

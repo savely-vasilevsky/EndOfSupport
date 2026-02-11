@@ -58,6 +58,7 @@ def create_resource(
         auto_minor_version_upgrade=None,
         extended_support_start=extended_support_start,
         extended_support_year1_start=None,
+        extended_support_year2_start=None,
         extended_support_year3_start=None,
         extended_support_end=extended_support_end,
         insights="Test resource",
@@ -147,7 +148,7 @@ def create_sample_report() -> Report:
             end_of_support=date.today() + timedelta(days=180),
             extended_support_start=date.today() - timedelta(days=10),
             extended_support_end=date.today() + timedelta(days=180),
-            status=SupportStatus.EXTENDED_SUPPORT,
+            status=SupportStatus.EXTENDED_SUPPORT_YEAR_1,
             days_to_eos=180,
         ),
     ]
@@ -367,7 +368,7 @@ class TestHTMLFormatterFilterBar:
         
         # Check for all status options
         options = status_filters.find_all('label', class_='filter-option')
-        assert len(options) == 4  # Supported, Approaching, Extended, Out of Support
+        assert len(options) == 6  # Supported, Approaching, Extended Year 1/2/3, Out of Support
     
     def test_filter_options_selected_by_default(self):
         """Test that all filter options are selected by default."""
@@ -483,12 +484,16 @@ class TestHTMLFormatterSummaryDashboard:
         # Check for each status card
         supported_card = soup.find('div', class_='summary-card supported')
         approaching_card = soup.find('div', class_='summary-card approaching')
-        extended_card = soup.find('div', class_='summary-card extended')
+        extended_year_1_card = soup.find('div', class_='summary-card extended-year-1')
+        extended_year_2_card = soup.find('div', class_='summary-card extended-year-2')
+        extended_year_3_card = soup.find('div', class_='summary-card extended-year-3')
         out_of_support_card = soup.find('div', class_='summary-card out-of-support')
         
         assert supported_card is not None
         assert approaching_card is not None
-        assert extended_card is not None
+        assert extended_year_1_card is not None
+        assert extended_year_2_card is not None
+        assert extended_year_3_card is not None
         assert out_of_support_card is not None
     
     def test_summary_shows_correct_total(self):
@@ -520,8 +525,8 @@ class TestHTMLFormatterSummaryDashboard:
         approaching_card = soup.find('div', class_='summary-card approaching')
         approaching_count = approaching_card.find('div', class_='count').text
         
-        extended_card = soup.find('div', class_='summary-card extended')
-        extended_count = extended_card.find('div', class_='count').text
+        extended_year_1_card = soup.find('div', class_='summary-card extended-year-1')
+        extended_year_1_count = extended_year_1_card.find('div', class_='count').text
         
         out_card = soup.find('div', class_='summary-card out-of-support')
         out_count = out_card.find('div', class_='count').text
@@ -529,7 +534,7 @@ class TestHTMLFormatterSummaryDashboard:
         # Verify counts match report
         assert int(supported_count) == report.total_counts.get(SupportStatus.SUPPORTED, 0)
         assert int(approaching_count) == report.total_counts.get(SupportStatus.APPROACHING_EOS, 0)
-        assert int(extended_count) == report.total_counts.get(SupportStatus.EXTENDED_SUPPORT, 0)
+        assert int(extended_year_1_count) == report.total_counts.get(SupportStatus.EXTENDED_SUPPORT_YEAR_1, 0)
         assert int(out_count) == report.total_counts.get(SupportStatus.OUT_OF_SUPPORT, 0)
     
     def test_summary_cards_are_clickable(self):
@@ -551,8 +556,14 @@ class TestHTMLFormatterSummaryDashboard:
         approaching_card = soup.find('div', class_='summary-card approaching')
         assert approaching_card.get('onclick') == "showStatusResources('approaching')"
         
-        extended_card = soup.find('div', class_='summary-card extended')
-        assert extended_card.get('onclick') == "showStatusResources('extended')"
+        extended_year_1_card = soup.find('div', class_='summary-card extended-year-1')
+        assert extended_year_1_card.get('onclick') == "showStatusResources('extended_year_1')"
+        
+        extended_year_2_card = soup.find('div', class_='summary-card extended-year-2')
+        assert extended_year_2_card.get('onclick') == "showStatusResources('extended_year_2')"
+        
+        extended_year_3_card = soup.find('div', class_='summary-card extended-year-3')
+        assert extended_year_3_card.get('onclick') == "showStatusResources('extended_year_3')"
         
         out_card = soup.find('div', class_='summary-card out-of-support')
         assert out_card.get('onclick') == "showStatusResources('out_of_support')"
@@ -884,7 +895,7 @@ class TestHTMLFormatterByService:
         for group in service_groups:
             header = group.find('div', class_='service-group-header')
             badges = header.find_all('span', class_='status-badge')
-            assert len(badges) == 4  # One for each status
+            assert len(badges) == 6  # One for each status (Supported, Approaching, Ext Year 1/2/3, Out of Support)
     
     def test_service_groups_have_tables(self):
         """Test that service groups have data tables."""
@@ -1998,7 +2009,9 @@ class TestHTMLFormatterPopupTabs:
         
         assert ".filter-chip.status-supported.selected" in html
         assert ".filter-chip.status-approaching.selected" in html
-        assert ".filter-chip.status-extended.selected" in html
+        assert ".filter-chip.status-extended_year_1.selected" in html
+        assert ".filter-chip.status-extended_year_2.selected" in html
+        assert ".filter-chip.status-extended_year_3.selected" in html
         assert ".filter-chip.status-out_of_support.selected" in html
     
     def test_popup_has_summary_bar(self):
@@ -2087,7 +2100,7 @@ class TestHTMLFormatterGUIInteraction:
         assert total_card.get('onclick') is not None
         
         # Status cards
-        for status_class in ['supported', 'approaching', 'extended', 'out-of-support']:
+        for status_class in ['supported', 'approaching', 'extended-year-1', 'extended-year-2', 'extended-year-3', 'out-of-support']:
             card = soup.find('div', class_=f'summary-card {status_class}')
             assert card is not None
             assert card.get('onclick') is not None

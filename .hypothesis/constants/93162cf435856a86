@@ -1,0 +1,4 @@
+# file: C:\Users\savely\Documents\Projects\KiroIDE\projects\EndOfSupportTool\src\html_formatter.py
+# hypothesis_version: 6.151.4
+
+[100, '"', '#0d47a1', '#1565c0', '#1b5e20', '#64b5f6', '#90caf9', '#b71c1c', '#bbdefb', '#c8e6c9', '#f57f17', '#ffcdd2', '#fff9c4', '%Y-%m', '%Y-%m-%d', '&', '&#39;', '&amp;', '&gt;', '&lt;', '&quot;', "'", ', ', '-', '.', '/', '2.3.0', ':', '<', '>', 'Amazon MQ', 'Approaching EOS', 'Aurora', 'DocumentDB', 'EKS', 'ElastiCache', 'Engine Releases', 'Kubernetes Versions', 'Lambda', 'MQ', 'MSK', 'N/A', 'Neptune', 'OpenSearch', 'OpenSearch Service', 'Out of Support', 'RDS', 'Supported', 'Unknown', 'Upgrading Domains', '_', 'account', 'approaching', 'description', 'engine', 'eos', 'eos_date', 'extended_year_1', 'extended_year_2', 'extended_year_3', 'name', 'out_of_support', 'resource', 'resources_list', 'service', 'status', 'status-approaching', 'status-supported', 'status_counts', 'supported', 'title', 'total', 'url', 'utf-8', 'version', 'w']

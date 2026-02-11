@@ -1,0 +1,4 @@
+# file: C:\Users\savely\Documents\Projects\KiroIDE\projects\EndOfSupportTool\src\parser.py
+# hypothesis_version: 6.151.4
+
+['%b %Y', '%b-%y', '%d %b %Y', '%d-%b-%y', '-', '1', 'Account', 'End-of-Support', 'Engine', 'Insights', 'Payer ID', 'Regions / AZs', 'Resource ARN', 'Resource Name', 'Resource Type', 'Service', 'TRUE', 'Version', 'YES', 'account', 'deprecated', 'end_of_support_raw', 'engine', 'extended_support_end', 'insights', 'not available', 'payer_id', 'r', 'region', 'resource_arn', 'resource_name', 'resource_type', 'service', 'supported', 'utf-8-sig', 'version']

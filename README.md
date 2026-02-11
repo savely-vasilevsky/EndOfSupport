@@ -4,7 +4,8 @@ A CLI and GUI tool to analyze AWS resource inventory CSV files and generate supp
 
 ## Features
 
-- **Support Status Classification**: Classifies resources as Supported, Approaching End-of-Support, Extended Support, or Out of Support
+- **Support Status Classification**: Classifies resources into 6 statuses: Supported, Approaching End-of-Support, Extended Support Y1/Y2/Y3, or Out of Support
+- **Extended Support Year Detection**: Automatically calculates Year 1, Year 2, and Year 3 of extended support based on dates
 - **Hierarchical Grouping**: Groups resources by Account → Service → Engine → Version
 - **Multiple Output Formats**: Text, CSV, JSON, Excel, and HTML
 - **Cross-Platform PivotTable**: Real Excel PivotTables on Windows, Mac, and Linux
@@ -15,6 +16,8 @@ A CLI and GUI tool to analyze AWS resource inventory CSV files and generate supp
 - **Configurable Threshold**: Set custom days threshold for "approaching" status
 - **GUI Interface**: Cross-platform graphical interface using tkinter
 - **Multiple Date Formats**: Supports various date formats (DD-MMM-YY, DD MMM YYYY, MMM-YY, MMM YYYY)
+- **Horizontal Scrolling**: HTML tables support horizontal scrolling for wide content
+- **Column Resizing**: Resize table columns without triggering re-sorting
 
 ## Installation
 
@@ -121,7 +124,9 @@ The Timeline sheet provides a visual Gantt-chart style view of support lifecycle
 | Color | Meaning |
 |-------|---------|
 | Yellow | Approaching End-of-Support |
-| Light Blue | Extended Support period |
+| Light Blue (Y1) | Extended Support Year 1 |
+| Medium Blue (Y2) | Extended Support Year 2 |
+| Dark Blue (Y3) | Extended Support Year 3 |
 | Light Red | Out of Support |
 | Red marker | End of Support event |
 | Blue marker | Extended Support Start |
@@ -174,7 +179,9 @@ Professional spreadsheet with:
 - Color-coded status rows:
   - 🟢 Green: Supported
   - 🟡 Yellow: Approaching End-of-Support
-  - 🔵 Blue: Extended Support
+  - 🔵 Light Blue: Extended Support Y1
+  - 🔵 Medium Blue: Extended Support Y2
+  - 🔵 Dark Blue: Extended Support Y3
   - 🔴 Red: Out of Support
 - Auto-filters on data sheet
 

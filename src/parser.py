@@ -65,6 +65,7 @@ class CSVParser:
         'Auto Minor Version Upgrade': 'auto_minor_version_upgrade',
         'Extended Support - Start Date': 'extended_support_start',
         'Extended Support - Year 1 Pricing Start Date': 'extended_support_year1_start',
+        'Extended Support - Year 2 Pricing Start Date': 'extended_support_year2_start',
         'Extended Support - Year 3 Pricing Start Date': 'extended_support_year3_start',
         'Extended Support - End Date': 'extended_support_end',
         'Insights': 'insights',
@@ -166,6 +167,10 @@ class CSVParser:
             row.get('Extended Support - Year 1 Pricing Start Date', '').strip(),
             row_num, 'Extended Support - Year 1 Pricing Start Date'
         )
+        extended_support_year2_start = self._parse_date(
+            row.get('Extended Support - Year 2 Pricing Start Date', '').strip(),
+            row_num, 'Extended Support - Year 2 Pricing Start Date'
+        )
         extended_support_year3_start = self._parse_date(
             row.get('Extended Support - Year 3 Pricing Start Date', '').strip(),
             row_num, 'Extended Support - Year 3 Pricing Start Date'
@@ -195,6 +200,7 @@ class CSVParser:
             auto_minor_version_upgrade=auto_minor_version_upgrade,
             extended_support_start=extended_support_start,
             extended_support_year1_start=extended_support_year1_start,
+            extended_support_year2_start=extended_support_year2_start,
             extended_support_year3_start=extended_support_year3_start,
             extended_support_end=extended_support_end,
             insights=insights,

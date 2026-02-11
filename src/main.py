@@ -24,8 +24,11 @@ STATUS_CHOICES = {
     "supported": SupportStatus.SUPPORTED,
     "approaching": SupportStatus.APPROACHING_EOS,
     "approaching-eos": SupportStatus.APPROACHING_EOS,
-    "extended": SupportStatus.EXTENDED_SUPPORT,
-    "extended-support": SupportStatus.EXTENDED_SUPPORT,
+    "extended": SupportStatus.EXTENDED_SUPPORT_YEAR_1,
+    "extended-support": SupportStatus.EXTENDED_SUPPORT_YEAR_1,
+    "extended-year-1": SupportStatus.EXTENDED_SUPPORT_YEAR_1,
+    "extended-year-2": SupportStatus.EXTENDED_SUPPORT_YEAR_2,
+    "extended-year-3": SupportStatus.EXTENDED_SUPPORT_YEAR_3,
     "out-of-support": SupportStatus.OUT_OF_SUPPORT,
     "oos": SupportStatus.OUT_OF_SUPPORT,
 }

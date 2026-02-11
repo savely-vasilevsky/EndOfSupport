@@ -39,7 +39,7 @@ except ImportError:
         EngineGroup,
         VersionGroup,
     )
-    __version__ = "2.3.0"
+    __version__ = "2.3.1"
 
 # Optional Excel support
 try:
@@ -992,7 +992,9 @@ class TextFormatter(BaseFormatter):
         abbreviations = {
             SupportStatus.SUPPORTED: "OK",
             SupportStatus.APPROACHING_EOS: "WARN",
-            SupportStatus.EXTENDED_SUPPORT: "EXT",
+            SupportStatus.EXTENDED_SUPPORT_YEAR_1: "EXT1",
+            SupportStatus.EXTENDED_SUPPORT_YEAR_2: "EXT2",
+            SupportStatus.EXTENDED_SUPPORT_YEAR_3: "EXT3",
             SupportStatus.OUT_OF_SUPPORT: "OOS",
         }
         return abbreviations.get(status, "?")
@@ -1294,10 +1296,12 @@ class ExcelFormatter(BaseFormatter):
     
     # Status colors (RGB hex)
     STATUS_COLORS = {
-        SupportStatus.SUPPORTED: "C6EFCE",        # Light green
-        SupportStatus.APPROACHING_EOS: "FFEB9C",  # Light yellow/orange
-        SupportStatus.EXTENDED_SUPPORT: "BDD7EE", # Light blue
-        SupportStatus.OUT_OF_SUPPORT: "FFC7CE",   # Light red
+        SupportStatus.SUPPORTED: "C6EFCE",              # Light green
+        SupportStatus.APPROACHING_EOS: "FFEB9C",        # Light yellow/orange
+        SupportStatus.EXTENDED_SUPPORT_YEAR_1: "BDD7EE", # Light blue
+        SupportStatus.EXTENDED_SUPPORT_YEAR_2: "9DC3E6", # Medium blue
+        SupportStatus.EXTENDED_SUPPORT_YEAR_3: "8DB4D8", # Darker blue
+        SupportStatus.OUT_OF_SUPPORT: "FFC7CE",         # Light red
     }
     
     def __init__(self):
@@ -1525,26 +1529,44 @@ class ExcelFormatter(BaseFormatter):
         
         # Now handle pivot creation that requires post-save processing
         if include_pivot:
-            use_windows = (pivot_method == "windows") or (pivot_method == "auto" and WIN32COM_AVAILABLE)
-            logger.info(f"Pivot creation: include_pivot={include_pivot}, pivot_method={pivot_method}, use_windows={use_windows}, WIN32COM_AVAILABLE={WIN32COM_AVAILABLE}")
-            
-            # Include all columns in pivot source (including Version Details)
-            # The Version Details column shows "See X tab" text which is meaningful in drill-down
-            pivot_col_count = len(headers)
-            
-            if use_windows and WIN32COM_AVAILABLE:
-                # Create real pivot tables with win32com
-                logger.info(f"Creating real pivot table with win32com: data_row_count={data_row_count}, col_count={pivot_col_count}")
-                self._create_real_pivot_table_with_per_account(
-                    filepath, report, data_row_count, pivot_per_account, days_threshold, 
-                    pivot_col_count, None
-                )
+            # Need at least 2 rows (header + 1 data row) for pivot table
+            if data_row_count < 2:
+                logger.warning(f"Skipping pivot creation: not enough data rows ({data_row_count}). Need at least 2 rows (header + data).")
             else:
-                # Cross-platform: use template for real pivot if available
-                template_path = os.path.join(TEMPLATE_DIR, "pivot_template.xlsx")
-                logger.info(f"Cross-platform pivot: template_path={template_path}, exists={os.path.exists(template_path)}")
-                if os.path.exists(template_path):
-                    self._create_pivot_from_template(filepath, data_row_count, template_path, pivot_col_count)
+                use_windows = (pivot_method == "windows") or (pivot_method == "auto" and WIN32COM_AVAILABLE)
+                logger.info(f"Pivot creation: include_pivot={include_pivot}, pivot_method={pivot_method}, use_windows={use_windows}, WIN32COM_AVAILABLE={WIN32COM_AVAILABLE}")
+                
+                # Include all columns in pivot source (including Version Details)
+                # The Version Details column shows "See X tab" text which is meaningful in drill-down
+                pivot_col_count = len(headers)
+                
+                pivot_created = False
+                if use_windows and WIN32COM_AVAILABLE:
+                    # Create real pivot tables with win32com
+                    logger.info(f"Creating real pivot table with win32com: data_row_count={data_row_count}, col_count={pivot_col_count}")
+                    try:
+                        self._create_real_pivot_table_with_per_account(
+                            filepath, report, data_row_count, pivot_per_account, days_threshold, 
+                            pivot_col_count, None
+                        )
+                        pivot_created = True
+                    except Exception as e:
+                        logger.warning(f"Windows COM pivot creation failed: {e}. Falling back to cross-platform summary.")
+                
+                # Fallback to cross-platform if Windows COM failed or not available
+                if not pivot_created:
+                    # Re-open the workbook and add the summary sheet
+                    logger.info("Creating cross-platform pivot summary as fallback")
+                    from openpyxl import load_workbook
+                    wb_fallback = load_workbook(filepath)
+                    logger.info(f"Fallback: Loaded workbook with sheets: {wb_fallback.sheetnames}")
+                    self._create_pivot_summary_sheet(wb_fallback, report)
+                    if pivot_per_account:
+                        self._create_pivot_summary_per_account(wb_fallback, report)
+                    logger.info(f"Fallback: After adding pivot, sheets: {wb_fallback.sheetnames}")
+                    wb_fallback.save(filepath)
+                    wb_fallback.close()
+                    logger.info("Cross-platform pivot summary created successfully")
         else:
             logger.info("Pivot creation skipped: include_pivot=False")
     
@@ -2168,7 +2190,8 @@ class ExcelFormatter(BaseFormatter):
                     excel.Quit()
             except Exception as cleanup_error:
                 logger.warning(f"Error during cleanup: {cleanup_error}")
-            raise e
+            # Don't re-raise - allow file to be created without pivot
+            logger.warning("Pivot table creation failed, file will be created without pivot sheet")
         finally:
             pythoncom.CoUninitialize()
     

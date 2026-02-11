@@ -93,7 +93,8 @@ The script will generate a CSV file with these columns:
 ├─────────────────────────────────────────────────────────┤
 │  FILTERS                                                │
 │  Status Filters: ☐ Supported  ☐ Approaching EOS         │
-│                  ☐ Extended   ☐ Out of Support          │
+│                  ☐ Ext Sup Y1 ☐ Ext Sup Y2 ☐ Ext Sup Y3 │
+│                  ☐ Out of Support                       │
 │  Days Threshold: [90]                                   │
 ├─────────────────────────────────────────────────────────┤
 │  [Generate Report]  [Clear]                             │
@@ -203,7 +204,7 @@ python -m src.main inventory.csv --account "Production Account"
 
 ## Understanding Support Status
 
-The tool classifies each resource into one of four statuses:
+The tool classifies each resource into one of six statuses:
 
 ### 🟢 Supported
 - End-of-support date is more than the threshold days away
@@ -213,13 +214,23 @@ The tool classifies each resource into one of four statuses:
 - End-of-support date is within the threshold (default: 90 days)
 - Plan upgrades soon
 
-### 🔵 Extended Support
-- Resource is in AWS Extended Support period
+### 🔵 Extended Support Y1 (Year 1)
+- Resource is in the first year of AWS Extended Support
 - May incur additional costs
 - Plan migration to supported version
 
+### 🔵 Extended Support Y2 (Year 2)
+- Resource is in the second year of AWS Extended Support
+- Higher costs than Year 1
+- Migration should be prioritized
+
+### 🔵 Extended Support Y3 (Year 3)
+- Resource is in the third year of AWS Extended Support
+- Highest extended support costs
+- Immediate migration recommended
+
 ### 🔴 Out of Support
-- End-of-support date has passed
+- End-of-support date has passed and not in extended support
 - No longer receiving security updates
 - Immediate action recommended
 
@@ -284,7 +295,7 @@ Interactive web-based report that can be opened in any browser. Styled similar t
 - **Filter Bar** - Multi-select filters at the top of the page:
   - **Service Filter**: Select/deselect services to show (all selected by default)
   - **Account Filter**: Select/deselect accounts to show (all selected by default)
-  - **Status Filter**: Select/deselect statuses (Supported, Approaching EOS, Extended Support, Out of Support)
+  - **Status Filter**: Select/deselect statuses (Supported, Approaching EOS, Extended Support Y1/Y2/Y3, Out of Support)
   - **Apply Filters**: Click to apply selected filters to ALL sections including charts, timeline, and tables
   - **Reset All**: Restore all filters to default (all selected)
   - Filters update: Summary counts, All charts, Resources table, Timeline, By Service section, Version Details
@@ -423,7 +434,9 @@ Visual Gantt-chart style timeline showing support lifecycle events:
 
 **Color Coding**:
 - 🟡 Yellow (`FFEB9C`): Approaching End-of-Support (within threshold days)
-- 🔵 Light Blue (`BDD7EE`): Extended Support period
+- 🔵 Light Blue (`BBDEFB`): Extended Support Year 1
+- 🔵 Medium Blue (`90CAF9`): Extended Support Year 2
+- 🔵 Dark Blue (`64B5F6`): Extended Support Year 3
 - 🔴 Light Red (`FFC7CE`): Out of Support period
 - 🔴 Red marker (`FF0000`): End of Support event date
 - 🔵 Blue marker (`0070C0`): Extended Support Start date
@@ -561,4 +574,4 @@ A: Extended Support means AWS still provides updates but may charge extra. Out o
 
 ---
 
-*Last updated: February 10, 2026*
+*Last updated: February 12, 2026 - Version 2.3.1*

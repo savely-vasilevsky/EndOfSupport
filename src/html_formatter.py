@@ -13,7 +13,7 @@ try:
     from . import __version__
 except ImportError:
     from models import Report, Resource, SupportStatus
-    __version__ = "2.3.0"
+    __version__ = "2.3.1"
 
 
 class HTMLFormatter:
@@ -29,16 +29,20 @@ class HTMLFormatter:
     
     # Status colors matching the BigID report style
     STATUS_COLORS = {
-        SupportStatus.SUPPORTED: ("#c8e6c9", "#1b5e20"),  # (bg, text)
-        SupportStatus.APPROACHING_EOS: ("#fff9c4", "#f57f17"),
-        SupportStatus.EXTENDED_SUPPORT: ("#bbdefb", "#0d47a1"),
-        SupportStatus.OUT_OF_SUPPORT: ("#ffcdd2", "#b71c1c"),
+        SupportStatus.SUPPORTED: ("#c8e6c9", "#1b5e20"),  # (bg, text) - Green
+        SupportStatus.APPROACHING_EOS: ("#fff9c4", "#f57f17"),  # Yellow/Orange
+        SupportStatus.EXTENDED_SUPPORT_YEAR_1: ("#bbdefb", "#0d47a1"),  # Light Blue
+        SupportStatus.EXTENDED_SUPPORT_YEAR_2: ("#90caf9", "#1565c0"),  # Medium Blue
+        SupportStatus.EXTENDED_SUPPORT_YEAR_3: ("#64b5f6", "#0d47a1"),  # Darker Blue
+        SupportStatus.OUT_OF_SUPPORT: ("#ffcdd2", "#b71c1c"),  # Red
     }
     
     STATUS_LABELS = {
         SupportStatus.SUPPORTED: "Supported",
         SupportStatus.APPROACHING_EOS: "Approaching EOS",
-        SupportStatus.EXTENDED_SUPPORT: "Extended Support",
+        SupportStatus.EXTENDED_SUPPORT_YEAR_1: "Extended Support Y1",
+        SupportStatus.EXTENDED_SUPPORT_YEAR_2: "Extended Support Y2",
+        SupportStatus.EXTENDED_SUPPORT_YEAR_3: "Extended Support Y3",
         SupportStatus.OUT_OF_SUPPORT: "Out of Support",
     }
     
@@ -359,8 +363,16 @@ body {
     background: linear-gradient(135deg, #fb8c00 0%, #ffa726 100%);
 }
 
-.summary-card.extended {
+.summary-card.extended-year-1 {
     background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+}
+
+.summary-card.extended-year-2 {
+    background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
+}
+
+.summary-card.extended-year-3 {
+    background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
 }
 
 .summary-card.out-of-support {
@@ -425,7 +437,9 @@ body {
 
 .status-supported { background-color: #c8e6c9; color: #1b5e20; }
 .status-approaching { background-color: #fff9c4; color: #f57f17; }
-.status-extended { background-color: #bbdefb; color: #0d47a1; }
+.status-extended-year-1 { background-color: #bbdefb; color: #0d47a1; }
+.status-extended-year-2 { background-color: #90caf9; color: #1565c0; }
+.status-extended-year-3 { background-color: #64b5f6; color: #0d47a1; }
 .status-out-of-support { background-color: #ffcdd2; color: #b71c1c; }
 
 .chart-container {
@@ -447,8 +461,8 @@ body {
 
 table.dataTable {
     width: 100% !important;
+    min-width: 1200px;
     border-collapse: collapse;
-    table-layout: fixed;
 }
 
 table.dataTable thead th {
@@ -458,21 +472,19 @@ table.dataTable thead th {
     text-align: left;
     font-weight: 600;
     position: relative;
-    overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 /* Column resizer handle */
 table.dataTable thead th .col-resizer {
     position: absolute;
-    right: 0;
+    right: -4px;
     top: 0;
-    width: 5px;
+    width: 10px;
     height: 100%;
     cursor: col-resize;
     background: transparent;
-    z-index: 10;
+    z-index: 100;
 }
 
 table.dataTable thead th .col-resizer:hover,
@@ -483,8 +495,6 @@ table.dataTable thead th .col-resizer.resizing {
 table.dataTable tbody td {
     padding: 10px 8px;
     border-bottom: 1px solid #eee;
-    overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
@@ -539,10 +549,71 @@ table.dataTable tbody tr:hover {
 .service-group-content {
     padding: 15px;
     display: none;
+    overflow-x: auto;
 }
 
 .service-group.expanded .service-group-content {
     display: block;
+}
+
+/* Table wrapper for horizontal scrolling */
+.table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 10px;
+}
+
+.table-wrapper::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
+/* DataTables horizontal scroll styling */
+.dataTables_wrapper {
+    overflow-x: auto;
+    width: 100%;
+}
+
+.dataTables_scrollHead,
+.dataTables_scrollBody {
+    overflow-x: auto !important;
+}
+
+.dataTables_scrollBody::-webkit-scrollbar {
+    height: 10px;
+}
+
+.dataTables_scrollBody::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.dataTables_scrollBody::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.dataTables_scrollBody::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
+/* Ensure table columns don't collapse */
+table.dataTable th,
+table.dataTable td {
+    min-width: 80px;
 }
 
 .timeline-bar {
@@ -712,9 +783,19 @@ table.dataTable tbody tr:hover {
     border-color: #fb8c00;
 }
 
-.filter-bar .filter-option.status-extended.selected {
+.filter-bar .filter-option.status-extended-year-1.selected {
     background-color: #1976d2;
     border-color: #1976d2;
+}
+
+.filter-bar .filter-option.status-extended-year-2.selected {
+    background-color: #1565c0;
+    border-color: #1565c0;
+}
+
+.filter-bar .filter-option.status-extended-year-3.selected {
+    background-color: #0d47a1;
+    border-color: #0d47a1;
 }
 
 .filter-bar .filter-option.status-out-of-support.selected {
@@ -1039,6 +1120,7 @@ table.dataTable tbody tr:hover {
 .version-detail-table {
     width: 100%;
     border-collapse: collapse;
+    min-width: 600px;
 }
 
 .version-detail-table th {
@@ -1047,11 +1129,13 @@ table.dataTable tbody tr:hover {
     text-align: left;
     font-weight: 600;
     border-bottom: 2px solid #ddd;
+    white-space: nowrap;
 }
 
 .version-detail-table td {
     padding: 10px;
     border-bottom: 1px solid #eee;
+    white-space: nowrap;
 }
 
 .version-detail-table tr:hover {
@@ -1134,8 +1218,12 @@ table.dataTable tbody tr:hover {
                 <input type="checkbox" checked><span class="checkmark">✓</span>Supported</label>
             <label class="filter-option status-approaching selected" data-filter="status" data-value="Approaching EOS">
                 <input type="checkbox" checked><span class="checkmark">✓</span>Approaching EOS</label>
-            <label class="filter-option status-extended selected" data-filter="status" data-value="Extended Support">
-                <input type="checkbox" checked><span class="checkmark">✓</span>Extended Support</label>
+            <label class="filter-option status-extended-year-1 selected" data-filter="status" data-value="Extended Support Y1">
+                <input type="checkbox" checked><span class="checkmark">✓</span>Extended Support Y1</label>
+            <label class="filter-option status-extended-year-2 selected" data-filter="status" data-value="Extended Support Y2">
+                <input type="checkbox" checked><span class="checkmark">✓</span>Extended Support Y2</label>
+            <label class="filter-option status-extended-year-3 selected" data-filter="status" data-value="Extended Support Y3">
+                <input type="checkbox" checked><span class="checkmark">✓</span>Extended Support Y3</label>
             <label class="filter-option status-out-of-support selected" data-filter="status" data-value="Out of Support">
                 <input type="checkbox" checked><span class="checkmark">✓</span>Out of Support</label>
         '''
@@ -1186,6 +1274,13 @@ table.dataTable tbody tr:hover {
         """Generate the summary dashboard section."""
         status_counts = report.total_counts
         
+        # Calculate total extended support count (sum of all 3 years)
+        extended_total = (
+            status_counts.get(SupportStatus.EXTENDED_SUPPORT_YEAR_1, 0) +
+            status_counts.get(SupportStatus.EXTENDED_SUPPORT_YEAR_2, 0) +
+            status_counts.get(SupportStatus.EXTENDED_SUPPORT_YEAR_3, 0)
+        )
+        
         return f"""<div id="summary-section" class="section">
     <h2>Summary Dashboard</h2>
     <p style="color: #666; margin-bottom: 15px;"><strong>Click on any card to view affected resources in a new tab. Hover to see breakdown by service.</strong></p>
@@ -1202,9 +1297,17 @@ table.dataTable tbody tr:hover {
             <div class="count">{status_counts.get(SupportStatus.APPROACHING_EOS, 0)}</div>
             <div class="label">Approaching EOS</div>
         </div>
-        <div class="summary-card extended" onclick="showStatusResources('extended')" onmouseenter="showSummaryTooltip(event, 'extended')" onmousemove="positionSummaryTooltip(event)" onmouseleave="hideSummaryTooltip()">
-            <div class="count">{status_counts.get(SupportStatus.EXTENDED_SUPPORT, 0)}</div>
-            <div class="label">Extended Support</div>
+        <div class="summary-card extended-year-1" onclick="showStatusResources('extended_year_1')" onmouseenter="showSummaryTooltip(event, 'extended_year_1')" onmousemove="positionSummaryTooltip(event)" onmouseleave="hideSummaryTooltip()">
+            <div class="count">{status_counts.get(SupportStatus.EXTENDED_SUPPORT_YEAR_1, 0)}</div>
+            <div class="label">Extended Support Y1</div>
+        </div>
+        <div class="summary-card extended-year-2" onclick="showStatusResources('extended_year_2')" onmouseenter="showSummaryTooltip(event, 'extended_year_2')" onmousemove="positionSummaryTooltip(event)" onmouseleave="hideSummaryTooltip()">
+            <div class="count">{status_counts.get(SupportStatus.EXTENDED_SUPPORT_YEAR_2, 0)}</div>
+            <div class="label">Extended Support Y2</div>
+        </div>
+        <div class="summary-card extended-year-3" onclick="showStatusResources('extended_year_3')" onmouseenter="showSummaryTooltip(event, 'extended_year_3')" onmousemove="positionSummaryTooltip(event)" onmouseleave="hideSummaryTooltip()">
+            <div class="count">{status_counts.get(SupportStatus.EXTENDED_SUPPORT_YEAR_3, 0)}</div>
+            <div class="label">Extended Support Y3</div>
         </div>
         <div class="summary-card out-of-support" onclick="showStatusResources('out_of_support')" onmouseenter="showSummaryTooltip(event, 'out_of_support')" onmousemove="positionSummaryTooltip(event)" onmouseleave="hideSummaryTooltip()">
             <div class="count">{status_counts.get(SupportStatus.OUT_OF_SUPPORT, 0)}</div>
@@ -1223,7 +1326,9 @@ table.dataTable tbody tr:hover {
             account_data[account_name] = {
                 'supported': 0,
                 'approaching': 0,
-                'extended': 0,
+                'extended_year_1': 0,
+                'extended_year_2': 0,
+                'extended_year_3': 0,
                 'out_of_support': 0
             }
             for service_name, service_group in account_group.services.items():
@@ -1231,7 +1336,9 @@ table.dataTable tbody tr:hover {
                     service_data[service_name] = {
                         'supported': 0,
                         'approaching': 0,
-                        'extended': 0,
+                        'extended_year_1': 0,
+                        'extended_year_2': 0,
+                        'extended_year_3': 0,
                         'out_of_support': 0
                     }
                 for engine_name, engine_group in service_group.engines.items():
@@ -1283,7 +1390,9 @@ table.dataTable tbody tr:hover {
         mapping = {
             SupportStatus.SUPPORTED: 'supported',
             SupportStatus.APPROACHING_EOS: 'approaching',
-            SupportStatus.EXTENDED_SUPPORT: 'extended',
+            SupportStatus.EXTENDED_SUPPORT_YEAR_1: 'extended_year_1',
+            SupportStatus.EXTENDED_SUPPORT_YEAR_2: 'extended_year_2',
+            SupportStatus.EXTENDED_SUPPORT_YEAR_3: 'extended_year_3',
             SupportStatus.OUT_OF_SUPPORT: 'out_of_support'
         }
         return mapping.get(status, 'supported')
@@ -1334,25 +1443,27 @@ table.dataTable tbody tr:hover {
         <button class="collapse-btn" onclick="toggleSection('resources-table-content')">−</button>
     </h2>
     <div id="resources-table-content" class="collapsible-content">
-        <table id="resourcesDataTable" class="display">
-            <thead>
-                <tr>
-                    <th>Account</th>
-                    <th>Service</th>
-                    <th>Engine</th>
-                    <th>Version</th>
-                    <th>Resource</th>
-                    <th>ARN</th>
-                    <th>End of Support</th>
-                    <th>Days to EOS</th>
-                    <th>Status</th>
-                    {version_details_header}
-                </tr>
-            </thead>
-            <tbody>
-                {rows_html}
-            </tbody>
-        </table>
+        <div class="table-wrapper">
+            <table id="resourcesDataTable" class="display">
+                <thead>
+                    <tr>
+                        <th>Account</th>
+                        <th>Service</th>
+                        <th>Engine</th>
+                        <th>Version</th>
+                        <th>Resource</th>
+                        <th>ARN</th>
+                        <th>End of Support</th>
+                        <th>Days to EOS</th>
+                        <th>Status</th>
+                        {version_details_header}
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows_html}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>"""
     
@@ -1369,7 +1480,9 @@ table.dataTable tbody tr:hover {
         mapping = {
             SupportStatus.SUPPORTED: 'status-supported',
             SupportStatus.APPROACHING_EOS: 'status-approaching',
-            SupportStatus.EXTENDED_SUPPORT: 'status-extended',
+            SupportStatus.EXTENDED_SUPPORT_YEAR_1: 'status-extended-year-1',
+            SupportStatus.EXTENDED_SUPPORT_YEAR_2: 'status-extended-year-2',
+            SupportStatus.EXTENDED_SUPPORT_YEAR_3: 'status-extended-year-3',
             SupportStatus.OUT_OF_SUPPORT: 'status-out-of-support'
         }
         return mapping.get(status, '')
@@ -1405,7 +1518,7 @@ table.dataTable tbody tr:hover {
         from collections import defaultdict
         
         # Collect timeline data grouped by month and status
-        monthly_data = defaultdict(lambda: {'supported': 0, 'approaching': 0, 'extended': 0, 'out_of_support': 0})
+        monthly_data = defaultdict(lambda: {'supported': 0, 'approaching': 0, 'extended_year_1': 0, 'extended_year_2': 0, 'extended_year_3': 0, 'out_of_support': 0})
         # Also collect detailed resources by month for click-through
         monthly_resources = defaultdict(list)
         timeline_items = []
@@ -1455,7 +1568,9 @@ table.dataTable tbody tr:hover {
         chart_labels = json.dumps(sorted_months)
         chart_supported = json.dumps([monthly_data[m]['supported'] for m in sorted_months])
         chart_approaching = json.dumps([monthly_data[m]['approaching'] for m in sorted_months])
-        chart_extended = json.dumps([monthly_data[m]['extended'] for m in sorted_months])
+        chart_extended_year_1 = json.dumps([monthly_data[m]['extended_year_1'] for m in sorted_months])
+        chart_extended_year_2 = json.dumps([monthly_data[m]['extended_year_2'] for m in sorted_months])
+        chart_extended_year_3 = json.dumps([monthly_data[m]['extended_year_3'] for m in sorted_months])
         chart_out_of_support = json.dumps([monthly_data[m]['out_of_support'] for m in sorted_months])
         
         # Prepare detailed resources data for click-through (JSON for JavaScript)
@@ -1477,7 +1592,7 @@ table.dataTable tbody tr:hover {
         timeline_list_html = []
         for item in timeline_items[:100]:  # Limit to 100 items
             status_class = f"status-{item['status'].replace('_', '-')}"
-            status_label = {'supported': 'Supported', 'approaching': 'Approaching EOS', 'extended': 'Extended Support', 'out_of_support': 'Out of Support'}.get(item['status'], item['status'])
+            status_label = {'supported': 'Supported', 'approaching': 'Approaching EOS', 'extended_year_1': 'Extended Support Y1', 'extended_year_2': 'Extended Support Y2', 'extended_year_3': 'Extended Support Y3', 'out_of_support': 'Out of Support'}.get(item['status'], item['status'])
             timeline_list_html.append(f"""
                 <div class="timeline-item" data-service="{self._escape_html(item['service'])}" data-status="{status_label}" style="display: flex; align-items: center; padding: 8px 12px; margin: 4px 0; border-radius: 4px; background-color: #f9f9f9;">
                     <span class="status-badge {status_class}" style="min-width: 120px; text-align: center;">{item['eos_date']}</span>
@@ -1545,7 +1660,9 @@ table.dataTable tbody tr:hover {
             window.allTimelineResourcesData = {monthly_resources_json};
             window.allTimelineData = {{
                 out_of_support: {chart_out_of_support},
-                extended: {chart_extended},
+                extended_year_3: {chart_extended_year_3},
+                extended_year_2: {chart_extended_year_2},
+                extended_year_1: {chart_extended_year_1},
                 approaching: {chart_approaching},
                 supported: {chart_supported}
             }};
@@ -1560,7 +1677,9 @@ table.dataTable tbody tr:hover {
                             labels: {chart_labels},
                             datasets: [
                                 {{ label: 'Out of Support', data: {chart_out_of_support}, backgroundColor: '#ef5350', borderColor: '#c62828', borderWidth: 1 }},
-                                {{ label: 'Extended Support', data: {chart_extended}, backgroundColor: '#42a5f5', borderColor: '#1565c0', borderWidth: 1 }},
+                                {{ label: 'Extended Support Y3', data: {chart_extended_year_3}, backgroundColor: '#64b5f6', borderColor: '#0d47a1', borderWidth: 1 }},
+                                {{ label: 'Extended Support Y2', data: {chart_extended_year_2}, backgroundColor: '#90caf9', borderColor: '#1565c0', borderWidth: 1 }},
+                                {{ label: 'Extended Support Y1', data: {chart_extended_year_1}, backgroundColor: '#bbdefb', borderColor: '#1976d2', borderWidth: 1 }},
                                 {{ label: 'Approaching EOS', data: {chart_approaching}, backgroundColor: '#ffa726', borderColor: '#ef6c00', borderWidth: 1 }},
                                 {{ label: 'Supported', data: {chart_supported}, backgroundColor: '#66bb6a', borderColor: '#2e7d32', borderWidth: 1 }}
                             ]
@@ -1687,7 +1806,9 @@ table.dataTable tbody tr:hover {
                         'status_counts': {
                             'supported': 0,
                             'approaching': 0,
-                            'extended': 0,
+                            'extended_year_1': 0,
+                            'extended_year_2': 0,
+                            'extended_year_3': 0,
                             'out_of_support': 0
                         },
                         'resources_list': []
@@ -1749,26 +1870,30 @@ table.dataTable tbody tr:hover {
                         <span>
                             <span class="status-badge status-supported" data-count="{status_counts['supported']}">{status_counts['supported']}</span>
                             <span class="status-badge status-approaching" data-count="{status_counts['approaching']}">{status_counts['approaching']}</span>
-                            <span class="status-badge status-extended" data-count="{status_counts['extended']}">{status_counts['extended']}</span>
+                            <span class="status-badge status-extended-year-1" data-count="{status_counts['extended_year_1']}">{status_counts['extended_year_1']}</span>
+                            <span class="status-badge status-extended-year-2" data-count="{status_counts['extended_year_2']}">{status_counts['extended_year_2']}</span>
+                            <span class="status-badge status-extended-year-3" data-count="{status_counts['extended_year_3']}">{status_counts['extended_year_3']}</span>
                             <span class="status-badge status-out-of-support" data-count="{status_counts['out_of_support']}">{status_counts['out_of_support']}</span>
                         </span>
                     </div>
                     <div class="service-group-content">
-                        <table id="{table_id}" class="service-datatable display" style="width: 100%;">
-                            <thead>
-                                <tr>
-                                    <th>Account</th>
-                                    <th>Engine</th>
-                                    <th>Version</th>
-                                    <th>Resource</th>
-                                    <th>End of Support</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {resource_rows_html}
-                            </tbody>
-                        </table>
+                        <div class="table-wrapper">
+                            <table id="{table_id}" class="service-datatable display" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Account</th>
+                                        <th>Engine</th>
+                                        <th>Version</th>
+                                        <th>Resource</th>
+                                        <th>End of Support</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {resource_rows_html}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
                 """)
@@ -1814,7 +1939,14 @@ table.dataTable tbody tr:hover {
             
             # Calculate totals for this service+engine
             total_resources = 0
-            status_counts = {'supported': 0, 'approaching': 0, 'extended': 0, 'out_of_support': 0}
+            status_counts = {
+                'supported': 0, 
+                'approaching': 0, 
+                'extended_year_1': 0, 
+                'extended_year_2': 0, 
+                'extended_year_3': 0, 
+                'out_of_support': 0
+            }
             
             for version_name, resources in versions_data.items():
                 total_resources += len(resources)
@@ -1863,8 +1995,12 @@ table.dataTable tbody tr:hover {
                 status_badges.append(f'<span class="stat-badge status-supported">{status_counts["supported"]} Supported</span>')
             if status_counts['approaching'] > 0:
                 status_badges.append(f'<span class="stat-badge status-approaching">{status_counts["approaching"]} Approaching</span>')
-            if status_counts['extended'] > 0:
-                status_badges.append(f'<span class="stat-badge status-extended">{status_counts["extended"]} Extended</span>')
+            if status_counts['extended_year_1'] > 0:
+                status_badges.append(f'<span class="stat-badge status-extended-year-1">{status_counts["extended_year_1"]} Ext Yr 1</span>')
+            if status_counts['extended_year_2'] > 0:
+                status_badges.append(f'<span class="stat-badge status-extended-year-2">{status_counts["extended_year_2"]} Ext Yr 2</span>')
+            if status_counts['extended_year_3'] > 0:
+                status_badges.append(f'<span class="stat-badge status-extended-year-3">{status_counts["extended_year_3"]} Ext Yr 3</span>')
             if status_counts['out_of_support'] > 0:
                 status_badges.append(f'<span class="stat-badge status-out-of-support">{status_counts["out_of_support"]} Out of Support</span>')
             
@@ -1902,29 +2038,39 @@ table.dataTable tbody tr:hover {
                             <div class="label">Approaching EOS</div>
                         </div>
                         <div class="summary-item" style="background: #bbdefb;">
-                            <div class="count" style="color: #0d47a1;">{status_counts['extended']}</div>
-                            <div class="label">Extended Support</div>
+                            <div class="count" style="color: #0d47a1;">{status_counts['extended_year_1']}</div>
+                            <div class="label">Extended Support Y1</div>
+                        </div>
+                        <div class="summary-item" style="background: #90caf9;">
+                            <div class="count" style="color: #1565c0;">{status_counts['extended_year_2']}</div>
+                            <div class="label">Extended Support Y2</div>
+                        </div>
+                        <div class="summary-item" style="background: #64b5f6;">
+                            <div class="count" style="color: #0d47a1;">{status_counts['extended_year_3']}</div>
+                            <div class="label">Extended Support Y3</div>
                         </div>
                         <div class="summary-item" style="background: #ffcdd2;">
                             <div class="count" style="color: #b71c1c;">{status_counts['out_of_support']}</div>
                             <div class="label">Out of Support</div>
                         </div>
                     </div>
-                    <table class="version-detail-table">
-                        <thead>
-                            <tr>
-                                <th>Version</th>
-                                <th>Resource Count</th>
-                                <th>End of Support</th>
-                                <th>Extended Support Start</th>
-                                <th>Extended Support End</th>
-                                <th>Status Summary</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {version_rows_html}
-                        </tbody>
-                    </table>
+                    <div class="table-wrapper">
+                        <table class="version-detail-table">
+                            <thead>
+                                <tr>
+                                    <th>Version</th>
+                                    <th>Resource Count</th>
+                                    <th>End of Support</th>
+                                    <th>Extended Support Start</th>
+                                    <th>Extended Support End</th>
+                                    <th>Status Summary</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {version_rows_html}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             """
@@ -1962,7 +2108,9 @@ table.dataTable tbody tr:hover {
         status_totals = {
             'supported': 0,
             'approaching': 0,
-            'extended': 0,
+            'extended_year_1': 0,
+            'extended_year_2': 0,
+            'extended_year_3': 0,
             'out_of_support': 0
         }
         
@@ -1974,10 +2122,10 @@ table.dataTable tbody tr:hover {
         
         for account_name, account_group in report.accounts.items():
             if account_name not in account_data:
-                account_data[account_name] = {'supported': 0, 'approaching': 0, 'extended': 0, 'out_of_support': 0}
+                account_data[account_name] = {'supported': 0, 'approaching': 0, 'extended_year_1': 0, 'extended_year_2': 0, 'extended_year_3': 0, 'out_of_support': 0}
             for service_name, service_group in account_group.services.items():
                 if service_name not in service_data:
-                    service_data[service_name] = {'supported': 0, 'approaching': 0, 'extended': 0, 'out_of_support': 0}
+                    service_data[service_name] = {'supported': 0, 'approaching': 0, 'extended_year_1': 0, 'extended_year_2': 0, 'extended_year_3': 0, 'out_of_support': 0}
                 for engine_name, engine_group in service_group.engines.items():
                     for version_name, version_group in engine_group.versions.items():
                         for resource in version_group.resources:
@@ -2005,19 +2153,25 @@ table.dataTable tbody tr:hover {
         service_labels = json.dumps(list(service_data.keys()))
         service_supported = json.dumps([v['supported'] for v in service_data.values()])
         service_approaching = json.dumps([v['approaching'] for v in service_data.values()])
-        service_extended = json.dumps([v['extended'] for v in service_data.values()])
+        service_extended_year_1 = json.dumps([v['extended_year_1'] for v in service_data.values()])
+        service_extended_year_2 = json.dumps([v['extended_year_2'] for v in service_data.values()])
+        service_extended_year_3 = json.dumps([v['extended_year_3'] for v in service_data.values()])
         service_out = json.dumps([v['out_of_support'] for v in service_data.values()])
         
         account_labels = json.dumps(list(account_data.keys()))
         account_supported = json.dumps([v['supported'] for v in account_data.values()])
         account_approaching = json.dumps([v['approaching'] for v in account_data.values()])
-        account_extended = json.dumps([v['extended'] for v in account_data.values()])
+        account_extended_year_1 = json.dumps([v['extended_year_1'] for v in account_data.values()])
+        account_extended_year_2 = json.dumps([v['extended_year_2'] for v in account_data.values()])
+        account_extended_year_3 = json.dumps([v['extended_year_3'] for v in account_data.values()])
         account_out = json.dumps([v['out_of_support'] for v in account_data.values()])
         
         status_values = json.dumps([
             status_totals['supported'],
             status_totals['approaching'],
-            status_totals['extended'],
+            status_totals['extended_year_1'],
+            status_totals['extended_year_2'],
+            status_totals['extended_year_3'],
             status_totals['out_of_support']
         ])
         
@@ -2033,14 +2187,16 @@ table.dataTable tbody tr:hover {
             'total': {},
             'supported': {},
             'approaching': {},
-            'extended': {},
+            'extended_year_1': {},
+            'extended_year_2': {},
+            'extended_year_3': {},
             'out_of_support': {}
         }
         for svc_name, svc_counts in service_data.items():
             total_for_service = sum(svc_counts.values())
             if total_for_service > 0:
                 status_service_summary['total'][svc_name] = total_for_service
-            for status_key in ['supported', 'approaching', 'extended', 'out_of_support']:
+            for status_key in ['supported', 'approaching', 'extended_year_1', 'extended_year_2', 'extended_year_3', 'out_of_support']:
                 if svc_counts[status_key] > 0:
                     status_service_summary[status_key][svc_name] = svc_counts[status_key]
         
@@ -2052,11 +2208,13 @@ var serviceResourcesData = {service_resources_json};
 var accountResourcesData = {account_resources_json};
 var statusResourcesData = {status_resources_json};
 var statusServiceSummary = {status_service_summary_json};
-var statusLabelsMap = ['supported', 'approaching', 'extended', 'out_of_support'];
+var statusLabelsMap = ['supported', 'approaching', 'extended_year_1', 'extended_year_2', 'extended_year_3', 'out_of_support'];
 var statusDisplayNames = {{
     'supported': 'Supported',
     'approaching': 'Approaching EOS',
-    'extended': 'Extended Support',
+    'extended_year_1': 'Extended Support Y1',
+    'extended_year_2': 'Extended Support Y2',
+    'extended_year_3': 'Extended Support Y3',
     'out_of_support': 'Out of Support'
 }};
 
@@ -2230,7 +2388,9 @@ function showReportHelp(event) {{
     html += '.status-example {{ display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; margin: 2px; }}';
     html += '.status-supported {{ background: #c8e6c9; color: #1b5e20; }}';
     html += '.status-approaching {{ background: #fff9c4; color: #f57f17; }}';
-    html += '.status-extended {{ background: #bbdefb; color: #0d47a1; }}';
+    html += '.status-extended-year-1 {{ background: #bbdefb; color: #0d47a1; }}';
+    html += '.status-extended-year-2 {{ background: #90caf9; color: #1565c0; }}';
+    html += '.status-extended-year-3 {{ background: #64b5f6; color: #0d47a1; }}';
     html += '.status-out {{ background: #ffcdd2; color: #b71c1c; }}';
     html += 'code {{ background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-family: monospace; }}';
     html += 'ul {{ padding-left: 20px; }}';
@@ -2452,19 +2612,23 @@ function showChartResources(title, resources, filterContext) {{
     // Get unique values from resources for filter options
     var allServices = [...new Set(resources.map(function(r) {{ return r.service; }}))].sort();
     var allAccounts = [...new Set(resources.map(function(r) {{ return r.account; }}))].sort();
-    var allStatuses = ['supported', 'approaching', 'extended', 'out_of_support'];
+    var allStatuses = ['supported', 'approaching', 'extended_year_1', 'extended_year_2', 'extended_year_3', 'out_of_support'];
     
     var statusColors = {{
         'supported': {{ bg: '#c8e6c9', text: '#1b5e20' }},
         'approaching': {{ bg: '#fff9c4', text: '#f57f17' }},
-        'extended': {{ bg: '#bbdefb', text: '#0d47a1' }},
+        'extended_year_1': {{ bg: '#bbdefb', text: '#0d47a1' }},
+        'extended_year_2': {{ bg: '#90caf9', text: '#1565c0' }},
+        'extended_year_3': {{ bg: '#64b5f6', text: '#0d47a1' }},
         'out_of_support': {{ bg: '#ffcdd2', text: '#b71c1c' }}
     }};
     
     var statusLabels = {{
         'supported': 'Supported',
         'approaching': 'Approaching EOS',
-        'extended': 'Extended Support',
+        'extended_year_1': 'Extended Support Y1',
+        'extended_year_2': 'Extended Support Y2',
+        'extended_year_3': 'Extended Support Y3',
         'out_of_support': 'Out of Support'
     }};
     
@@ -2504,7 +2668,9 @@ function showChartResources(title, resources, filterContext) {{
     html += '.filter-chip.selected {{ background: #2074d5; color: white; }}' + nl;
     html += '.filter-chip.status-supported.selected {{ background: #43a047; border-color: #43a047; }}' + nl;
     html += '.filter-chip.status-approaching.selected {{ background: #fb8c00; border-color: #fb8c00; }}' + nl;
-    html += '.filter-chip.status-extended.selected {{ background: #1976d2; border-color: #1976d2; }}' + nl;
+    html += '.filter-chip.status-extended_year_1.selected {{ background: #1976d2; border-color: #1976d2; }}' + nl;
+    html += '.filter-chip.status-extended_year_2.selected {{ background: #1565c0; border-color: #1565c0; }}' + nl;
+    html += '.filter-chip.status-extended_year_3.selected {{ background: #0d47a1; border-color: #0d47a1; }}' + nl;
     html += '.filter-chip.status-out_of_support.selected {{ background: #e53935; border-color: #e53935; }}' + nl;
     html += '.filter-actions {{ display: flex; gap: 10px; align-items: flex-end; padding-top: 24px; }}' + nl;
     html += '.filter-btn {{ padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; }}' + nl;
@@ -2734,6 +2900,7 @@ function toggleServiceGroup(groupId) {{
                 lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],
                 order: [[4, 'asc']],
                 dom: 'lfrtip',
+                scrollX: true,
                 language: {{
                     search: "Search:",
                     lengthMenu: "Show _MENU_ entries"
@@ -2753,32 +2920,62 @@ window.addEventListener('scroll', function() {{
     }}
 }});
 
+// Global flag to prevent sorting during column resize
+window.isColumnResizing = false;
+
 // Column resizing functionality
 function initColumnResizers(tableSelector) {{
-    const table = document.querySelector(tableSelector);
-    if (!table) return;
+    // When scrollX is enabled, DataTables clones headers into .dataTables_scrollHead
+    // We need to add resizers to the visible headers in the scroll head
+    const wrapper = $(tableSelector).closest('.dataTables_wrapper');
+    const dt = $(tableSelector).DataTable();
+    let headerContainer;
     
-    const headers = table.querySelectorAll('thead th');
+    if (wrapper.length && wrapper.find('.dataTables_scrollHead').length) {{
+        // scrollX is enabled - use the scroll head
+        headerContainer = wrapper.find('.dataTables_scrollHead table thead')[0];
+    }} else {{
+        // No scrollX - use the original table
+        headerContainer = document.querySelector(tableSelector + ' thead');
+    }}
+    
+    if (!headerContainer) return;
+    
+    const headers = headerContainer.querySelectorAll('th');
+    
+    // Add capturing click handler to block sorting during resize
+    headerContainer.addEventListener('click', function(e) {{
+        if (window.isColumnResizing) {{
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            return false;
+        }}
+    }}, true);  // true = capturing phase, runs before DataTables handler
     
     headers.forEach(function(th, index) {{
         // Skip last column (no resizer needed)
         if (index === headers.length - 1) return;
+        
+        // Remove existing resizer if any
+        const existingResizer = th.querySelector('.col-resizer');
+        if (existingResizer) existingResizer.remove();
         
         // Create resizer element
         const resizer = document.createElement('div');
         resizer.className = 'col-resizer';
         th.appendChild(resizer);
         
-        let startX, startWidth, nextStartWidth;
-        const nextTh = headers[index + 1];
+        let startX, startWidth;
         
         resizer.addEventListener('mousedown', function(e) {{
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
             
+            window.isColumnResizing = true;
             startX = e.pageX;
             startWidth = th.offsetWidth;
-            if (nextTh) nextStartWidth = nextTh.offsetWidth;
             
             resizer.classList.add('resizing');
             document.body.style.cursor = 'col-resize';
@@ -2786,21 +2983,42 @@ function initColumnResizers(tableSelector) {{
             
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp);
+            return false;
         }});
         
         function onMouseMove(e) {{
+            e.preventDefault();
             const diff = e.pageX - startX;
             const newWidth = Math.max(50, startWidth + diff);
+            
+            // Update both the scroll header and the body table columns
             th.style.width = newWidth + 'px';
             th.style.minWidth = newWidth + 'px';
+            
+            // Also update the corresponding column in the body table
+            const bodyTable = wrapper.find('.dataTables_scrollBody table');
+            if (bodyTable.length) {{
+                const bodyTh = bodyTable.find('thead th').eq(index);
+                if (bodyTh.length) {{
+                    bodyTh.css({{ width: newWidth + 'px', minWidth: newWidth + 'px' }});
+                }}
+            }}
         }}
         
-        function onMouseUp() {{
+        function onMouseUp(e) {{
+            e.preventDefault();
+            e.stopPropagation();
+            
             resizer.classList.remove('resizing');
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
+            
+            // Delay resetting the flag to prevent the click from triggering sort
+            setTimeout(function() {{
+                window.isColumnResizing = false;
+            }}, 200);
         }}
     }});
 }}
@@ -2966,7 +3184,7 @@ function updateChartsWithFilters(filters) {{
     // Recalculate chart data based on filtered resources
     var filteredServiceData = {{}};
     var filteredAccountData = {{}};
-    var filteredStatusTotals = {{ supported: 0, approaching: 0, extended: 0, out_of_support: 0 }};
+    var filteredStatusTotals = {{ supported: 0, approaching: 0, extended_year_1: 0, extended_year_2: 0, extended_year_3: 0, out_of_support: 0 }};
     
     // Get all resources and filter them
     for (var service in serviceResourcesData) {{
@@ -2983,13 +3201,13 @@ function updateChartsWithFilters(filters) {{
             
             // Count for service chart
             if (!filteredServiceData[service]) {{
-                filteredServiceData[service] = {{ supported: 0, approaching: 0, extended: 0, out_of_support: 0 }};
+                filteredServiceData[service] = {{ supported: 0, approaching: 0, extended_year_1: 0, extended_year_2: 0, extended_year_3: 0, out_of_support: 0 }};
             }}
             filteredServiceData[service][r.status]++;
             
             // Count for account chart
             if (!filteredAccountData[r.account]) {{
-                filteredAccountData[r.account] = {{ supported: 0, approaching: 0, extended: 0, out_of_support: 0 }};
+                filteredAccountData[r.account] = {{ supported: 0, approaching: 0, extended_year_1: 0, extended_year_2: 0, extended_year_3: 0, out_of_support: 0 }};
             }}
             filteredAccountData[r.account][r.status]++;
             
@@ -3005,8 +3223,10 @@ function updateChartsWithFilters(filters) {{
         serviceChart.data.labels = filteredServiceLabels;
         serviceChart.data.datasets[0].data = filteredServiceLabels.map(function(s) {{ return filteredServiceData[s].supported; }});
         serviceChart.data.datasets[1].data = filteredServiceLabels.map(function(s) {{ return filteredServiceData[s].approaching; }});
-        serviceChart.data.datasets[2].data = filteredServiceLabels.map(function(s) {{ return filteredServiceData[s].extended; }});
-        serviceChart.data.datasets[3].data = filteredServiceLabels.map(function(s) {{ return filteredServiceData[s].out_of_support; }});
+        serviceChart.data.datasets[2].data = filteredServiceLabels.map(function(s) {{ return filteredServiceData[s].extended_year_1; }});
+        serviceChart.data.datasets[3].data = filteredServiceLabels.map(function(s) {{ return filteredServiceData[s].extended_year_2; }});
+        serviceChart.data.datasets[4].data = filteredServiceLabels.map(function(s) {{ return filteredServiceData[s].extended_year_3; }});
+        serviceChart.data.datasets[5].data = filteredServiceLabels.map(function(s) {{ return filteredServiceData[s].out_of_support; }});
         serviceChart.update();
     }}
     
@@ -3017,8 +3237,10 @@ function updateChartsWithFilters(filters) {{
         accountChart.data.labels = filteredAccountLabels;
         accountChart.data.datasets[0].data = filteredAccountLabels.map(function(a) {{ return filteredAccountData[a].supported; }});
         accountChart.data.datasets[1].data = filteredAccountLabels.map(function(a) {{ return filteredAccountData[a].approaching; }});
-        accountChart.data.datasets[2].data = filteredAccountLabels.map(function(a) {{ return filteredAccountData[a].extended; }});
-        accountChart.data.datasets[3].data = filteredAccountLabels.map(function(a) {{ return filteredAccountData[a].out_of_support; }});
+        accountChart.data.datasets[2].data = filteredAccountLabels.map(function(a) {{ return filteredAccountData[a].extended_year_1; }});
+        accountChart.data.datasets[3].data = filteredAccountLabels.map(function(a) {{ return filteredAccountData[a].extended_year_2; }});
+        accountChart.data.datasets[4].data = filteredAccountLabels.map(function(a) {{ return filteredAccountData[a].extended_year_3; }});
+        accountChart.data.datasets[5].data = filteredAccountLabels.map(function(a) {{ return filteredAccountData[a].out_of_support; }});
         accountChart.update();
     }}
     
@@ -3028,7 +3250,9 @@ function updateChartsWithFilters(filters) {{
         statusPieChart.data.datasets[0].data = [
             filteredStatusTotals.supported,
             filteredStatusTotals.approaching,
-            filteredStatusTotals.extended,
+            filteredStatusTotals.extended_year_1,
+            filteredStatusTotals.extended_year_2,
+            filteredStatusTotals.extended_year_3,
             filteredStatusTotals.out_of_support
         ];
         statusPieChart.update();
@@ -3041,7 +3265,7 @@ function updateChartsWithFilters(filters) {{
         servicePieChart.data.labels = filteredServiceLabels;
         servicePieChart.data.datasets[0].data = filteredServiceLabels.map(function(s) {{
             var d = filteredServiceData[s];
-            return d.supported + d.approaching + d.extended + d.out_of_support;
+            return d.supported + d.approaching + d.extended_year_1 + d.extended_year_2 + d.extended_year_3 + d.out_of_support;
         }});
         servicePieChart.update();
     }}
@@ -3083,7 +3307,9 @@ function updateTimelineWithFilters(filters) {{
             filteredMonthlyData[month] = {{
                 supported: 0,
                 approaching: 0,
-                extended: 0,
+                extended_year_1: 0,
+                extended_year_2: 0,
+                extended_year_3: 0,
                 out_of_support: 0
             }};
             filteredResources.forEach(function(r) {{
@@ -3107,9 +3333,11 @@ function updateTimelineWithFilters(filters) {{
         
         window.timelineChartInstance.data.labels = filteredMonths;
         window.timelineChartInstance.data.datasets[0].data = filteredMonths.map(function(m) {{ return filteredMonthlyData[m] ? filteredMonthlyData[m].out_of_support : 0; }});
-        window.timelineChartInstance.data.datasets[1].data = filteredMonths.map(function(m) {{ return filteredMonthlyData[m] ? filteredMonthlyData[m].extended : 0; }});
-        window.timelineChartInstance.data.datasets[2].data = filteredMonths.map(function(m) {{ return filteredMonthlyData[m] ? filteredMonthlyData[m].approaching : 0; }});
-        window.timelineChartInstance.data.datasets[3].data = filteredMonths.map(function(m) {{ return filteredMonthlyData[m] ? filteredMonthlyData[m].supported : 0; }});
+        window.timelineChartInstance.data.datasets[1].data = filteredMonths.map(function(m) {{ return filteredMonthlyData[m] ? filteredMonthlyData[m].extended_year_3 : 0; }});
+        window.timelineChartInstance.data.datasets[2].data = filteredMonths.map(function(m) {{ return filteredMonthlyData[m] ? filteredMonthlyData[m].extended_year_2 : 0; }});
+        window.timelineChartInstance.data.datasets[3].data = filteredMonths.map(function(m) {{ return filteredMonthlyData[m] ? filteredMonthlyData[m].extended_year_1 : 0; }});
+        window.timelineChartInstance.data.datasets[4].data = filteredMonths.map(function(m) {{ return filteredMonthlyData[m] ? filteredMonthlyData[m].approaching : 0; }});
+        window.timelineChartInstance.data.datasets[5].data = filteredMonths.map(function(m) {{ return filteredMonthlyData[m] ? filteredMonthlyData[m].supported : 0; }});
         window.timelineChartInstance.update();
     }}
     
@@ -3136,7 +3364,9 @@ function updateSummaryCounts(table) {{
     let total = 0;
     let supported = 0;
     let approaching = 0;
-    let extended = 0;
+    let extendedYear1 = 0;
+    let extendedYear2 = 0;
+    let extendedYear3 = 0;
     let outOfSupport = 0;
     
     table.rows({{ search: 'applied' }}).every(function() {{
@@ -3146,18 +3376,22 @@ function updateSummaryCounts(table) {{
         
         if (statusCell.includes('status-supported')) supported++;
         else if (statusCell.includes('status-approaching')) approaching++;
-        else if (statusCell.includes('status-extended')) extended++;
+        else if (statusCell.includes('status-extended-year-1')) extendedYear1++;
+        else if (statusCell.includes('status-extended-year-2')) extendedYear2++;
+        else if (statusCell.includes('status-extended-year-3')) extendedYear3++;
         else if (statusCell.includes('status-out-of-support')) outOfSupport++;
     }});
     
     // Update the summary cards
     const cards = document.querySelectorAll('.summary-card .count');
-    if (cards.length >= 5) {{
+    if (cards.length >= 7) {{
         cards[0].textContent = total;
         cards[1].textContent = supported;
         cards[2].textContent = approaching;
-        cards[3].textContent = extended;
-        cards[4].textContent = outOfSupport;
+        cards[3].textContent = extendedYear1;
+        cards[4].textContent = extendedYear2;
+        cards[5].textContent = extendedYear3;
+        cards[6].textContent = outOfSupport;
     }}
 }}
 
@@ -3213,12 +3447,14 @@ function resetFilters() {{
     
     // Reset summary counts to original values
     const cards = document.querySelectorAll('.summary-card .count');
-    if (cards.length >= 5) {{
+    if (cards.length >= 7) {{
         cards[0].textContent = '{report.total_resources}';
         cards[1].textContent = '{report.total_counts.get(SupportStatus.SUPPORTED, 0)}';
         cards[2].textContent = '{report.total_counts.get(SupportStatus.APPROACHING_EOS, 0)}';
-        cards[3].textContent = '{report.total_counts.get(SupportStatus.EXTENDED_SUPPORT, 0)}';
-        cards[4].textContent = '{report.total_counts.get(SupportStatus.OUT_OF_SUPPORT, 0)}';
+        cards[3].textContent = '{report.total_counts.get(SupportStatus.EXTENDED_SUPPORT_YEAR_1, 0)}';
+        cards[4].textContent = '{report.total_counts.get(SupportStatus.EXTENDED_SUPPORT_YEAR_2, 0)}';
+        cards[5].textContent = '{report.total_counts.get(SupportStatus.EXTENDED_SUPPORT_YEAR_3, 0)}';
+        cards[6].textContent = '{report.total_counts.get(SupportStatus.OUT_OF_SUPPORT, 0)}';
     }}
     
     // Reset version detail cards visibility
@@ -3248,8 +3484,10 @@ function resetChartsToOriginal() {{
         serviceChart.data.labels = serviceLabelsArray;
         serviceChart.data.datasets[0].data = {service_supported};
         serviceChart.data.datasets[1].data = {service_approaching};
-        serviceChart.data.datasets[2].data = {service_extended};
-        serviceChart.data.datasets[3].data = {service_out};
+        serviceChart.data.datasets[2].data = {service_extended_year_1};
+        serviceChart.data.datasets[3].data = {service_extended_year_2};
+        serviceChart.data.datasets[4].data = {service_extended_year_3};
+        serviceChart.data.datasets[5].data = {service_out};
         serviceChart.update();
     }}
     
@@ -3259,8 +3497,10 @@ function resetChartsToOriginal() {{
         accountChart.data.labels = accountLabelsArray;
         accountChart.data.datasets[0].data = {account_supported};
         accountChart.data.datasets[1].data = {account_approaching};
-        accountChart.data.datasets[2].data = {account_extended};
-        accountChart.data.datasets[3].data = {account_out};
+        accountChart.data.datasets[2].data = {account_extended_year_1};
+        accountChart.data.datasets[3].data = {account_extended_year_2};
+        accountChart.data.datasets[4].data = {account_extended_year_3};
+        accountChart.data.datasets[5].data = {account_out};
         accountChart.update();
     }}
     
@@ -3381,7 +3621,9 @@ function initChartsLazy() {{
                 datasets: [
                     {{ label: 'Supported', data: {service_supported}, backgroundColor: '#66bb6a' }},
                     {{ label: 'Approaching EOS', data: {service_approaching}, backgroundColor: '#ffa726' }},
-                    {{ label: 'Extended Support', data: {service_extended}, backgroundColor: '#42a5f5' }},
+                    {{ label: 'Extended Support Y1', data: {service_extended_year_1}, backgroundColor: '#bbdefb' }},
+                    {{ label: 'Extended Support Y2', data: {service_extended_year_2}, backgroundColor: '#90caf9' }},
+                    {{ label: 'Extended Support Y3', data: {service_extended_year_3}, backgroundColor: '#64b5f6' }},
                     {{ label: 'Out of Support', data: {service_out}, backgroundColor: '#ef5350' }}
                 ]
             }},
@@ -3421,7 +3663,9 @@ function initChartsLazy() {{
                 datasets: [
                     {{ label: 'Supported', data: {account_supported}, backgroundColor: '#66bb6a' }},
                     {{ label: 'Approaching EOS', data: {account_approaching}, backgroundColor: '#ffa726' }},
-                    {{ label: 'Extended Support', data: {account_extended}, backgroundColor: '#42a5f5' }},
+                    {{ label: 'Extended Support Y1', data: {account_extended_year_1}, backgroundColor: '#bbdefb' }},
+                    {{ label: 'Extended Support Y2', data: {account_extended_year_2}, backgroundColor: '#90caf9' }},
+                    {{ label: 'Extended Support Y3', data: {account_extended_year_3}, backgroundColor: '#64b5f6' }},
                     {{ label: 'Out of Support', data: {account_out}, backgroundColor: '#ef5350' }}
                 ]
             }},
@@ -3457,8 +3701,8 @@ function initChartsLazy() {{
         new Chart(document.getElementById('statusPieChart'), {{
             type: 'doughnut',
             data: {{
-                labels: ['Supported', 'Approaching EOS', 'Extended Support', 'Out of Support'],
-                datasets: [{{ data: {status_values}, backgroundColor: ['#66bb6a', '#ffa726', '#42a5f5', '#ef5350'] }}]
+                labels: ['Supported', 'Approaching EOS', 'Extended Support Y1', 'Extended Support Y2', 'Extended Support Y3', 'Out of Support'],
+                datasets: [{{ data: {status_values}, backgroundColor: ['#66bb6a', '#ffa726', '#bbdefb', '#90caf9', '#64b5f6', '#ef5350'] }}]
             }},
             options: {{
                 responsive: true,
@@ -3561,6 +3805,7 @@ $(document).ready(function() {{
             dom: 'Bfrtip',
             buttons: ['copy', 'csv', 'excel'],
             deferRender: true,
+            scrollX: true,
             language: {{ search: "Search:", lengthMenu: "Show _MENU_ entries" }},
             initComplete: function() {{
                 // Add column resizers after DataTable init

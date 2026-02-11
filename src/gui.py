@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 try:
     from . import __version__
 except ImportError:
-    __version__ = "2.3.0"
+    __version__ = "2.3.1"
 
 # Handle imports for both package and frozen executable modes
 try:
@@ -68,7 +68,9 @@ class EndOfSupportGUI:
         # Status filter checkboxes - default to showing action-needed items
         self.filter_supported = tk.BooleanVar(value=False)
         self.filter_approaching = tk.BooleanVar(value=True)
-        self.filter_extended = tk.BooleanVar(value=True)
+        self.filter_extended_year_1 = tk.BooleanVar(value=True)
+        self.filter_extended_year_2 = tk.BooleanVar(value=True)
+        self.filter_extended_year_3 = tk.BooleanVar(value=True)
         self.filter_oos = tk.BooleanVar(value=True)
         
         # Excel options
@@ -175,12 +177,14 @@ class EndOfSupportGUI:
         filter_frame = ttk.LabelFrame(main_frame, text="Filters", padding="5")
         filter_frame.grid(row=3, column=0, sticky="ew", pady=(0, 10))
         
-        ttk.Label(filter_frame, text="Status Filters (leave unchecked for all):").grid(row=0, column=0, columnspan=4, sticky="w")
+        ttk.Label(filter_frame, text="Status Filters (leave unchecked for all):").grid(row=0, column=0, columnspan=6, sticky="w")
         
         ttk.Checkbutton(filter_frame, text="Regular Support", variable=self.filter_supported).grid(row=1, column=0, sticky="w")
         ttk.Checkbutton(filter_frame, text="Approaching EOS", variable=self.filter_approaching).grid(row=1, column=1, sticky="w")
-        ttk.Checkbutton(filter_frame, text="Extended Support", variable=self.filter_extended).grid(row=1, column=2, sticky="w")
-        ttk.Checkbutton(filter_frame, text="Out of Support", variable=self.filter_oos).grid(row=1, column=3, sticky="w")
+        ttk.Checkbutton(filter_frame, text="Ext Sup Yr 1", variable=self.filter_extended_year_1).grid(row=1, column=2, sticky="w")
+        ttk.Checkbutton(filter_frame, text="Ext Sup Yr 2", variable=self.filter_extended_year_2).grid(row=1, column=3, sticky="w")
+        ttk.Checkbutton(filter_frame, text="Ext Sup Yr 3", variable=self.filter_extended_year_3).grid(row=1, column=4, sticky="w")
+        ttk.Checkbutton(filter_frame, text="Out of Support", variable=self.filter_oos).grid(row=1, column=5, sticky="w")
         
         ttk.Label(filter_frame, text="Days Threshold:").grid(row=2, column=0, sticky="w", pady=(10, 0))
         ttk.Spinbox(filter_frame, from_=1, to=365, textvariable=self.days_threshold, width=10).grid(row=2, column=1, sticky="w", pady=(10, 0))
@@ -345,7 +349,9 @@ class EndOfSupportGUI:
         # Reset filters to defaults (show action-needed items)
         self.filter_supported.set(False)
         self.filter_approaching.set(True)
-        self.filter_extended.set(True)
+        self.filter_extended_year_1.set(True)
+        self.filter_extended_year_2.set(True)
+        self.filter_extended_year_3.set(True)
         self.filter_oos.set(True)
         self.include_pivot.set(True)
         self.pivot_method.set("auto")
@@ -367,8 +373,12 @@ class EndOfSupportGUI:
             filters.append(SupportStatus.SUPPORTED)
         if self.filter_approaching.get():
             filters.append(SupportStatus.APPROACHING_EOS)
-        if self.filter_extended.get():
-            filters.append(SupportStatus.EXTENDED_SUPPORT)
+        if self.filter_extended_year_1.get():
+            filters.append(SupportStatus.EXTENDED_SUPPORT_YEAR_1)
+        if self.filter_extended_year_2.get():
+            filters.append(SupportStatus.EXTENDED_SUPPORT_YEAR_2)
+        if self.filter_extended_year_3.get():
+            filters.append(SupportStatus.EXTENDED_SUPPORT_YEAR_3)
         if self.filter_oos.get():
             filters.append(SupportStatus.OUT_OF_SUPPORT)
         return filters if filters else None
