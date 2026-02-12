@@ -1604,8 +1604,31 @@ table.dataTable td {
         Returns:
             HTML string for the timeline bar
         """
-        from datetime import date as date_type
+        from datetime import date as date_type, timedelta
         today = date_type.today()
+        
+        def safe_add_years(d: date_type, years: int) -> date_type:
+            """Safely add/subtract years, handling leap year edge cases."""
+            try:
+                return date_type(d.year + years, d.month, d.day)
+            except ValueError:
+                # Handle Feb 29 -> Feb 28 for non-leap years
+                return date_type(d.year + years, d.month, d.day - 1)
+        
+        def safe_add_months(d: date_type, months: int) -> date_type:
+            """Safely add/subtract months, handling edge cases."""
+            new_month = d.month + months
+            new_year = d.year
+            while new_month > 12:
+                new_month -= 12
+                new_year += 1
+            while new_month < 1:
+                new_month += 12
+                new_year -= 1
+            # Handle day overflow (e.g., Jan 31 + 1 month = Feb 28)
+            import calendar
+            max_day = calendar.monthrange(new_year, new_month)[1]
+            return date_type(new_year, new_month, min(d.day, max_day))
         
         # If no dates available, show a simple "No data" bar
         if not eos_date and not ext_start and not ext_end:
@@ -1615,27 +1638,25 @@ table.dataTable td {
         ext_y2_start = None
         if ext_y1_start and not ext_y3_start:
             # If no Y3, calculate Y2 as Y1 + 1 year
-            ext_y2_start = date_type(ext_y1_start.year + 1, ext_y1_start.month, ext_y1_start.day)
+            ext_y2_start = safe_add_years(ext_y1_start, 1)
         elif ext_y1_start and ext_y3_start:
             # Y2 is between Y1 and Y3
-            ext_y2_start = date_type(ext_y1_start.year + 1, ext_y1_start.month, ext_y1_start.day)
+            ext_y2_start = safe_add_years(ext_y1_start, 1)
         
         # Determine the timeline range
         # Start from 1 year before EOS (or today if no EOS)
         # End at ext_end + 6 months (or 2 years after EOS if no ext_end)
         if eos_date:
-            timeline_start = date_type(eos_date.year - 1, eos_date.month, eos_date.day)
+            timeline_start = safe_add_years(eos_date, -1)
         else:
-            timeline_start = date_type(today.year - 1, today.month, today.day)
+            timeline_start = safe_add_years(today, -1)
         
         if ext_end:
-            timeline_end = date_type(ext_end.year, ext_end.month + 6 if ext_end.month <= 6 else ext_end.month - 6, ext_end.day)
-            if ext_end.month > 6:
-                timeline_end = date_type(ext_end.year + 1, ext_end.month - 6, ext_end.day)
+            timeline_end = safe_add_months(ext_end, 6)
         elif eos_date:
-            timeline_end = date_type(eos_date.year + 2, eos_date.month, eos_date.day)
+            timeline_end = safe_add_years(eos_date, 2)
         else:
-            timeline_end = date_type(today.year + 2, today.month, today.day)
+            timeline_end = safe_add_years(today, 2)
         
         total_days = (timeline_end - timeline_start).days
         if total_days <= 0:
@@ -1658,7 +1679,7 @@ table.dataTable td {
         # Extended Support Year 1
         if ext_y1_start or ext_start:
             y1_start = ext_y1_start or ext_start
-            y1_end = ext_y2_start or ext_y3_start or ext_end or date_type(y1_start.year + 1, y1_start.month, y1_start.day)
+            y1_end = ext_y2_start or ext_y3_start or ext_end or safe_add_years(y1_start, 1)
             y1_width = max(0, (y1_end - y1_start).days) / total_days * 100
             if y1_width > 0:
                 segments.append({
@@ -1670,7 +1691,7 @@ table.dataTable td {
         
         # Extended Support Year 2
         if ext_y2_start:
-            y2_end = ext_y3_start or ext_end or date_type(ext_y2_start.year + 1, ext_y2_start.month, ext_y2_start.day)
+            y2_end = ext_y3_start or ext_end or safe_add_years(ext_y2_start, 1)
             y2_width = max(0, (y2_end - ext_y2_start).days) / total_days * 100
             if y2_width > 0:
                 segments.append({
@@ -1682,7 +1703,7 @@ table.dataTable td {
         
         # Extended Support Year 3
         if ext_y3_start:
-            y3_end = ext_end or date_type(ext_y3_start.year + 1, ext_y3_start.month, ext_y3_start.day)
+            y3_end = ext_end or safe_add_years(ext_y3_start, 1)
             y3_width = max(0, (y3_end - ext_y3_start).days) / total_days * 100
             if y3_width > 0:
                 segments.append({
