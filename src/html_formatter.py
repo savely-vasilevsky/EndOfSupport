@@ -442,6 +442,71 @@ body {
 .status-extended-year-3 { background-color: #64b5f6; color: #0d47a1; }
 .status-out-of-support { background-color: #ffcdd2; color: #b71c1c; }
 
+/* Support Lifecycle Timeline Bar */
+.lifecycle-bar {
+    position: relative;
+    display: flex;
+    height: 24px;
+    border-radius: 4px;
+    overflow: visible;
+    background: #f0f0f0;
+    font-size: 10px;
+    min-width: 250px;
+}
+
+.lifecycle-segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-right: 1px solid rgba(255,255,255,0.5);
+}
+
+.lifecycle-segment:last-of-type {
+    border-right: none;
+}
+
+.lifecycle-segment.supported {
+    background: linear-gradient(135deg, #66bb6a, #43a047);
+    color: white;
+}
+
+.lifecycle-segment.ext-y1 {
+    background: linear-gradient(135deg, #42a5f5, #1e88e5);
+    color: white;
+}
+
+.lifecycle-segment.ext-y2 {
+    background: linear-gradient(135deg, #ffa726, #fb8c00);
+    color: white;
+}
+
+.lifecycle-segment.ext-y3 {
+    background: linear-gradient(135deg, #ef5350, #e53935);
+    color: white;
+}
+
+.lifecycle-segment.out-of-support {
+    background: linear-gradient(135deg, #78909c, #546e7a);
+    color: white;
+}
+
+.lifecycle-marker {
+    position: absolute;
+    top: -8px;
+    transform: translateX(-50%);
+    font-size: 14px;
+    color: #d32f2f;
+    font-weight: bold;
+    text-shadow: 0 0 2px white, 0 0 2px white;
+    z-index: 10;
+    cursor: help;
+}
+
 .chart-container {
     height: 300px;
     margin: 20px 0;
@@ -1521,6 +1586,137 @@ table.dataTable td {
                 .replace('"', '&quot;')
                 .replace("'", '&#39;'))
 
+    def _generate_lifecycle_timeline_bar(self, eos_date: Optional[date], ext_start: Optional[date], 
+                                          ext_y1_start: Optional[date], ext_y3_start: Optional[date],
+                                          ext_end: Optional[date]) -> str:
+        """Generate a visual support lifecycle timeline bar showing current position.
+        
+        The bar shows: Supported | Ext Y1 | Ext Y2 | Ext Y3 | Out of Support
+        with a marker showing where TODAY falls on the timeline.
+        
+        Args:
+            eos_date: End of standard support date
+            ext_start: Extended support start date
+            ext_y1_start: Extended support Year 1 start date
+            ext_y3_start: Extended support Year 3 start date
+            ext_end: Extended support end date
+            
+        Returns:
+            HTML string for the timeline bar
+        """
+        from datetime import date as date_type
+        today = date_type.today()
+        
+        # If no dates available, show a simple "No data" bar
+        if not eos_date and not ext_start and not ext_end:
+            return '<div class="lifecycle-bar"><div class="lifecycle-segment supported" style="width: 100%;" title="No lifecycle data available">No data</div></div>'
+        
+        # Calculate Year 2 start (1 year after Y1 start)
+        ext_y2_start = None
+        if ext_y1_start and not ext_y3_start:
+            # If no Y3, calculate Y2 as Y1 + 1 year
+            ext_y2_start = date_type(ext_y1_start.year + 1, ext_y1_start.month, ext_y1_start.day)
+        elif ext_y1_start and ext_y3_start:
+            # Y2 is between Y1 and Y3
+            ext_y2_start = date_type(ext_y1_start.year + 1, ext_y1_start.month, ext_y1_start.day)
+        
+        # Determine the timeline range
+        # Start from 1 year before EOS (or today if no EOS)
+        # End at ext_end + 6 months (or 2 years after EOS if no ext_end)
+        if eos_date:
+            timeline_start = date_type(eos_date.year - 1, eos_date.month, eos_date.day)
+        else:
+            timeline_start = date_type(today.year - 1, today.month, today.day)
+        
+        if ext_end:
+            timeline_end = date_type(ext_end.year, ext_end.month + 6 if ext_end.month <= 6 else ext_end.month - 6, ext_end.day)
+            if ext_end.month > 6:
+                timeline_end = date_type(ext_end.year + 1, ext_end.month - 6, ext_end.day)
+        elif eos_date:
+            timeline_end = date_type(eos_date.year + 2, eos_date.month, eos_date.day)
+        else:
+            timeline_end = date_type(today.year + 2, today.month, today.day)
+        
+        total_days = (timeline_end - timeline_start).days
+        if total_days <= 0:
+            total_days = 365  # Fallback
+        
+        # Calculate segment widths as percentages
+        segments = []
+        
+        # Supported segment (from timeline_start to eos_date or ext_start)
+        supported_end = eos_date or ext_start or timeline_end
+        supported_width = max(0, (supported_end - timeline_start).days) / total_days * 100
+        if supported_width > 0:
+            segments.append({
+                'class': 'supported',
+                'width': supported_width,
+                'label': 'Supported',
+                'tooltip': f'Standard Support (until {supported_end.strftime("%Y-%m-%d")})'
+            })
+        
+        # Extended Support Year 1
+        if ext_y1_start or ext_start:
+            y1_start = ext_y1_start or ext_start
+            y1_end = ext_y2_start or ext_y3_start or ext_end or date_type(y1_start.year + 1, y1_start.month, y1_start.day)
+            y1_width = max(0, (y1_end - y1_start).days) / total_days * 100
+            if y1_width > 0:
+                segments.append({
+                    'class': 'ext-y1',
+                    'width': y1_width,
+                    'label': 'Y1',
+                    'tooltip': f'Extended Support Year 1 ({y1_start.strftime("%Y-%m-%d")} to {y1_end.strftime("%Y-%m-%d")})'
+                })
+        
+        # Extended Support Year 2
+        if ext_y2_start:
+            y2_end = ext_y3_start or ext_end or date_type(ext_y2_start.year + 1, ext_y2_start.month, ext_y2_start.day)
+            y2_width = max(0, (y2_end - ext_y2_start).days) / total_days * 100
+            if y2_width > 0:
+                segments.append({
+                    'class': 'ext-y2',
+                    'width': y2_width,
+                    'label': 'Y2',
+                    'tooltip': f'Extended Support Year 2 ({ext_y2_start.strftime("%Y-%m-%d")} to {y2_end.strftime("%Y-%m-%d")})'
+                })
+        
+        # Extended Support Year 3
+        if ext_y3_start:
+            y3_end = ext_end or date_type(ext_y3_start.year + 1, ext_y3_start.month, ext_y3_start.day)
+            y3_width = max(0, (y3_end - ext_y3_start).days) / total_days * 100
+            if y3_width > 0:
+                segments.append({
+                    'class': 'ext-y3',
+                    'width': y3_width,
+                    'label': 'Y3',
+                    'tooltip': f'Extended Support Year 3 ({ext_y3_start.strftime("%Y-%m-%d")} to {y3_end.strftime("%Y-%m-%d")})'
+                })
+        
+        # Out of Support segment
+        oos_start = ext_end or eos_date
+        if oos_start and oos_start < timeline_end:
+            oos_width = max(0, (timeline_end - oos_start).days) / total_days * 100
+            if oos_width > 0:
+                segments.append({
+                    'class': 'out-of-support',
+                    'width': oos_width,
+                    'label': 'OOS',
+                    'tooltip': f'Out of Support (from {oos_start.strftime("%Y-%m-%d")})'
+                })
+        
+        # Calculate TODAY marker position
+        today_position = max(0, min(100, (today - timeline_start).days / total_days * 100))
+        
+        # Build HTML
+        segments_html = ''
+        for seg in segments:
+            segments_html += f'<div class="lifecycle-segment {seg["class"]}" style="width: {seg["width"]:.1f}%;" title="{seg["tooltip"]}">{seg["label"]}</div>'
+        
+        # Add TODAY marker
+        marker_html = f'<div class="lifecycle-marker" style="left: {today_position:.1f}%;" title="Today ({today.strftime("%Y-%m-%d")})">▼</div>'
+        
+        return f'<div class="lifecycle-bar">{segments_html}{marker_html}</div>'
+
     def _get_aws_docs_link_html(self, service: str) -> str:
         """Generate HTML for AWS documentation link if available for the service.
         
@@ -2005,9 +2201,22 @@ table.dataTable td {
                 ext_start_dates = [r.extended_support_start for r in resources if r.extended_support_start]
                 ext_end_dates = [r.extended_support_end for r in resources if r.extended_support_end]
                 
+                # Get extended support year dates for timeline
+                ext_y1_dates = [r.extended_support_year1_start for r in resources if r.extended_support_year1_start]
+                ext_y3_dates = [r.extended_support_year3_start for r in resources if r.extended_support_year3_start]
+                
                 eos_date = min(eos_dates).strftime('%Y-%m-%d') if eos_dates else 'N/A'
                 ext_start = min(ext_start_dates).strftime('%Y-%m-%d') if ext_start_dates else 'N/A'
                 ext_end = max(ext_end_dates).strftime('%Y-%m-%d') if ext_end_dates else 'N/A'
+                
+                # Generate support lifecycle timeline bar
+                timeline_html = self._generate_lifecycle_timeline_bar(
+                    eos_date=min(eos_dates) if eos_dates else None,
+                    ext_start=min(ext_start_dates) if ext_start_dates else None,
+                    ext_y1_start=min(ext_y1_dates) if ext_y1_dates else None,
+                    ext_y3_start=min(ext_y3_dates) if ext_y3_dates else None,
+                    ext_end=max(ext_end_dates) if ext_end_dates else None
+                )
                 
                 # Status summary
                 version_status_counts = {}
@@ -2024,6 +2233,7 @@ table.dataTable td {
                         <td>{ext_start}</td>
                         <td>{ext_end}</td>
                         <td>{status_summary}</td>
+                        <td style="min-width: 280px;">{timeline_html}</td>
                     </tr>
                 """)
             
@@ -2104,6 +2314,7 @@ table.dataTable td {
                                     <th>Extended Support Start</th>
                                     <th>Extended Support End</th>
                                     <th>Status Summary</th>
+                                    <th>Support Lifecycle</th>
                                 </tr>
                             </thead>
                             <tbody>

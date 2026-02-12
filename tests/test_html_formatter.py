@@ -2717,7 +2717,8 @@ class TestHTMLFormatterVersionDetails:
         header_texts = [h.text for h in headers]
         
         expected = ['Version', 'Resource Count', 'End of Support', 
-                   'Extended Support Start', 'Extended Support End', 'Status Summary']
+                   'Extended Support Start', 'Extended Support End', 'Status Summary',
+                   'Support Lifecycle']
         assert header_texts == expected
     
     def test_version_details_link_in_resources_table(self):
