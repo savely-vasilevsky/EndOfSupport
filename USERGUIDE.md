@@ -574,4 +574,4 @@ A: Extended Support means AWS still provides updates but may charge extra. Out o
 
 ---
 
-*Last updated: February 12, 2026 - Version 2.3.1*
+*Last updated: February 12, 2026 - Version 2.4.0*

@@ -68,6 +68,9 @@ class CSVParser:
         'Extended Support - Year 2 Pricing Start Date': 'extended_support_year2_start',
         'Extended Support - Year 3 Pricing Start Date': 'extended_support_year3_start',
         'Extended Support - End Date': 'extended_support_end',
+        'Instance Type': 'instance_type',
+        'Est. Monthly Ext Support Cost': 'est_monthly_ext_support_cost',
+        'Est. Annual Ext Support Cost': 'est_annual_ext_support_cost',
         'Insights': 'insights',
     }
 
@@ -204,6 +207,9 @@ class CSVParser:
             extended_support_year3_start=extended_support_year3_start,
             extended_support_end=extended_support_end,
             insights=insights,
+            instance_type=row.get('Instance Type', '').strip() or None,
+            est_monthly_ext_support_cost=row.get('Est. Monthly Ext Support Cost', '').strip() or None,
+            est_annual_ext_support_cost=row.get('Est. Annual Ext Support Cost', '').strip() or None,
         )
 
     def _parse_date(self, date_str: str, row_num: int, field_name: str) -> Optional[date]:

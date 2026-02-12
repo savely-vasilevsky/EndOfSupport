@@ -1,6 +1,6 @@
 """EndOfSupportTool - AWS resource support status analyzer."""
 
-__version__ = "2.3.1"
+__version__ = "2.4.0"
 
 from .models import (
     SupportStatus,

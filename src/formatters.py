@@ -39,7 +39,7 @@ except ImportError:
         EngineGroup,
         VersionGroup,
     )
-    __version__ = "2.3.1"
+    __version__ = "2.4.0"
 
 # Optional Excel support
 try:
@@ -952,6 +952,17 @@ class TextFormatter(BaseFormatter):
         if resource.extended_support_end:
             lines.append(f"{indent}  Extended Support End: {resource.extended_support_end.isoformat()}")
         
+        # Extended support cost estimates (add * for Approaching EOS - future cost if not upgraded)
+        if resource.est_monthly_ext_support_cost:
+            monthly_cost = resource.est_monthly_ext_support_cost
+            annual_cost = resource.est_annual_ext_support_cost or ""
+            if resource.status == SupportStatus.APPROACHING_EOS:
+                monthly_cost = f"{monthly_cost}*"
+                annual_cost = f"{annual_cost}*" if annual_cost else ""
+            lines.append(f"{indent}  Est. Monthly Cost: {monthly_cost}")
+            if annual_cost:
+                lines.append(f"{indent}  Est. Annual Cost: {annual_cost}")
+        
         return lines
     
     def _format_status_counts(
@@ -1018,11 +1029,14 @@ class CSVFormatter(BaseFormatter):
         "Resource ARN",
         "Region",
         "Resource Type",
+        "Instance Type",
         "Status",
         "Days to EOS",
         "End of Support",
         "Extended Support Start",
         "Extended Support End",
+        "Est. Monthly Cost",
+        "Est. Annual Cost",
         "Insights",
     ]
     
@@ -1069,6 +1083,13 @@ class CSVFormatter(BaseFormatter):
         Returns:
             List of string values for the CSV row.
         """
+        # Add star (*) to cost if status is Approaching EOS (future cost if not upgraded)
+        monthly_cost = resource.est_monthly_ext_support_cost or ""
+        annual_cost = resource.est_annual_ext_support_cost or ""
+        if resource.status == SupportStatus.APPROACHING_EOS and monthly_cost:
+            monthly_cost = f"{monthly_cost}*"
+            annual_cost = f"{annual_cost}*" if annual_cost else ""
+        
         return [
             resource.account,
             resource.service,
@@ -1078,11 +1099,14 @@ class CSVFormatter(BaseFormatter):
             resource.resource_arn,
             resource.region,
             resource.resource_type,
+            resource.instance_type or "",
             resource.status.value if resource.status else "",
             str(resource.days_to_eos) if resource.days_to_eos is not None else "",
             resource.end_of_support.isoformat() if resource.end_of_support else resource.end_of_support_raw,
             resource.extended_support_start.isoformat() if resource.extended_support_start else "",
             resource.extended_support_end.isoformat() if resource.extended_support_end else "",
+            monthly_cost,
+            annual_cost,
             resource.insights,
         ]
 
@@ -1230,6 +1254,13 @@ class JSONFormatter(BaseFormatter):
         Returns:
             Dictionary representation with all fields.
         """
+        # Add star (*) to cost if status is Approaching EOS (future cost if not upgraded)
+        monthly_cost = resource.est_monthly_ext_support_cost
+        annual_cost = resource.est_annual_ext_support_cost
+        if resource.status == SupportStatus.APPROACHING_EOS and monthly_cost:
+            monthly_cost = f"{monthly_cost}*"
+            annual_cost = f"{annual_cost}*" if annual_cost else None
+        
         return {
             "account": resource.account,
             "payer_id": resource.payer_id,
@@ -1240,6 +1271,7 @@ class JSONFormatter(BaseFormatter):
             "region": resource.region,
             "engine": resource.engine,
             "version": resource.version,
+            "instance_type": resource.instance_type,
             "end_of_support": resource.end_of_support.isoformat() if resource.end_of_support else None,
             "end_of_support_raw": resource.end_of_support_raw,
             "auto_minor_version_upgrade": resource.auto_minor_version_upgrade,
@@ -1250,6 +1282,8 @@ class JSONFormatter(BaseFormatter):
             "insights": resource.insights,
             "status": resource.status.value if resource.status else None,
             "days_to_eos": resource.days_to_eos,
+            "est_monthly_ext_support_cost": monthly_cost,
+            "est_annual_ext_support_cost": annual_cost,
         }
     
     def _status_counts_to_dict(self, counts: Dict[SupportStatus, int]) -> Dict[str, int]:
@@ -1286,11 +1320,14 @@ class ExcelFormatter(BaseFormatter):
         "Resource ARN",
         "Region",
         "Resource Type",
+        "Instance Type",
         "Status",
         "Days to EOS",
         "End of Support",
         "Extended Support Start",
         "Extended Support End",
+        "Est. Monthly Cost",
+        "Est. Annual Cost",
         "Insights",
     ]
     
@@ -2372,6 +2409,13 @@ class ExcelFormatter(BaseFormatter):
         Returns:
             List of values for the Excel row.
         """
+        # Add star (*) to cost if status is Approaching EOS (future cost if not upgraded)
+        monthly_cost = resource.est_monthly_ext_support_cost or ""
+        annual_cost = resource.est_annual_ext_support_cost or ""
+        if resource.status == SupportStatus.APPROACHING_EOS and monthly_cost:
+            monthly_cost = f"{monthly_cost}*"
+            annual_cost = f"{annual_cost}*" if annual_cost else ""
+        
         return [
             resource.account,
             resource.service,
@@ -2381,11 +2425,14 @@ class ExcelFormatter(BaseFormatter):
             resource.resource_arn,
             resource.region,
             resource.resource_type,
+            resource.instance_type or "",
             resource.status.value if resource.status else "",
             resource.days_to_eos if resource.days_to_eos is not None else "",
             resource.end_of_support.isoformat() if resource.end_of_support else resource.end_of_support_raw,
             resource.extended_support_start.isoformat() if resource.extended_support_start else "",
             resource.extended_support_end.isoformat() if resource.extended_support_end else "",
+            monthly_cost,
+            annual_cost,
             resource.insights,
         ]
     

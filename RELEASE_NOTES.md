@@ -1,3 +1,25 @@
+# Release Notes - v2.4.0
+
+## 🎉 What's New in v2.4.0
+
+### Extended Support Date Columns in HTML Report
+- **New columns** - Added "Ext. Support Start" and "Ext. Support End" columns to the All Resources table
+- **Cost columns** - Added "Est. Monthly Cost" and "Est. Annual Cost" columns with star (*) notation for Approaching EOS status
+
+### Cost Estimation with Star Notation
+- **Star (*) indicator** - Costs marked with * indicate future charges that will apply if the component is not upgraded before EOS
+- **All formats updated** - Star notation added to CSV, Excel, JSON, Text, and HTML formatters
+- **Help documentation** - Added explanation about star notation in GUI Help and HTML report Help guide
+
+### Extended Support Lookup Improvements
+- **DocumentDB support** - Fixed version normalization for DocumentDB (4.0, 5.0) in extended support lookup
+- **Comprehensive test suite** - Added `test_extended_support_dates.py` script to validate all extended support date fetching
+
+### Bug Fixes
+- **Fixed DocumentDB lookup** - DocumentDB versions now correctly resolve in the extended support lookup table
+
+---
+
 # Release Notes - v2.3.1
 
 ## 🎉 What's New in v2.3.1

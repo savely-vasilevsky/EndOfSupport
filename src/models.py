@@ -39,6 +39,10 @@ class Resource:
     insights: str
     status: Optional[SupportStatus] = None
     days_to_eos: Optional[int] = None
+    # Cost estimation fields
+    instance_type: Optional[str] = None
+    est_monthly_ext_support_cost: Optional[str] = None
+    est_annual_ext_support_cost: Optional[str] = None
 
 
 @dataclass
