@@ -1630,10 +1630,18 @@ table.dataTable td {
         more_text = f'<p style="color: #666; font-style: italic;">Showing {len(timeline_list_html)} of {len(timeline_items)} unique engine-version combinations</p>' if len(timeline_items) > 100 else ''
         
         # Get min and max dates for the date range inputs
-        # Default: earliest date in report to 6 months in the future
+        # Default: 6 months before current date to 6 months after
         from datetime import datetime
         
         today = datetime.now()
+        
+        # Calculate 6 months before
+        year_start = today.year
+        month_start = today.month - 6
+        while month_start < 1:
+            month_start += 12
+            year_start -= 1
+        default_start = f"{year_start:04d}-{month_start:02d}"
         
         # Calculate 6 months ahead
         year_end = today.year
@@ -1646,16 +1654,15 @@ table.dataTable td {
         if sorted_months:
             data_min_month = sorted_months[0]
             data_max_month = sorted_months[-1]
-            # Start from earliest date in report
-            default_start = data_min_month
-            # Clamp end to available data range
+            # Clamp defaults to available data range
+            if default_start < data_min_month:
+                default_start = data_min_month
             if default_end > data_max_month:
                 default_end = data_max_month
         else:
-            data_min_month = ""
-            data_max_month = ""
-            default_start = ""
-            default_end = ""
+            # No data - use calculated defaults anyway
+            data_min_month = default_start
+            data_max_month = default_end
         
         return f"""<div id="timeline-section" class="section">
     <h2>Support Timeline
@@ -1755,8 +1762,18 @@ table.dataTable td {
                 var startDate = document.getElementById('timelineStartDate').value;
                 var endDate = document.getElementById('timelineEndDate').value;
                 
+                // If dates are empty, use first and last available months as defaults
+                if (!startDate && window.allTimelineMonths.length > 0) {{
+                    startDate = window.allTimelineMonths[0];
+                    document.getElementById('timelineStartDate').value = startDate;
+                }}
+                if (!endDate && window.allTimelineMonths.length > 0) {{
+                    endDate = window.allTimelineMonths[window.allTimelineMonths.length - 1];
+                    document.getElementById('timelineEndDate').value = endDate;
+                }}
+                
                 if (!startDate || !endDate) {{
-                    alert('Please select both start and end dates');
+                    // No data available at all
                     return;
                 }}
                 
