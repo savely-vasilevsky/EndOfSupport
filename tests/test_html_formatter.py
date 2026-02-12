@@ -748,9 +748,11 @@ class TestHTMLFormatterResourcesTable:
         table = soup.find('table', id='resourcesDataTable')
         headers = table.find('thead').find_all('th')
         
-        # Version Details column is now included by default, ARN column added
+        # Updated headers with extended support columns and cost columns
         expected_headers = ['Account', 'Service', 'Engine', 'Version', 
-                          'Resource', 'ARN', 'End of Support', 'Days to EOS', 'Status', 'Version Details']
+                          'Resource', 'ARN', 'End of Support', 'Days to EOS', 'Status',
+                          'Ext. Support Start', 'Ext. Support End',
+                          'Est. Monthly Cost', 'Est. Annual Cost', 'Version Details']
         header_texts = [h.text for h in headers]
         
         assert header_texts == expected_headers

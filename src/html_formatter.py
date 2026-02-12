@@ -1416,11 +1416,15 @@ table.dataTable td {
                             ext_end = resource.extended_support_end.strftime('%Y-%m-%d') if resource.extended_support_end else 'N/A'
                             
                             # Cost with star (*) for Approaching EOS (future cost if not upgraded)
-                            monthly_cost = resource.est_monthly_ext_support_cost or ''
-                            annual_cost = resource.est_annual_ext_support_cost or ''
-                            if resource.status == SupportStatus.APPROACHING_EOS and monthly_cost:
-                                monthly_cost = f"{monthly_cost}*"
-                                annual_cost = f"{annual_cost}*" if annual_cost else ""
+                            # Don't show cost for Supported status (no extended support cost applies)
+                            monthly_cost = ''
+                            annual_cost = ''
+                            if resource.status != SupportStatus.SUPPORTED:
+                                monthly_cost = resource.est_monthly_ext_support_cost or ''
+                                annual_cost = resource.est_annual_ext_support_cost or ''
+                                if resource.status == SupportStatus.APPROACHING_EOS and monthly_cost:
+                                    monthly_cost = f"{monthly_cost}*"
+                                    annual_cost = f"{annual_cost}*" if annual_cost else ""
                             
                             # Generate version details link
                             version_details_cell = ""

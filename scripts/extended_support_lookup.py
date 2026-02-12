@@ -67,11 +67,13 @@ class ExtendedSupportDates:
 
 
 # =============================================================================
-# Extended Support Pricing (per vCPU-hour)
+# Extended Support Pricing
 # Source: https://aws.amazon.com/rds/aurora/pricing/ and RDS pricing pages
+# EKS: https://aws.amazon.com/eks/pricing/
 # =============================================================================
 
-# Pricing per vCPU-hour for extended support
+# Pricing per vCPU-hour for extended support (databases)
+# EKS uses per-cluster-hour pricing instead
 EXTENDED_SUPPORT_PRICING = {
     # Aurora MySQL/PostgreSQL pricing per vCPU-hour
     "aurora-mysql": {
@@ -101,6 +103,14 @@ EXTENDED_SUPPORT_PRICING = {
         "year2": 0.200,
         "year3": 0.300,
     },
+}
+
+# EKS Extended Support Pricing (per cluster per hour)
+# Standard support: $0.10/cluster/hour
+# Extended support: $0.60/cluster/hour (includes $0.50 additional charge)
+EKS_EXTENDED_SUPPORT_PRICING = {
+    "standard": 0.10,   # $0.10 per cluster per hour
+    "extended": 0.60,   # $0.60 per cluster per hour (total)
 }
 
 # vCPU counts for common instance types
@@ -291,6 +301,59 @@ STATIC_EXTENDED_SUPPORT_DATES: Dict[Tuple[str, str], Dict[str, str]] = {
         "extended_support_year3_start": "2028-11-01",
         "extended_support_end": "2029-10-31",
     },
+    # EKS (Elastic Kubernetes Service)
+    # Source: https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html
+    # EKS has 14 months standard support + 12 months extended support (26 total)
+    # Note: EKS extended support is flat rate, no Year 1/2/3 tiers
+    ("eks", "1.29"): {
+        "standard_support_end": "2025-03-23",
+        "extended_support_start": "2025-03-23",
+        "extended_support_year1_start": "2025-03-23",
+        "extended_support_year3_start": None,  # EKS only has 12 months extended
+        "extended_support_end": "2026-03-23",
+    },
+    ("eks", "1.30"): {
+        "standard_support_end": "2025-07-23",
+        "extended_support_start": "2025-07-23",
+        "extended_support_year1_start": "2025-07-23",
+        "extended_support_year3_start": None,
+        "extended_support_end": "2026-07-23",
+    },
+    ("eks", "1.31"): {
+        "standard_support_end": "2025-11-26",
+        "extended_support_start": "2025-11-26",
+        "extended_support_year1_start": "2025-11-26",
+        "extended_support_year3_start": None,
+        "extended_support_end": "2026-11-26",
+    },
+    ("eks", "1.32"): {
+        "standard_support_end": "2026-03-23",
+        "extended_support_start": "2026-03-23",
+        "extended_support_year1_start": "2026-03-23",
+        "extended_support_year3_start": None,
+        "extended_support_end": "2027-03-23",
+    },
+    ("eks", "1.33"): {
+        "standard_support_end": "2026-07-29",
+        "extended_support_start": "2026-07-29",
+        "extended_support_year1_start": "2026-07-29",
+        "extended_support_year3_start": None,
+        "extended_support_end": "2027-07-29",
+    },
+    ("eks", "1.34"): {
+        "standard_support_end": "2026-12-02",
+        "extended_support_start": "2026-12-02",
+        "extended_support_year1_start": "2026-12-02",
+        "extended_support_year3_start": None,
+        "extended_support_end": "2027-12-02",
+    },
+    ("eks", "1.35"): {
+        "standard_support_end": "2027-03-27",
+        "extended_support_start": "2027-03-27",
+        "extended_support_year1_start": "2027-03-27",
+        "extended_support_year3_start": None,
+        "extended_support_end": "2028-03-27",
+    },
 }
 
 
@@ -364,19 +427,22 @@ class ExtendedSupportLookup:
         2. Supplement with RDS API data if available
         
         Args:
-            engine: Engine name (e.g., "mysql", "aurora-postgresql")
-            version: Major version (e.g., "5.7", "14")
+            engine: Engine name (e.g., "mysql", "aurora-postgresql", "eks")
+            version: Major version (e.g., "5.7", "14", "1.31")
             
         Returns:
             ExtendedSupportDates or None if not found.
         """
         # Normalize engine name
         engine_lower = engine.lower()
+        # Handle EKS variations
+        if engine_lower in ('kubernetes', 'elastic kubernetes service (eks)', 'elastic kubernetes service'):
+            engine_lower = 'eks'
         
         # Extract major version
         major_version = version.split('.')[0] if '.' in version else version
-        # For MySQL/PostgreSQL/DocumentDB, keep major.minor (e.g., "5.7", "8.0", "4.0")
-        if engine_lower in ('mysql', 'aurora-mysql', 'docdb') and '.' in version:
+        # For MySQL/PostgreSQL/DocumentDB/EKS, keep major.minor (e.g., "5.7", "8.0", "4.0", "1.31")
+        if engine_lower in ('mysql', 'aurora-mysql', 'docdb', 'eks') and '.' in version:
             parts = version.split('.')
             if len(parts) >= 2:
                 major_version = f"{parts[0]}.{parts[1]}"
@@ -414,6 +480,7 @@ class ExtendedSupportLookup:
         version: str,
         instance_type: Optional[str] = None,
         vcpu_count: Optional[int] = None,
+        cluster_count: int = 1,
         hours_per_month: int = 730,
         reference_date: Optional[date] = None,
     ) -> Dict[str, Any]:
@@ -422,8 +489,9 @@ class ExtendedSupportLookup:
         Args:
             engine: Engine name
             version: Engine version
-            instance_type: Instance type (e.g., "db.r5.large")
-            vcpu_count: Override vCPU count (if instance_type not provided)
+            instance_type: Instance type (e.g., "db.r5.large") - for databases
+            vcpu_count: Override vCPU count (if instance_type not provided) - for databases
+            cluster_count: Number of clusters (for EKS)
             hours_per_month: Hours per month (default 730 for 24/7)
             reference_date: Date to calculate current year
             
@@ -432,11 +500,17 @@ class ExtendedSupportLookup:
         """
         dates = self.get_extended_support_dates(engine, version)
         
+        # Normalize engine name
+        engine_lower = engine.lower()
+        if engine_lower in ('kubernetes', 'elastic kubernetes service (eks)', 'elastic kubernetes service'):
+            engine_lower = 'eks'
+        
         result = {
             "engine": engine,
             "version": version,
             "instance_type": instance_type,
             "vcpu_count": 0,
+            "cluster_count": cluster_count if engine_lower == 'eks' else 0,
             "current_year": None,
             "in_extended_support": False,
             "monthly_cost_year1": 0.0,
@@ -448,33 +522,52 @@ class ExtendedSupportLookup:
             "annual_cost_year3": 0.0,
             "current_annual_cost": 0.0,
             "pricing_available": False,
+            "pricing_model": "per_vcpu" if engine_lower != 'eks' else "per_cluster",
         }
         
-        # Get vCPU count
-        if vcpu_count:
-            result["vcpu_count"] = vcpu_count
-        elif instance_type:
-            result["vcpu_count"] = INSTANCE_VCPU_MAP.get(instance_type.lower(), 2)
-        else:
-            result["vcpu_count"] = 2  # Default assumption
-        
-        vcpus = result["vcpu_count"]
-        
-        # Get pricing for this engine
-        engine_lower = engine.lower()
-        pricing = EXTENDED_SUPPORT_PRICING.get(engine_lower)
-        
-        if pricing and vcpus > 0:
+        # EKS uses per-cluster pricing (flat rate)
+        if engine_lower == 'eks':
             result["pricing_available"] = True
             
-            # Calculate costs per year
-            result["monthly_cost_year1"] = vcpus * pricing["year1"] * hours_per_month
-            result["monthly_cost_year2"] = vcpus * pricing["year2"] * hours_per_month
-            result["monthly_cost_year3"] = vcpus * pricing["year3"] * hours_per_month
+            # EKS extended support is flat rate: $0.60/cluster/hour (no Year 1/2/3 tiers)
+            # Standard support is $0.10/cluster/hour
+            extended_hourly = EKS_EXTENDED_SUPPORT_PRICING["extended"]
+            monthly_cost = cluster_count * extended_hourly * hours_per_month
             
-            result["annual_cost_year1"] = result["monthly_cost_year1"] * 12
-            result["annual_cost_year2"] = result["monthly_cost_year2"] * 12
-            result["annual_cost_year3"] = result["monthly_cost_year3"] * 12
+            # EKS has same rate for all extended support period (no year tiers)
+            result["monthly_cost_year1"] = monthly_cost
+            result["monthly_cost_year2"] = monthly_cost  # Same rate
+            result["monthly_cost_year3"] = monthly_cost  # Same rate (though EKS only has 12 months)
+            
+            result["annual_cost_year1"] = monthly_cost * 12
+            result["annual_cost_year2"] = monthly_cost * 12
+            result["annual_cost_year3"] = monthly_cost * 12
+        else:
+            # Database engines use per-vCPU pricing
+            # Get vCPU count
+            if vcpu_count:
+                result["vcpu_count"] = vcpu_count
+            elif instance_type:
+                result["vcpu_count"] = INSTANCE_VCPU_MAP.get(instance_type.lower(), 2)
+            else:
+                result["vcpu_count"] = 2  # Default assumption
+            
+            vcpus = result["vcpu_count"]
+            
+            # Get pricing for this engine
+            pricing = EXTENDED_SUPPORT_PRICING.get(engine_lower)
+            
+            if pricing and vcpus > 0:
+                result["pricing_available"] = True
+                
+                # Calculate costs per year
+                result["monthly_cost_year1"] = vcpus * pricing["year1"] * hours_per_month
+                result["monthly_cost_year2"] = vcpus * pricing["year2"] * hours_per_month
+                result["monthly_cost_year3"] = vcpus * pricing["year3"] * hours_per_month
+                
+                result["annual_cost_year1"] = result["monthly_cost_year1"] * 12
+                result["annual_cost_year2"] = result["monthly_cost_year2"] * 12
+                result["annual_cost_year3"] = result["monthly_cost_year3"] * 12
         
         # Determine current year and cost
         if dates:
@@ -557,7 +650,8 @@ if __name__ == "__main__":
     
     lookup = ExtendedSupportLookup()
     
-    test_cases = [
+    # Database test cases
+    db_test_cases = [
         ("aurora-mysql", "5.7", "db.r5.large"),
         ("aurora-postgresql", "11", "db.r6g.xlarge"),
         ("mysql", "5.7", "db.t3.medium"),
@@ -565,7 +659,8 @@ if __name__ == "__main__":
         ("docdb", "4.0", "db.r5.large"),
     ]
     
-    for engine, version, instance_type in test_cases:
+    print("\n--- Database Extended Support ---")
+    for engine, version, instance_type in db_test_cases:
         print(f"\n{engine} {version} ({instance_type}):")
         
         dates = lookup.get_extended_support_dates(engine, version)
@@ -583,3 +678,27 @@ if __name__ == "__main__":
         print(f"  Year 1 Monthly: ${cost['monthly_cost_year1']:.2f}")
         print(f"  Year 2 Monthly: ${cost['monthly_cost_year2']:.2f}")
         print(f"  Year 3 Monthly: ${cost['monthly_cost_year3']:.2f}")
+    
+    # EKS test cases
+    eks_test_cases = [
+        ("eks", "1.29", 1),
+        ("eks", "1.30", 3),
+        ("eks", "1.31", 5),
+    ]
+    
+    print("\n--- EKS Extended Support ---")
+    for engine, version, cluster_count in eks_test_cases:
+        print(f"\n{engine} {version} ({cluster_count} cluster(s)):")
+        
+        dates = lookup.get_extended_support_dates(engine, version)
+        if dates:
+            print(f"  Standard End: {dates.standard_support_end}")
+            print(f"  Extended Start: {dates.extended_support_start}")
+            print(f"  Extended End: {dates.extended_support_end}")
+            print(f"  Current Year: {dates.get_current_year()}")
+        
+        cost = lookup.estimate_monthly_cost(engine, version, cluster_count=cluster_count)
+        print(f"  Pricing Model: {cost['pricing_model']}")
+        print(f"  In Extended Support: {cost['in_extended_support']}")
+        print(f"  Monthly Cost: ${cost['monthly_cost_year1']:.2f} (flat rate)")
+        print(f"  Annual Cost: ${cost['annual_cost_year1']:.2f}")

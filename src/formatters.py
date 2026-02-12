@@ -953,7 +953,8 @@ class TextFormatter(BaseFormatter):
             lines.append(f"{indent}  Extended Support End: {resource.extended_support_end.isoformat()}")
         
         # Extended support cost estimates (add * for Approaching EOS - future cost if not upgraded)
-        if resource.est_monthly_ext_support_cost:
+        # Don't show cost for Supported status (no extended support cost applies)
+        if resource.est_monthly_ext_support_cost and resource.status != SupportStatus.SUPPORTED:
             monthly_cost = resource.est_monthly_ext_support_cost
             annual_cost = resource.est_annual_ext_support_cost or ""
             if resource.status == SupportStatus.APPROACHING_EOS:
@@ -1084,11 +1085,15 @@ class CSVFormatter(BaseFormatter):
             List of string values for the CSV row.
         """
         # Add star (*) to cost if status is Approaching EOS (future cost if not upgraded)
-        monthly_cost = resource.est_monthly_ext_support_cost or ""
-        annual_cost = resource.est_annual_ext_support_cost or ""
-        if resource.status == SupportStatus.APPROACHING_EOS and monthly_cost:
-            monthly_cost = f"{monthly_cost}*"
-            annual_cost = f"{annual_cost}*" if annual_cost else ""
+        # Don't show cost for Supported status (no extended support cost applies)
+        monthly_cost = ""
+        annual_cost = ""
+        if resource.status != SupportStatus.SUPPORTED:
+            monthly_cost = resource.est_monthly_ext_support_cost or ""
+            annual_cost = resource.est_annual_ext_support_cost or ""
+            if resource.status == SupportStatus.APPROACHING_EOS and monthly_cost:
+                monthly_cost = f"{monthly_cost}*"
+                annual_cost = f"{annual_cost}*" if annual_cost else ""
         
         return [
             resource.account,
@@ -1255,11 +1260,15 @@ class JSONFormatter(BaseFormatter):
             Dictionary representation with all fields.
         """
         # Add star (*) to cost if status is Approaching EOS (future cost if not upgraded)
-        monthly_cost = resource.est_monthly_ext_support_cost
-        annual_cost = resource.est_annual_ext_support_cost
-        if resource.status == SupportStatus.APPROACHING_EOS and monthly_cost:
-            monthly_cost = f"{monthly_cost}*"
-            annual_cost = f"{annual_cost}*" if annual_cost else None
+        # Don't show cost for Supported status (no extended support cost applies)
+        monthly_cost = None
+        annual_cost = None
+        if resource.status != SupportStatus.SUPPORTED:
+            monthly_cost = resource.est_monthly_ext_support_cost
+            annual_cost = resource.est_annual_ext_support_cost
+            if resource.status == SupportStatus.APPROACHING_EOS and monthly_cost:
+                monthly_cost = f"{monthly_cost}*"
+                annual_cost = f"{annual_cost}*" if annual_cost else None
         
         return {
             "account": resource.account,
@@ -2410,11 +2419,15 @@ class ExcelFormatter(BaseFormatter):
             List of values for the Excel row.
         """
         # Add star (*) to cost if status is Approaching EOS (future cost if not upgraded)
-        monthly_cost = resource.est_monthly_ext_support_cost or ""
-        annual_cost = resource.est_annual_ext_support_cost or ""
-        if resource.status == SupportStatus.APPROACHING_EOS and monthly_cost:
-            monthly_cost = f"{monthly_cost}*"
-            annual_cost = f"{annual_cost}*" if annual_cost else ""
+        # Don't show cost for Supported status (no extended support cost applies)
+        monthly_cost = ""
+        annual_cost = ""
+        if resource.status != SupportStatus.SUPPORTED:
+            monthly_cost = resource.est_monthly_ext_support_cost or ""
+            annual_cost = resource.est_annual_ext_support_cost or ""
+            if resource.status == SupportStatus.APPROACHING_EOS and monthly_cost:
+                monthly_cost = f"{monthly_cost}*"
+                annual_cost = f"{annual_cost}*" if annual_cost else ""
         
         return [
             resource.account,

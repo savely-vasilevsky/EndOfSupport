@@ -19,6 +19,7 @@ from extended_support_lookup import (
     ExtendedSupportDates,
     STATIC_EXTENDED_SUPPORT_DATES,
     EXTENDED_SUPPORT_PRICING,
+    EKS_EXTENDED_SUPPORT_PRICING,
     INSTANCE_VCPU_MAP,
 )
 
@@ -45,6 +46,7 @@ def test_static_lookup_coverage():
         "aurora-mysql": ["5.7", "8.0"],
         "aurora-postgresql": ["11", "12", "13", "14", "15", "16", "17"],
         "docdb": ["4.0", "5.0"],
+        "eks": ["1.29", "1.30", "1.31", "1.32", "1.33", "1.34", "1.35"],
     }
     
     missing = []
@@ -265,8 +267,8 @@ def test_cost_estimation():
     lookup = ExtendedSupportLookup()
     errors = []
     
-    # Test cost calculation for different instance types
-    test_cases = [
+    # Test cost calculation for different instance types (databases)
+    db_test_cases = [
         ("aurora-mysql", "5.7", "db.r5.large", 2),    # 2 vCPUs
         ("aurora-mysql", "5.7", "db.r5.xlarge", 4),   # 4 vCPUs
         ("mysql", "5.7", "db.t3.medium", 2),          # 2 vCPUs
@@ -274,13 +276,16 @@ def test_cost_estimation():
         ("docdb", "4.0", "db.r5.large", 2),           # 2 vCPUs
     ]
     
-    print_subheader("Cost Estimates by Instance Type")
+    print_subheader("Database Cost Estimates (per-vCPU pricing)")
     
-    for engine, version, instance_type, expected_vcpus in test_cases:
+    for engine, version, instance_type, expected_vcpus in db_test_cases:
         cost = lookup.estimate_monthly_cost(engine, version, instance_type)
         
         if cost["vcpu_count"] != expected_vcpus:
             errors.append(f"{instance_type}: Expected {expected_vcpus} vCPUs, got {cost['vcpu_count']}")
+        
+        if cost["pricing_model"] != "per_vcpu":
+            errors.append(f"{engine}: Expected per_vcpu pricing model, got {cost['pricing_model']}")
         
         print(f"\n  {engine} {version} ({instance_type}):")
         print(f"    vCPUs: {cost['vcpu_count']}")
@@ -291,10 +296,42 @@ def test_cost_estimation():
         if cost['in_extended_support']:
             print(f"    Current (Year {cost['current_year']}): ${cost['current_monthly_cost']:.2f}/month")
     
-    # Verify pricing increases each year
-    print_subheader("Verifying Year-over-Year Price Increase")
+    # Test EKS per-cluster pricing
+    print_subheader("EKS Cost Estimates (per-cluster pricing)")
     
-    for engine, version, instance_type, _ in test_cases:
+    eks_test_cases = [
+        ("eks", "1.29", 1),   # 1 cluster
+        ("eks", "1.30", 3),   # 3 clusters
+        ("eks", "1.31", 5),   # 5 clusters
+    ]
+    
+    for engine, version, cluster_count in eks_test_cases:
+        cost = lookup.estimate_monthly_cost(engine, version, cluster_count=cluster_count)
+        
+        if cost["pricing_model"] != "per_cluster":
+            errors.append(f"{engine}: Expected per_cluster pricing model, got {cost['pricing_model']}")
+        
+        if cost["cluster_count"] != cluster_count:
+            errors.append(f"{engine} {version}: Expected {cluster_count} clusters, got {cost['cluster_count']}")
+        
+        # EKS: $0.60/cluster/hour * 730 hours = $438/cluster/month
+        expected_monthly = cluster_count * 0.60 * 730
+        if abs(cost["monthly_cost_year1"] - expected_monthly) > 0.01:
+            errors.append(f"{engine} {version}: Expected ${expected_monthly:.2f}/month, got ${cost['monthly_cost_year1']:.2f}")
+        
+        print(f"\n  {engine} {version} ({cluster_count} cluster(s)):")
+        print(f"    Pricing Model: {cost['pricing_model']}")
+        print(f"    Clusters: {cost['cluster_count']}")
+        print(f"    Monthly Cost: ${cost['monthly_cost_year1']:.2f}/month (flat rate)")
+        print(f"    Annual Cost: ${cost['annual_cost_year1']:.2f}/year")
+        
+        if cost['in_extended_support']:
+            print(f"    Current: ${cost['current_monthly_cost']:.2f}/month")
+    
+    # Verify pricing increases each year for databases
+    print_subheader("Verifying Year-over-Year Price Increase (Databases)")
+    
+    for engine, version, instance_type, _ in db_test_cases:
         cost = lookup.estimate_monthly_cost(engine, version, instance_type)
         
         if cost['monthly_cost_year2'] <= cost['monthly_cost_year1']:
@@ -304,6 +341,21 @@ def test_cost_estimation():
             errors.append(f"{engine} {version}: Year 3 cost not greater than Year 2")
         
         print(f"  ✓ {engine} {version}: Y1 < Y2 < Y3")
+    
+    # Verify EKS has flat rate (same cost all years)
+    print_subheader("Verifying EKS Flat Rate Pricing")
+    
+    for engine, version, cluster_count in eks_test_cases:
+        cost = lookup.estimate_monthly_cost(engine, version, cluster_count=cluster_count)
+        
+        # EKS should have same cost for all years (flat rate)
+        if cost['monthly_cost_year1'] != cost['monthly_cost_year2']:
+            errors.append(f"{engine} {version}: EKS Year 1 and Year 2 costs should be equal")
+        
+        if cost['monthly_cost_year2'] != cost['monthly_cost_year3']:
+            errors.append(f"{engine} {version}: EKS Year 2 and Year 3 costs should be equal")
+        
+        print(f"  ✓ {engine} {version}: Y1 = Y2 = Y3 (flat rate ${cost['monthly_cost_year1']:.2f}/month)")
     
     if errors:
         print(f"\n✗ Found {len(errors)} errors:")
@@ -320,10 +372,15 @@ def test_pricing_coverage():
     print_header("TEST 6: Pricing Coverage")
     
     engines_in_lookup = set(engine for engine, _ in STATIC_EXTENDED_SUPPORT_DATES.keys())
-    engines_with_pricing = set(EXTENDED_SUPPORT_PRICING.keys())
+    engines_with_vcpu_pricing = set(EXTENDED_SUPPORT_PRICING.keys())
+    
+    # EKS uses per-cluster pricing, not per-vCPU
+    engines_with_cluster_pricing = {'eks'} if EKS_EXTENDED_SUPPORT_PRICING else set()
+    engines_with_pricing = engines_with_vcpu_pricing | engines_with_cluster_pricing
     
     print(f"\nEngines in static lookup: {sorted(engines_in_lookup)}")
-    print(f"Engines with pricing: {sorted(engines_with_pricing)}")
+    print(f"Engines with per-vCPU pricing: {sorted(engines_with_vcpu_pricing)}")
+    print(f"Engines with per-cluster pricing: {sorted(engines_with_cluster_pricing)}")
     
     missing_pricing = engines_in_lookup - engines_with_pricing
     

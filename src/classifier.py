@@ -10,8 +10,10 @@ from typing import Optional
 # Handle imports for both package and frozen executable modes
 try:
     from .models import Resource, SupportStatus
+    from .extended_support_lookup import get_extended_support_dates
 except ImportError:
     from models import Resource, SupportStatus
+    from extended_support_lookup import get_extended_support_dates
 
 
 class ResourceClassifier:
@@ -27,6 +29,9 @@ class ResourceClassifier:
     7. If no extended support dates AND End-of-Support date is in the past -> OUT_OF_SUPPORT
     8. If End-of-Support date is within days_threshold -> APPROACHING_EOS
     9. Otherwise -> SUPPORTED
+    
+    Note: Resources are automatically enriched with extended support dates from
+    the static lookup table if they're missing from the CSV input.
     """
     
     DEFAULT_DAYS_THRESHOLD = 90
@@ -39,6 +44,38 @@ class ResourceClassifier:
                           end-of-support. Default is 90 days.
         """
         self.days_threshold = days_threshold
+    
+    def _enrich_extended_support_dates(self, resource: Resource) -> None:
+        """Enrich resource with extended support dates from static lookup if missing.
+        
+        This allows resources loaded from CSV (which may not have extended support
+        dates populated) to be correctly classified based on the static lookup table.
+        
+        Args:
+            resource: The Resource object to enrich.
+        """
+        # Only enrich if extended support dates are missing
+        if (resource.extended_support_start is not None or 
+            resource.extended_support_year1_start is not None or
+            resource.extended_support_end is not None):
+            return
+        
+        # Look up dates based on engine and version
+        engine = resource.engine or ''
+        version = resource.version or ''
+        
+        if not engine or not version:
+            return
+        
+        dates = get_extended_support_dates(engine, version)
+        if dates is None:
+            return
+        
+        # Enrich the resource with lookup dates
+        resource.extended_support_start = dates.extended_support_start
+        resource.extended_support_year1_start = dates.extended_support_year1_start
+        resource.extended_support_year3_start = dates.extended_support_year3_start
+        resource.extended_support_end = dates.extended_support_end
     
     def classify(self, resource: Resource, reference_date: Optional[date] = None) -> SupportStatus:
         """Determine the support status of a resource.
@@ -54,6 +91,9 @@ class ResourceClassifier:
             SupportStatus enum value indicating the resource's status.
         """
         today = reference_date or date.today()
+        
+        # Enrich resource with extended support dates from static lookup if missing
+        self._enrich_extended_support_dates(resource)
         
         # Calculate days to EOS if we have a valid end_of_support date
         if resource.end_of_support is not None:
