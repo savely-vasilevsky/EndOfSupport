@@ -43,13 +43,20 @@ htmlcov/
 .tox/
 .nox/
 
-# Data files - exclude from repo
+# Data files - exclude from repo (may contain customer data)
 *.csv
 *.xls
 *.xlsx
 example*.csv
 report*.xlsx
 examplereport*
+aws_inventory.*
+test_output.*
+
+# Generated HTML reports (may contain customer data)
+*_report.html
+report*.html
+test_output.html
 
 # Exception: keep pivot template for cross-platform support
 !src/templates/pivot_template.xlsx
