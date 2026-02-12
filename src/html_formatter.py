@@ -464,10 +464,17 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     border-right: 1px solid rgba(255,255,255,0.5);
+    opacity: 0.5;
+    transition: opacity 0.2s;
 }
 
 .lifecycle-segment:last-of-type {
     border-right: none;
+}
+
+.lifecycle-segment.active {
+    opacity: 1;
+    box-shadow: inset 0 0 0 2px rgba(0,0,0,0.3);
 }
 
 .lifecycle-segment.supported {
@@ -493,6 +500,12 @@ body {
 .lifecycle-segment.out-of-support {
     background: linear-gradient(135deg, #78909c, #546e7a);
     color: white;
+}
+
+.lifecycle-segment.no-data {
+    background: #e0e0e0;
+    color: #666;
+    opacity: 1;
 }
 
 .lifecycle-marker {
@@ -1591,8 +1604,9 @@ table.dataTable td {
                                           ext_end: Optional[date]) -> str:
         """Generate a visual support lifecycle timeline bar showing current position.
         
-        The bar shows: Supported | Ext Y1 | Ext Y2 | Ext Y3 | Out of Support
+        The bar shows 5 equal-width segments: Supported | Y1 | Y2 | Y3 | Out of Support
         with a marker showing where TODAY falls on the timeline.
+        All bars have the same appearance for consistency across versions.
         
         Args:
             eos_date: End of standard support date
@@ -1604,7 +1618,7 @@ table.dataTable td {
         Returns:
             HTML string for the timeline bar
         """
-        from datetime import date as date_type, timedelta
+        from datetime import date as date_type
         today = date_type.today()
         
         def safe_add_years(d: date_type, years: int) -> date_type:
@@ -1615,126 +1629,112 @@ table.dataTable td {
                 # Handle Feb 29 -> Feb 28 for non-leap years
                 return date_type(d.year + years, d.month, d.day - 1)
         
-        def safe_add_months(d: date_type, months: int) -> date_type:
-            """Safely add/subtract months, handling edge cases."""
-            new_month = d.month + months
-            new_year = d.year
-            while new_month > 12:
-                new_month -= 12
-                new_year += 1
-            while new_month < 1:
-                new_month += 12
-                new_year -= 1
-            # Handle day overflow (e.g., Jan 31 + 1 month = Feb 28)
-            import calendar
-            max_day = calendar.monthrange(new_year, new_month)[1]
-            return date_type(new_year, new_month, min(d.day, max_day))
-        
         # If no dates available, show a simple "No data" bar
         if not eos_date and not ext_start and not ext_end:
-            return '<div class="lifecycle-bar"><div class="lifecycle-segment supported" style="width: 100%;" title="No lifecycle data available">No data</div></div>'
+            return '<div class="lifecycle-bar"><div class="lifecycle-segment no-data" style="width: 100%;" title="No lifecycle data available">No data</div></div>'
         
-        # Calculate Year 2 start (1 year after Y1 start)
-        ext_y2_start = None
-        if ext_y1_start and not ext_y3_start:
-            # If no Y3, calculate Y2 as Y1 + 1 year
-            ext_y2_start = safe_add_years(ext_y1_start, 1)
-        elif ext_y1_start and ext_y3_start:
-            # Y2 is between Y1 and Y3
-            ext_y2_start = safe_add_years(ext_y1_start, 1)
+        # Calculate all phase boundaries
+        # Standard support ends at eos_date or ext_start
+        supported_end = eos_date or ext_start
         
-        # Determine the timeline range
-        # Start from 1 year before EOS (or today if no EOS)
-        # End at ext_end + 6 months (or 2 years after EOS if no ext_end)
-        if eos_date:
-            timeline_start = safe_add_years(eos_date, -1)
+        # Extended support Year 1 starts
+        y1_start = ext_y1_start or ext_start or eos_date
+        
+        # Calculate Y2 start (1 year after Y1)
+        y2_start = safe_add_years(y1_start, 1) if y1_start else None
+        
+        # Y3 start from data or calculated
+        y3_start = ext_y3_start
+        if not y3_start and y2_start:
+            y3_start = safe_add_years(y2_start, 1)
+        
+        # Extended support ends
+        support_end = ext_end
+        if not support_end and y3_start:
+            support_end = safe_add_years(y3_start, 1)
+        elif not support_end and y1_start:
+            support_end = safe_add_years(y1_start, 3)  # Default 3 years extended
+        
+        # Determine which phase TODAY is in (0-4: Supported, Y1, Y2, Y3, OOS)
+        current_phase = 0  # Default: Supported
+        if support_end and today >= support_end:
+            current_phase = 4  # Out of Support
+        elif y3_start and today >= y3_start:
+            current_phase = 3  # Year 3
+        elif y2_start and today >= y2_start:
+            current_phase = 2  # Year 2
+        elif y1_start and today >= y1_start:
+            current_phase = 1  # Year 1
+        
+        # Calculate marker position within the current phase (0-100% within that segment)
+        # Each segment is 20% of the bar
+        segment_width = 20.0
+        
+        if current_phase == 0 and supported_end:
+            # In Supported phase - position based on how close to end
+            # Show marker at 50% of supported segment if no clear timeline
+            days_to_end = (supported_end - today).days
+            if days_to_end > 365:
+                marker_in_segment = 10  # Early in supported
+            elif days_to_end > 180:
+                marker_in_segment = 30
+            elif days_to_end > 90:
+                marker_in_segment = 50
+            elif days_to_end > 30:
+                marker_in_segment = 70
+            else:
+                marker_in_segment = 90  # Near end of supported
+        elif current_phase == 4:
+            # Out of Support - position at end
+            marker_in_segment = 50
+        elif current_phase >= 1 and current_phase <= 3:
+            # In extended support year - calculate position within year
+            phase_start = [None, y1_start, y2_start, y3_start][current_phase]
+            phase_end = [None, y2_start, y3_start, support_end][current_phase]
+            if phase_start and phase_end:
+                total_phase_days = (phase_end - phase_start).days
+                days_into_phase = (today - phase_start).days
+                if total_phase_days > 0:
+                    marker_in_segment = (days_into_phase / total_phase_days) * 100
+                else:
+                    marker_in_segment = 50
+            else:
+                marker_in_segment = 50
         else:
-            timeline_start = safe_add_years(today, -1)
+            marker_in_segment = 50
         
-        if ext_end:
-            timeline_end = safe_add_months(ext_end, 6)
-        elif eos_date:
-            timeline_end = safe_add_years(eos_date, 2)
-        else:
-            timeline_end = safe_add_years(today, 2)
+        # Calculate absolute marker position (0-100%)
+        marker_position = (current_phase * segment_width) + (marker_in_segment * segment_width / 100)
+        marker_position = max(2, min(98, marker_position))  # Keep within bounds
         
-        total_days = (timeline_end - timeline_start).days
-        if total_days <= 0:
-            total_days = 365  # Fallback
+        # Build tooltips for each segment
+        def fmt_date(d):
+            return d.strftime("%Y-%m-%d") if d else "N/A"
         
-        # Calculate segment widths as percentages
-        segments = []
+        tooltips = [
+            f'Standard Support (until {fmt_date(supported_end)})',
+            f'Extended Support Year 1 ({fmt_date(y1_start)} to {fmt_date(y2_start)})',
+            f'Extended Support Year 2 ({fmt_date(y2_start)} to {fmt_date(y3_start)})',
+            f'Extended Support Year 3 ({fmt_date(y3_start)} to {fmt_date(support_end)})',
+            f'Out of Support (from {fmt_date(support_end)})'
+        ]
         
-        # Supported segment (from timeline_start to eos_date or ext_start)
-        supported_end = eos_date or ext_start or timeline_end
-        supported_width = max(0, (supported_end - timeline_start).days) / total_days * 100
-        if supported_width > 0:
-            segments.append({
-                'class': 'supported',
-                'width': supported_width,
-                'label': 'Supported',
-                'tooltip': f'Standard Support (until {supported_end.strftime("%Y-%m-%d")})'
-            })
+        # Build HTML with 5 equal segments
+        segments = [
+            ('supported', 'Supported', tooltips[0], current_phase == 0),
+            ('ext-y1', 'Y1', tooltips[1], current_phase == 1),
+            ('ext-y2', 'Y2', tooltips[2], current_phase == 2),
+            ('ext-y3', 'Y3', tooltips[3], current_phase == 3),
+            ('out-of-support', 'OOS', tooltips[4], current_phase == 4),
+        ]
         
-        # Extended Support Year 1
-        if ext_y1_start or ext_start:
-            y1_start = ext_y1_start or ext_start
-            y1_end = ext_y2_start or ext_y3_start or ext_end or safe_add_years(y1_start, 1)
-            y1_width = max(0, (y1_end - y1_start).days) / total_days * 100
-            if y1_width > 0:
-                segments.append({
-                    'class': 'ext-y1',
-                    'width': y1_width,
-                    'label': 'Y1',
-                    'tooltip': f'Extended Support Year 1 ({y1_start.strftime("%Y-%m-%d")} to {y1_end.strftime("%Y-%m-%d")})'
-                })
-        
-        # Extended Support Year 2
-        if ext_y2_start:
-            y2_end = ext_y3_start or ext_end or safe_add_years(ext_y2_start, 1)
-            y2_width = max(0, (y2_end - ext_y2_start).days) / total_days * 100
-            if y2_width > 0:
-                segments.append({
-                    'class': 'ext-y2',
-                    'width': y2_width,
-                    'label': 'Y2',
-                    'tooltip': f'Extended Support Year 2 ({ext_y2_start.strftime("%Y-%m-%d")} to {y2_end.strftime("%Y-%m-%d")})'
-                })
-        
-        # Extended Support Year 3
-        if ext_y3_start:
-            y3_end = ext_end or safe_add_years(ext_y3_start, 1)
-            y3_width = max(0, (y3_end - ext_y3_start).days) / total_days * 100
-            if y3_width > 0:
-                segments.append({
-                    'class': 'ext-y3',
-                    'width': y3_width,
-                    'label': 'Y3',
-                    'tooltip': f'Extended Support Year 3 ({ext_y3_start.strftime("%Y-%m-%d")} to {y3_end.strftime("%Y-%m-%d")})'
-                })
-        
-        # Out of Support segment
-        oos_start = ext_end or eos_date
-        if oos_start and oos_start < timeline_end:
-            oos_width = max(0, (timeline_end - oos_start).days) / total_days * 100
-            if oos_width > 0:
-                segments.append({
-                    'class': 'out-of-support',
-                    'width': oos_width,
-                    'label': 'OOS',
-                    'tooltip': f'Out of Support (from {oos_start.strftime("%Y-%m-%d")})'
-                })
-        
-        # Calculate TODAY marker position
-        today_position = max(0, min(100, (today - timeline_start).days / total_days * 100))
-        
-        # Build HTML
         segments_html = ''
-        for seg in segments:
-            segments_html += f'<div class="lifecycle-segment {seg["class"]}" style="width: {seg["width"]:.1f}%;" title="{seg["tooltip"]}">{seg["label"]}</div>'
+        for seg_class, label, tooltip, is_current in segments:
+            active_class = ' active' if is_current else ''
+            segments_html += f'<div class="lifecycle-segment {seg_class}{active_class}" style="width: {segment_width}%;" title="{tooltip}">{label}</div>'
         
         # Add TODAY marker
-        marker_html = f'<div class="lifecycle-marker" style="left: {today_position:.1f}%;" title="Today ({today.strftime("%Y-%m-%d")})">▼</div>'
+        marker_html = f'<div class="lifecycle-marker" style="left: {marker_position:.1f}%;" title="Today ({today.strftime("%Y-%m-%d")})">▼</div>'
         
         return f'<div class="lifecycle-bar">{segments_html}{marker_html}</div>'
 
