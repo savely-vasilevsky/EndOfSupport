@@ -50,6 +50,11 @@ try:
 except ImportError:
     EXCEL_AVAILABLE = False
     Workbook = None  # For type hints when openpyxl not installed
+    PatternFill = None  # For type hints when openpyxl not installed
+    Font = None
+    Alignment = None
+    Border = None
+    Side = None
 
 # Optional win32com support for real pivot tables (Windows only)
 try:
