@@ -174,6 +174,7 @@ class HTMLFormatter:
     <script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     {self._generate_scripts(report)}
 </body>
 </html>"""
@@ -183,6 +184,38 @@ class HTMLFormatter:
         return """<style>
 * {
     box-sizing: border-box;
+}
+
+/* Theme Variables */
+:root {
+    /* Light theme (default) */
+    --bg-primary: #f9f9f9;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f5f5f5;
+    --text-primary: #232f3e;
+    --text-secondary: #545b64;
+    --text-muted: #666666;
+    --border-color: #e0e0e0;
+    --header-bg: #232f3e;
+    --header-text: #ffffff;
+    --card-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    --chart-grid: rgba(0,0,0,0.1);
+    --chart-text: #666666;
+}
+
+[data-theme="dark"] {
+    --bg-primary: #1a1a2e;
+    --bg-secondary: #16213e;
+    --bg-tertiary: #0f3460;
+    --text-primary: #eaeaea;
+    --text-secondary: #b8b8b8;
+    --text-muted: #888888;
+    --border-color: #3a3a5a;
+    --header-bg: #0f0f23;
+    --header-text: #ffffff;
+    --card-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    --chart-grid: rgba(255,255,255,0.1);
+    --chart-text: #b8b8b8;
 }
 
 /* Loading spinner - inline in header */
@@ -212,13 +245,14 @@ body {
     padding: 0;
     font-family: "Amazon Ember", "Helvetica Neue", Roboto, Arial, sans-serif;
     font-size: 14px;
-    color: #545b64;
-    background-color: #f9f9f9;
+    color: var(--text-secondary);
+    background-color: var(--bg-primary);
+    transition: background-color 0.3s, color 0.3s;
 }
 
 .header {
-    background-color: #232f3e;
-    color: white;
+    background-color: var(--header-bg);
+    color: var(--header-text);
     padding: 15px 30px;
     display: flex;
     align-items: center;
@@ -263,10 +297,10 @@ body {
 #menuBar {
     display: flex;
     list-style: none;
-    background-color: #f2f2f2;
+    background-color: var(--bg-tertiary);
     padding: 0;
     margin: 0;
-    border-bottom: 1px solid #dcdcdc;
+    border-bottom: 1px solid var(--border-color);
     position: sticky;
     top: 0;
     z-index: 100;
@@ -279,7 +313,7 @@ body {
 #menuBar li a {
     display: block;
     padding: 12px 20px;
-    color: #16191f;
+    color: var(--text-primary);
     text-decoration: none;
     font-weight: 500;
 }
@@ -298,12 +332,165 @@ body {
     padding: 20px;
 }
 
+/* Theme Toggle */
+.theme-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    padding: 6px 12px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.theme-toggle:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+.theme-toggle-icon {
+    font-size: 18px;
+}
+
+.theme-toggle-label {
+    font-size: 12px;
+    color: #aab7b8;
+}
+
+/* Chart Controls */
+.chart-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.chart-controls label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
+.chart-controls input[type="checkbox"] {
+    cursor: pointer;
+}
+
+.chart-controls .fullscreen-btn {
+    margin-left: auto;
+    padding: 4px 10px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+}
+
+.chart-controls .fullscreen-btn:hover {
+    background: #ff9900;
+    color: white;
+    border-color: #ff9900;
+}
+
+/* Fullscreen Chart Modal */
+.chart-fullscreen-modal {
+    display: none;
+    position: fixed;
+    z-index: 10001;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-primary);
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.chart-fullscreen-modal.active {
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-fullscreen-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background: var(--header-bg);
+    color: white;
+    border-radius: 8px 8px 0 0;
+    margin-bottom: 0;
+}
+
+.chart-fullscreen-header h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.chart-fullscreen-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.chart-fullscreen-controls label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #aab7b8;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.chart-fullscreen-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0 10px;
+    line-height: 1;
+}
+
+.chart-fullscreen-close:hover {
+    color: #ff9900;
+}
+
+.chart-fullscreen-body {
+    flex: 1;
+    background: var(--bg-secondary);
+    border-radius: 0 0 8px 8px;
+    padding: 20px;
+    position: relative;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.chart-fullscreen-body canvas {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    width: calc(100% - 40px) !important;
+    height: calc(100% - 40px) !important;
+}
+
 .section {
-    background: white;
+    background: var(--bg-secondary);
     border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: var(--card-shadow);
     margin-bottom: 20px;
     padding: 20px;
+    transition: background-color 0.3s, box-shadow 0.3s;
 }
 
 .section h2 {
@@ -319,7 +506,7 @@ body {
 .section h2 .collapse-btn {
     cursor: pointer;
     font-size: 18px;
-    color: #545b64;
+    color: var(--text-secondary);
     background: none;
     border: none;
     padding: 5px 10px;
@@ -523,12 +710,25 @@ body {
 .chart-container {
     height: 300px;
     margin: 20px 0;
+    position: relative;
+    width: 100%;
+}
+
+.chart-container canvas {
+    width: 100% !important;
+    height: 100% !important;
 }
 
 .chart-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
+    width: 100%;
+}
+
+.chart-row > div {
+    min-width: 0;
+    width: 100%;
 }
 
 @media (max-width: 900px) {
@@ -541,16 +741,18 @@ table.dataTable {
     width: 100% !important;
     min-width: 1200px;
     border-collapse: collapse;
+    background: var(--bg-secondary);
 }
 
 table.dataTable thead th {
-    background-color: #f5f5f5;
-    border-bottom: 2px solid #ddd;
+    background-color: var(--bg-tertiary);
+    border-bottom: 2px solid var(--border-color);
     padding: 12px 8px;
     text-align: left;
     font-weight: 600;
     position: relative;
     white-space: nowrap;
+    color: var(--text-primary);
 }
 
 /* Column resizer handle */
@@ -572,12 +774,13 @@ table.dataTable thead th .col-resizer.resizing {
 
 table.dataTable tbody td {
     padding: 10px 8px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     white-space: nowrap;
+    color: var(--text-secondary);
 }
 
 table.dataTable tbody tr:hover {
-    background-color: #f5f5f5;
+    background-color: var(--bg-tertiary);
 }
 
 .status-badge {
@@ -612,22 +815,24 @@ table.dataTable tbody tr:hover {
 }
 
 .service-group-header {
-    background-color: #f5f5f5;
+    background-color: var(--bg-tertiary);
     padding: 12px 15px;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    color: var(--text-primary);
 }
 
 .service-group-header:hover {
-    background-color: #eeeeee;
+    background-color: var(--bg-primary);
 }
 
 .service-group-content {
     padding: 15px;
     display: none;
     overflow-x: auto;
+    background: var(--bg-secondary);
 }
 
 .service-group.expanded .service-group-content {
@@ -726,9 +931,11 @@ table.dataTable td {
 
 .search-box input {
     padding: 8px 12px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     width: 300px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
 }
 
 .dt-buttons {
@@ -736,23 +943,24 @@ table.dataTable td {
 }
 
 .dt-button {
-    background-color: #f5f5f5 !important;
-    border: 1px solid #ccc !important;
+    background-color: var(--bg-tertiary) !important;
+    border: 1px solid var(--border-color) !important;
     border-radius: 4px !important;
     padding: 6px 12px !important;
     margin-right: 5px !important;
+    color: var(--text-primary) !important;
 }
 
 .dt-button:hover {
-    background-color: #e0e0e0 !important;
+    background-color: var(--bg-primary) !important;
 }
 
 /* Filter bar styles */
 .filter-bar {
-    background-color: #fff;
+    background-color: var(--bg-secondary);
     padding: 15px 20px;
-    border-bottom: 1px solid #dcdcdc;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: var(--card-shadow);
 }
 
 .filter-bar .filter-container {
@@ -773,7 +981,7 @@ table.dataTable td {
     display: block;
     font-weight: 600;
     margin-bottom: 8px;
-    color: #16191f;
+    color: var(--text-primary);
 }
 
 .filter-bar .filter-options {
@@ -1087,34 +1295,35 @@ table.dataTable td {
 }
 
 .version-detail-card {
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     margin-bottom: 15px;
     overflow: hidden;
     transition: box-shadow 0.2s;
+    background: var(--bg-secondary);
 }
 
 .version-detail-card:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: var(--card-shadow);
 }
 
 .version-detail-header {
-    background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+    background: var(--bg-tertiary);
     padding: 15px 20px;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .version-detail-header:hover {
-    background: linear-gradient(135deg, #e8e8e8 0%, #ddd 100%);
+    background: var(--bg-primary);
 }
 
 .version-detail-header h3 {
     margin: 0;
-    color: #232f3e;
+    color: var(--text-primary);
     font-size: 16px;
 }
 
@@ -1150,7 +1359,7 @@ table.dataTable td {
 
 .version-detail-header .expand-icon {
     font-size: 18px;
-    color: #666;
+    color: var(--text-muted);
     transition: transform 0.2s;
 }
 
@@ -1163,6 +1372,7 @@ table.dataTable td {
     max-height: 0;
     overflow: hidden;
     transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+    background: var(--bg-secondary);
 }
 
 .version-detail-card.expanded .version-detail-content {
@@ -1178,7 +1388,7 @@ table.dataTable td {
 }
 
 .version-detail-summary .summary-item {
-    background: #f9f9f9;
+    background: var(--bg-tertiary);
     padding: 6px 12px;
     border-radius: 4px;
     text-align: center;
@@ -1229,7 +1439,7 @@ table.dataTable td {
 }
 
 .insights-modal-content {
-    background-color: white;
+    background-color: var(--bg-secondary);
     margin: 5% auto;
     padding: 0;
     border-radius: 8px;
@@ -1245,7 +1455,7 @@ table.dataTable td {
     justify-content: space-between;
     align-items: center;
     padding: 15px 20px;
-    background: #232f3e;
+    background: var(--header-bg);
     color: white;
     border-radius: 8px 8px 0 0;
 }
@@ -1268,31 +1478,35 @@ table.dataTable td {
 
 .insights-modal-body {
     padding: 20px;
+    color: var(--text-primary);
 }
 
 .version-detail-table {
     width: 100%;
     border-collapse: collapse;
     min-width: 600px;
+    background: var(--bg-secondary);
 }
 
 .version-detail-table th {
-    background: #f5f5f5;
+    background: var(--bg-tertiary);
     padding: 10px;
     text-align: left;
     font-weight: 600;
-    border-bottom: 2px solid #ddd;
+    border-bottom: 2px solid var(--border-color);
     white-space: nowrap;
+    color: var(--text-primary);
 }
 
 .version-detail-table td {
     padding: 10px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     white-space: nowrap;
+    color: var(--text-secondary);
 }
 
 .version-detail-table tr:hover {
-    background: #f9f9f9;
+    background: var(--bg-tertiary);
 }
 </style>"""
 
@@ -1313,6 +1527,10 @@ table.dataTable td {
     <div class="loading-status">
         <span id="loading-text">Loading...</span>
         <div id="header-spinner" class="header-spinner"></div>
+    </div>
+    <div class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light theme">
+        <span class="theme-toggle-icon" id="themeIcon">🌙</span>
+        <span class="theme-toggle-label" id="themeLabel">Dark</span>
     </div>
 </div>"""
 
@@ -1506,17 +1724,25 @@ table.dataTable td {
         <button class="collapse-btn" onclick="toggleSection('status-breakdown-content')">−</button>
     </h2>
     <div id="status-breakdown-content" class="collapsible-content">
-        <p style="color: #666; margin-bottom: 15px;"><strong>Click on any chart element to view affected resources in a new tab.</strong></p>
+        <p style="color: var(--text-muted); margin-bottom: 15px;"><strong>Click on any chart element to view affected resources.</strong> Charts are optimized for PowerPoint presentations. Use ⛶ to view fullscreen.</p>
         <div class="chart-row">
             <div>
                 <h3>By Service</h3>
-                <div class="chart-container" style="cursor: pointer;">
+                <div class="chart-controls">
+                    <label><input type="checkbox" id="serviceChartLabels" onchange="toggleChartLabels('serviceChart', this.checked)"> Show data labels</label>
+                    <button class="fullscreen-btn" onclick="openChartFullscreen('serviceChart', 'By Service')" title="View fullscreen">⛶</button>
+                </div>
+                <div class="chart-container" style="cursor: pointer; height: 350px;">
                     <canvas id="serviceChart"></canvas>
                 </div>
             </div>
             <div>
                 <h3>By Account</h3>
-                <div class="chart-container" style="cursor: pointer;">
+                <div class="chart-controls">
+                    <label><input type="checkbox" id="accountChartLabels" onchange="toggleChartLabels('accountChart', this.checked)"> Show data labels</label>
+                    <button class="fullscreen-btn" onclick="openChartFullscreen('accountChart', 'By Account')" title="View fullscreen">⛶</button>
+                </div>
+                <div class="chart-container" style="cursor: pointer; height: 350px;">
                     <canvas id="accountChart"></canvas>
                 </div>
             </div>
@@ -1524,13 +1750,21 @@ table.dataTable td {
         <div class="chart-row">
             <div>
                 <h3>Overall Status Distribution</h3>
-                <div class="chart-container" style="cursor: pointer;">
+                <div class="chart-controls">
+                    <label><input type="checkbox" id="statusPieChartLabels" onchange="toggleChartLabels('statusPieChart', this.checked)"> Show data labels</label>
+                    <button class="fullscreen-btn" onclick="openChartFullscreen('statusPieChart', 'Overall Status Distribution')" title="View fullscreen">⛶</button>
+                </div>
+                <div class="chart-container" style="cursor: pointer; height: 350px;">
                     <canvas id="statusPieChart"></canvas>
                 </div>
             </div>
             <div>
                 <h3>Resources by Service</h3>
-                <div class="chart-container" style="cursor: pointer;">
+                <div class="chart-controls">
+                    <label><input type="checkbox" id="servicePieChartLabels" onchange="toggleChartLabels('servicePieChart', this.checked)"> Show data labels</label>
+                    <button class="fullscreen-btn" onclick="openChartFullscreen('servicePieChart', 'Resources by Service')" title="View fullscreen">⛶</button>
+                </div>
+                <div class="chart-container" style="cursor: pointer; height: 350px;">
                     <canvas id="servicePieChart"></canvas>
                 </div>
             </div>
@@ -1962,13 +2196,17 @@ table.dataTable td {
     </h2>
     <div id="timeline-content" class="collapsible-content">
         <p>End-of-Support events aggregated by month. <strong>Click on a bar to view affected resources in a new tab.</strong></p>
-        <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px; padding: 12px; background: #f9f9f9; border-radius: 6px; flex-wrap: wrap;">
+        <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px; padding: 12px; background: var(--bg-tertiary); border-radius: 6px; flex-wrap: wrap;">
             <label style="font-weight: 500;">Date Range:</label>
-            <input type="month" id="timelineStartDate" value="{default_start}" min="{data_min_month}" max="{data_max_month}" style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;">
+            <input type="month" id="timelineStartDate" value="{default_start}" min="{data_min_month}" max="{data_max_month}" style="padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-secondary); color: var(--text-primary);">
             <span>to</span>
-            <input type="month" id="timelineEndDate" value="{default_end}" min="{data_min_month}" max="{data_max_month}" style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;">
+            <input type="month" id="timelineEndDate" value="{default_end}" min="{data_min_month}" max="{data_max_month}" style="padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-secondary); color: var(--text-primary);">
             <button onclick="applyTimelineDateFilter()" style="padding: 6px 16px; background: #2074d5; color: white; border: none; border-radius: 4px; cursor: pointer;">Apply</button>
-            <button onclick="resetTimelineDateFilter()" style="padding: 6px 16px; background: #f5f5f5; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">Reset</button>
+            <button onclick="resetTimelineDateFilter()" style="padding: 6px 16px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; color: var(--text-primary);">Reset</button>
+        </div>
+        <div class="chart-controls">
+            <label><input type="checkbox" id="timelineChartLabels" onchange="toggleChartLabels('timelineChart', this.checked)"> Show data labels</label>
+            <button class="fullscreen-btn" onclick="openChartFullscreen('timelineChart', 'Support Timeline')" title="View fullscreen">⛶</button>
         </div>
         <div class="chart-container" style="height: 350px; cursor: pointer;">
             <canvas id="timelineChart"></canvas>
@@ -1998,12 +2236,12 @@ table.dataTable td {
                         data: {{
                             labels: {chart_labels},
                             datasets: [
-                                {{ label: 'Out of Support', data: {chart_out_of_support}, backgroundColor: '#ef5350', borderColor: '#c62828', borderWidth: 1 }},
-                                {{ label: 'Extended Support Y3', data: {chart_extended_year_3}, backgroundColor: '#64b5f6', borderColor: '#0d47a1', borderWidth: 1 }},
-                                {{ label: 'Extended Support Y2', data: {chart_extended_year_2}, backgroundColor: '#90caf9', borderColor: '#1565c0', borderWidth: 1 }},
-                                {{ label: 'Extended Support Y1', data: {chart_extended_year_1}, backgroundColor: '#bbdefb', borderColor: '#1976d2', borderWidth: 1 }},
-                                {{ label: 'Approaching EOS', data: {chart_approaching}, backgroundColor: '#ffa726', borderColor: '#ef6c00', borderWidth: 1 }},
-                                {{ label: 'Supported', data: {chart_supported}, backgroundColor: '#66bb6a', borderColor: '#2e7d32', borderWidth: 1 }}
+                                {{ label: 'Out of Support', data: {chart_out_of_support}, backgroundColor: '#ef5350', borderColor: '#c62828', borderWidth: 1, datalabels: {{ display: false }} }},
+                                {{ label: 'Extended Support Y3', data: {chart_extended_year_3}, backgroundColor: '#64b5f6', borderColor: '#0d47a1', borderWidth: 1, datalabels: {{ display: false }} }},
+                                {{ label: 'Extended Support Y2', data: {chart_extended_year_2}, backgroundColor: '#90caf9', borderColor: '#1565c0', borderWidth: 1, datalabels: {{ display: false }} }},
+                                {{ label: 'Extended Support Y1', data: {chart_extended_year_1}, backgroundColor: '#bbdefb', borderColor: '#1976d2', borderWidth: 1, datalabels: {{ display: false }} }},
+                                {{ label: 'Approaching EOS', data: {chart_approaching}, backgroundColor: '#ffa726', borderColor: '#ef6c00', borderWidth: 1, datalabels: {{ display: false }} }},
+                                {{ label: 'Supported', data: {chart_supported}, backgroundColor: '#66bb6a', borderColor: '#2e7d32', borderWidth: 1, datalabels: {{ display: false }} }}
                             ]
                         }},
                         options: {{
@@ -2019,6 +2257,14 @@ table.dataTable td {
                             plugins: {{ 
                                 title: {{ display: true, text: 'Resources by End-of-Support Month (Click to view details)' }}, 
                                 legend: {{ position: 'top' }},
+                                datalabels: {{
+                                    display: false,
+                                    color: '#333',
+                                    font: {{ weight: 'bold', size: 10 }},
+                                    anchor: 'center',
+                                    align: 'center',
+                                    formatter: function(value) {{ return value > 0 ? value : ''; }}
+                                }},
                                 tooltip: {{
                                     callbacks: {{
                                         afterBody: function(context) {{
@@ -2316,10 +2562,21 @@ table.dataTable td {
                 
                 # Status summary
                 version_status_counts = {}
+                version_accounts = set()  # Collect accounts for this version
                 for r in resources:
                     status_label = self.STATUS_LABELS.get(r.status, "Unknown")
                     version_status_counts[status_label] = version_status_counts.get(status_label, 0) + 1
+                    # Get account from resource - try to find it in the report structure
+                    # We need to track which accounts have this resource
+                    for account_name, account_group in report.accounts.items():
+                        for service_name, service_group in account_group.services.items():
+                            for engine_name, engine_group in service_group.engines.items():
+                                for version_name_inner, version_group in engine_group.versions.items():
+                                    if r in version_group.resources:
+                                        version_accounts.add(account_name)
+                
                 status_summary = ", ".join([f"{k}: {v}" for k, v in sorted(version_status_counts.items())])
+                accounts_data = ','.join(sorted(version_accounts)) if version_accounts else ''
                 
                 # Generate EKS Insights links for EKS clusters
                 insights_links_html = ''
@@ -2350,7 +2607,7 @@ table.dataTable td {
                         insights_links_html = '<div style="margin-top: 4px;">' + ' '.join(insights_links) + '</div>'
                 
                 version_rows.append(f"""
-                    <tr>
+                    <tr data-accounts="{accounts_data}">
                         <td>{self._escape_html(version_name)}{insights_links_html}</td>
                         <td>{resource_count}</td>
                         <td>{eos_date}</td>
@@ -2486,6 +2743,20 @@ table.dataTable td {
         <div class="insights-modal-body" id="eksInsightsBody">
             <!-- Content loaded dynamically -->
         </div>
+    </div>
+</div>
+
+<!-- Chart Fullscreen Modal -->
+<div id="chartFullscreenModal" class="chart-fullscreen-modal">
+    <div class="chart-fullscreen-header">
+        <h3 id="chartFullscreenTitle">Chart</h3>
+        <div class="chart-fullscreen-controls">
+            <label><input type="checkbox" id="fullscreenChartLabels" onchange="toggleFullscreenChartLabels(this.checked)"> Show data labels</label>
+            <button class="chart-fullscreen-close" onclick="closeChartFullscreen()">&times;</button>
+        </div>
+    </div>
+    <div class="chart-fullscreen-body">
+        <canvas id="fullscreenChart"></canvas>
     </div>
 </div>"""
 
@@ -3572,8 +3843,119 @@ function filterVersionDetailCards(filters) {{
         // Check if service matches filter
         if (filters.services.length > 0 && !filters.services.includes(service)) {{
             card.style.display = 'none';
+            return;
+        }}
+        
+        // Filter rows within the card by account
+        var visibleRowCount = 0;
+        var statusCounts = {{ supported: 0, approaching: 0, extended_year_1: 0, extended_year_2: 0, extended_year_3: 0, out_of_support: 0 }};
+        var totalResources = 0;
+        
+        card.querySelectorAll('tbody tr').forEach(function(row) {{
+            var rowAccounts = row.dataset.accounts ? row.dataset.accounts.split(',') : [];
+            var accountMatch = filters.accounts.length === 0 || rowAccounts.some(function(acc) {{
+                return filters.accounts.includes(acc);
+            }});
+            
+            // Parse status summary from the row to check status filter
+            var statusCell = row.cells[5]; // Status column
+            var statusText = statusCell ? statusCell.textContent : '';
+            var statusMatch = true;
+            
+            if (filters.statuses.length > 0) {{
+                // Check if any of the statuses in this row match the filter
+                statusMatch = filters.statuses.some(function(status) {{
+                    return statusText.includes(status);
+                }});
+            }}
+            
+            if (accountMatch && statusMatch) {{
+                row.style.display = '';
+                visibleRowCount++;
+                
+                // Parse resource count from the row
+                var resourceCount = parseInt(row.cells[1].textContent) || 0;
+                totalResources += resourceCount;
+                
+                // Parse status counts from status summary
+                var statusParts = statusText.split(',');
+                statusParts.forEach(function(part) {{
+                    part = part.trim();
+                    if (part.includes('Supported:')) {{
+                        statusCounts.supported += parseInt(part.split(':')[1]) || 0;
+                    }} else if (part.includes('Approaching EOS:')) {{
+                        statusCounts.approaching += parseInt(part.split(':')[1]) || 0;
+                    }} else if (part.includes('Extended Support Y1:')) {{
+                        statusCounts.extended_year_1 += parseInt(part.split(':')[1]) || 0;
+                    }} else if (part.includes('Extended Support Y2:')) {{
+                        statusCounts.extended_year_2 += parseInt(part.split(':')[1]) || 0;
+                    }} else if (part.includes('Extended Support Y3:')) {{
+                        statusCounts.extended_year_3 += parseInt(part.split(':')[1]) || 0;
+                    }} else if (part.includes('Out of Support:')) {{
+                        statusCounts.out_of_support += parseInt(part.split(':')[1]) || 0;
+                    }}
+                }});
+            }} else {{
+                row.style.display = 'none';
+            }}
+        }});
+        
+        // Hide card if no visible rows
+        if (visibleRowCount === 0) {{
+            card.style.display = 'none';
         }} else {{
             card.style.display = '';
+            
+            // Update summary counts in the card header
+            var statsSpan = card.querySelector('.version-detail-header .stats > span:first-child');
+            if (statsSpan) {{
+                statsSpan.textContent = totalResources + ' resources, ' + visibleRowCount + ' versions';
+            }}
+            
+            // Update status badges
+            var badges = card.querySelectorAll('.version-detail-header .stat-badge');
+            badges.forEach(function(badge) {{
+                if (badge.classList.contains('status-supported')) {{
+                    badge.textContent = statusCounts.supported + ' Supported';
+                    badge.style.display = statusCounts.supported > 0 ? '' : 'none';
+                }} else if (badge.classList.contains('status-approaching')) {{
+                    badge.textContent = statusCounts.approaching + ' Approaching';
+                    badge.style.display = statusCounts.approaching > 0 ? '' : 'none';
+                }} else if (badge.classList.contains('status-extended-year-1')) {{
+                    badge.textContent = statusCounts.extended_year_1 + ' Ext Yr 1';
+                    badge.style.display = statusCounts.extended_year_1 > 0 ? '' : 'none';
+                }} else if (badge.classList.contains('status-extended-year-2')) {{
+                    badge.textContent = statusCounts.extended_year_2 + ' Ext Yr 2';
+                    badge.style.display = statusCounts.extended_year_2 > 0 ? '' : 'none';
+                }} else if (badge.classList.contains('status-extended-year-3')) {{
+                    badge.textContent = statusCounts.extended_year_3 + ' Ext Yr 3';
+                    badge.style.display = statusCounts.extended_year_3 > 0 ? '' : 'none';
+                }} else if (badge.classList.contains('status-out-of-support')) {{
+                    badge.textContent = statusCounts.out_of_support + ' Out of Support';
+                    badge.style.display = statusCounts.out_of_support > 0 ? '' : 'none';
+                }}
+            }});
+            
+            // Update summary item counts in the card content
+            var summaryItems = card.querySelectorAll('.version-detail-summary .summary-item');
+            summaryItems.forEach(function(item) {{
+                var label = item.querySelector('.label');
+                var countEl = item.querySelector('.count');
+                if (label && countEl) {{
+                    var labelText = label.textContent;
+                    if (labelText === 'Total Resources') {{
+                        countEl.textContent = totalResources;
+                    }} else if (labelText === 'Supported') {{
+                        countEl.textContent = statusCounts.supported;
+                    }} else if (labelText === 'Approaching EOS') {{
+                        countEl.textContent = statusCounts.approaching;
+                    }} else if (labelText === 'Extended Support') {{
+                        countEl.textContent = statusCounts.extended_year_1 + statusCounts.extended_year_2 + statusCounts.extended_year_3;
+                    }} else if (labelText === 'Out of Support') {{
+                        countEl.textContent = statusCounts.out_of_support;
+                    }}
+                }}
+            }});
         }}
     }});
 }}
@@ -3992,15 +4374,139 @@ function updateLoadingStatus(message) {{
 function stepComplete() {{
     loadingSteps++;
     if (loadingSteps >= totalSteps) {{
-        var spinner = document.getElementById('header-spinner');
-        var loadingText = document.getElementById('loading-text');
-        if (spinner) spinner.classList.add('hidden');
-        if (loadingText) loadingText.textContent = 'Ready';
-        setTimeout(function() {{
-            var loadingStatus = document.querySelector('.loading-status');
-            if (loadingStatus) loadingStatus.style.opacity = '0';
-        }}, 1000);
+        finishLoading();
     }}
+}}
+
+function finishLoading() {{
+    var spinner = document.getElementById('header-spinner');
+    var loadingText = document.getElementById('loading-text');
+    if (spinner) spinner.classList.add('hidden');
+    if (loadingText) loadingText.textContent = 'Ready';
+    setTimeout(function() {{
+        var loadingStatus = document.querySelector('.loading-status');
+        if (loadingStatus) loadingStatus.style.opacity = '0';
+    }}, 1000);
+}}
+
+// Theme toggle functionality
+function toggleTheme() {{
+    var html = document.documentElement;
+    var currentTheme = html.getAttribute('data-theme') || 'light';
+    var newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('eos-report-theme', newTheme);
+    
+    // Update toggle button
+    var themeIcon = document.getElementById('themeIcon');
+    var themeLabel = document.getElementById('themeLabel');
+    if (themeIcon) themeIcon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+    if (themeLabel) themeLabel.textContent = newTheme === 'dark' ? 'Light' : 'Dark';
+    
+    // Update chart colors for theme
+    updateChartsForTheme(newTheme);
+}}
+
+// Initialize theme from localStorage
+function initTheme() {{
+    var savedTheme = localStorage.getItem('eos-report-theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    
+    var themeIcon = document.getElementById('themeIcon');
+    var themeLabel = document.getElementById('themeLabel');
+    if (themeIcon) themeIcon.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    if (themeLabel) themeLabel.textContent = savedTheme === 'dark' ? 'Light' : 'Dark';
+}}
+
+// Update chart colors based on theme
+function updateChartsForTheme(theme) {{
+    var gridColor = theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+    var textColor = theme === 'dark' ? '#b8b8b8' : '#666666';
+    
+    Chart.defaults.color = textColor;
+    Chart.defaults.borderColor = gridColor;
+    
+    // Update all existing charts
+    ['serviceChart', 'accountChart', 'statusPieChart', 'servicePieChart'].forEach(function(chartId) {{
+        var chart = Chart.getChart(chartId);
+        if (chart) {{
+            if (chart.options.scales && chart.options.scales.x) {{
+                chart.options.scales.x.grid = {{ color: gridColor }};
+                chart.options.scales.x.ticks = {{ color: textColor }};
+            }}
+            if (chart.options.scales && chart.options.scales.y) {{
+                chart.options.scales.y.grid = {{ color: gridColor }};
+                chart.options.scales.y.ticks = {{ color: textColor }};
+            }}
+            if (chart.options.plugins && chart.options.plugins.legend) {{
+                chart.options.plugins.legend.labels = {{ color: textColor }};
+            }}
+            chart.update();
+        }}
+    }});
+    
+    // Update timeline chart if exists
+    if (typeof window.timelineChartInstance !== 'undefined' && window.timelineChartInstance) {{
+        var chart = window.timelineChartInstance;
+        if (chart.options.scales && chart.options.scales.x) {{
+            chart.options.scales.x.grid = {{ color: gridColor }};
+            chart.options.scales.x.ticks = {{ color: textColor }};
+        }}
+        if (chart.options.scales && chart.options.scales.y) {{
+            chart.options.scales.y.grid = {{ color: gridColor }};
+            chart.options.scales.y.ticks = {{ color: textColor }};
+        }}
+        chart.update();
+    }}
+}}
+
+// Toggle data labels on charts
+function toggleChartLabels(chartId, show) {{
+    var chart;
+    
+    // Handle timeline chart specially since it uses window.timelineChartInstance
+    if (chartId === 'timelineChart') {{
+        chart = window.timelineChartInstance;
+    }} else {{
+        chart = Chart.getChart(chartId);
+    }}
+    
+    if (!chart) {{
+        console.log('Chart not found:', chartId);
+        return;
+    }}
+    
+    // Determine if it's a pie/doughnut chart or bar chart
+    var isPieChart = (chart.config.type === 'pie' || chart.config.type === 'doughnut');
+    
+    // Update datalabels display function for each dataset
+    chart.data.datasets.forEach(function(dataset, index) {{
+        if (!dataset.datalabels) {{
+            dataset.datalabels = {{}};
+        }}
+        dataset.datalabels.display = show;
+        
+        // Set appropriate formatter based on chart type
+        if (isPieChart) {{
+            dataset.datalabels.color = '#fff';
+            dataset.datalabels.font = {{ weight: 'bold', size: 12 }};
+            dataset.datalabels.formatter = function(value, context) {{
+                if (value === 0) return '';
+                var total = context.chart.data.datasets[0].data.reduce(function(a, b) {{ return a + b; }}, 0);
+                var percentage = Math.round((value / total) * 100);
+                return value + ' (' + percentage + '%)';
+            }};
+        }} else {{
+            dataset.datalabels.color = '#333';
+            dataset.datalabels.font = {{ weight: 'bold', size: 10 }};
+            dataset.datalabels.anchor = 'center';
+            dataset.datalabels.align = 'center';
+            dataset.datalabels.formatter = function(value) {{ return value > 0 ? value : ''; }};
+        }}
+    }});
+    
+    chart.update();
 }}
 
 // Lazy load charts
@@ -4008,9 +4514,39 @@ var chartsInitialized = false;
 var serviceLabelsArray = {service_labels};
 var accountLabelsArray = {account_labels};
 
+// Register datalabels plugin
+Chart.register(ChartDataLabels);
+
+// Common datalabels config for bar charts (PowerPoint optimized)
+var barDataLabelsConfig = {{
+    display: false,
+    color: '#333',
+    font: {{ weight: 'bold', size: 11 }},
+    anchor: 'center',
+    align: 'center',
+    formatter: function(value) {{ return value > 0 ? value : ''; }}
+}};
+
+// Common datalabels config for pie/doughnut charts
+var pieDataLabelsConfig = {{
+    display: false,
+    color: '#fff',
+    font: {{ weight: 'bold', size: 12 }},
+    formatter: function(value, context) {{
+        var total = context.chart.data.datasets[0].data.reduce(function(a, b) {{ return a + b; }}, 0);
+        var percentage = Math.round((value / total) * 100);
+        return value > 0 ? value + ' (' + percentage + '%)' : '';
+    }}
+}};
+
 function initChartsLazy() {{
     if (chartsInitialized) return;
     chartsInitialized = true;
+    
+    // Apply theme colors
+    var savedTheme = localStorage.getItem('eos-report-theme') || 'light';
+    var gridColor = savedTheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+    var textColor = savedTheme === 'dark' ? '#b8b8b8' : '#666666';
     
     requestAnimationFrame(function() {{
         new Chart(document.getElementById('serviceChart'), {{
@@ -4018,39 +4554,39 @@ function initChartsLazy() {{
             data: {{
                 labels: {service_labels},
                 datasets: [
-                    {{ label: 'Supported', data: {service_supported}, backgroundColor: '#66bb6a' }},
-                    {{ label: 'Approaching EOS', data: {service_approaching}, backgroundColor: '#ffa726' }},
-                    {{ label: 'Extended Support Y1', data: {service_extended_year_1}, backgroundColor: '#bbdefb' }},
-                    {{ label: 'Extended Support Y2', data: {service_extended_year_2}, backgroundColor: '#90caf9' }},
-                    {{ label: 'Extended Support Y3', data: {service_extended_year_3}, backgroundColor: '#64b5f6' }},
-                    {{ label: 'Out of Support', data: {service_out}, backgroundColor: '#ef5350' }}
+                    {{ label: 'Supported', data: {service_supported}, backgroundColor: '#66bb6a', datalabels: {{ display: false }} }},
+                    {{ label: 'Approaching EOS', data: {service_approaching}, backgroundColor: '#ffa726', datalabels: {{ display: false }} }},
+                    {{ label: 'Extended Support Y1', data: {service_extended_year_1}, backgroundColor: '#bbdefb', datalabels: {{ display: false }} }},
+                    {{ label: 'Extended Support Y2', data: {service_extended_year_2}, backgroundColor: '#90caf9', datalabels: {{ display: false }} }},
+                    {{ label: 'Extended Support Y3', data: {service_extended_year_3}, backgroundColor: '#64b5f6', datalabels: {{ display: false }} }},
+                    {{ label: 'Out of Support', data: {service_out}, backgroundColor: '#ef5350', datalabels: {{ display: false }} }}
                 ]
             }},
             options: {{
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: {{ x: {{ stacked: true }}, y: {{ stacked: true, beginAtZero: true }} }},
+                scales: {{ 
+                    x: {{ stacked: true, grid: {{ color: gridColor }}, ticks: {{ color: textColor, font: {{ size: 12 }} }} }}, 
+                    y: {{ stacked: true, beginAtZero: true, grid: {{ color: gridColor }}, ticks: {{ color: textColor, font: {{ size: 12 }} }} }} 
+                }},
                 onClick: function(event, elements) {{
                     if (elements.length > 0) {{
                         var index = elements[0].index;
                         var datasetIndex = elements[0].datasetIndex;
-                        var service = serviceLabelsArray[index];
+                        var chart = Chart.getChart('serviceChart');
+                        var service = chart.data.labels[index];
                         var allResources = serviceResourcesData[service] || [];
                         var statusKey = statusLabelsMap[datasetIndex];
-                        // Filter resources by the clicked status
                         var resources = allResources.filter(function(r) {{ return r.status === statusKey; }});
-                        // Apply current page filters (account filter)
                         resources = filterResourcesByCurrentFilters(resources);
                         var statusName = statusDisplayNames[statusKey];
                         showChartResources(statusName + ' Resources for ' + service, resources, {{ services: [service], statuses: [statusKey] }});
                     }}
                 }},
                 plugins: {{
-                    tooltip: {{
-                        callbacks: {{
-                            afterBody: function() {{ return 'Click to view resources'; }}
-                        }}
-                    }}
+                    legend: {{ labels: {{ color: textColor, font: {{ size: 12 }} }} }},
+                    tooltip: {{ callbacks: {{ afterBody: function() {{ return 'Click to view resources'; }} }} }},
+                    datalabels: barDataLabelsConfig
                 }}
             }}
         }});
@@ -4060,39 +4596,39 @@ function initChartsLazy() {{
             data: {{
                 labels: {account_labels},
                 datasets: [
-                    {{ label: 'Supported', data: {account_supported}, backgroundColor: '#66bb6a' }},
-                    {{ label: 'Approaching EOS', data: {account_approaching}, backgroundColor: '#ffa726' }},
-                    {{ label: 'Extended Support Y1', data: {account_extended_year_1}, backgroundColor: '#bbdefb' }},
-                    {{ label: 'Extended Support Y2', data: {account_extended_year_2}, backgroundColor: '#90caf9' }},
-                    {{ label: 'Extended Support Y3', data: {account_extended_year_3}, backgroundColor: '#64b5f6' }},
-                    {{ label: 'Out of Support', data: {account_out}, backgroundColor: '#ef5350' }}
+                    {{ label: 'Supported', data: {account_supported}, backgroundColor: '#66bb6a', datalabels: {{ display: false }} }},
+                    {{ label: 'Approaching EOS', data: {account_approaching}, backgroundColor: '#ffa726', datalabels: {{ display: false }} }},
+                    {{ label: 'Extended Support Y1', data: {account_extended_year_1}, backgroundColor: '#bbdefb', datalabels: {{ display: false }} }},
+                    {{ label: 'Extended Support Y2', data: {account_extended_year_2}, backgroundColor: '#90caf9', datalabels: {{ display: false }} }},
+                    {{ label: 'Extended Support Y3', data: {account_extended_year_3}, backgroundColor: '#64b5f6', datalabels: {{ display: false }} }},
+                    {{ label: 'Out of Support', data: {account_out}, backgroundColor: '#ef5350', datalabels: {{ display: false }} }}
                 ]
             }},
             options: {{
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: {{ x: {{ stacked: true }}, y: {{ stacked: true, beginAtZero: true }} }},
+                scales: {{ 
+                    x: {{ stacked: true, grid: {{ color: gridColor }}, ticks: {{ color: textColor, font: {{ size: 12 }} }} }}, 
+                    y: {{ stacked: true, beginAtZero: true, grid: {{ color: gridColor }}, ticks: {{ color: textColor, font: {{ size: 12 }} }} }} 
+                }},
                 onClick: function(event, elements) {{
                     if (elements.length > 0) {{
                         var index = elements[0].index;
                         var datasetIndex = elements[0].datasetIndex;
-                        var account = accountLabelsArray[index];
+                        var chart = Chart.getChart('accountChart');
+                        var account = chart.data.labels[index];
                         var allResources = accountResourcesData[account] || [];
                         var statusKey = statusLabelsMap[datasetIndex];
-                        // Filter resources by the clicked status
                         var resources = allResources.filter(function(r) {{ return r.status === statusKey; }});
-                        // Apply current page filters (service filter)
                         resources = filterResourcesByCurrentFilters(resources);
                         var statusName = statusDisplayNames[statusKey];
                         showChartResources(statusName + ' Resources for Account ' + account, resources, {{ accounts: [account], statuses: [statusKey] }});
                     }}
                 }},
                 plugins: {{
-                    tooltip: {{
-                        callbacks: {{
-                            afterBody: function() {{ return 'Click to view resources'; }}
-                        }}
-                    }}
+                    legend: {{ labels: {{ color: textColor, font: {{ size: 12 }} }} }},
+                    tooltip: {{ callbacks: {{ afterBody: function() {{ return 'Click to view resources'; }} }} }},
+                    datalabels: barDataLabelsConfig
                 }}
             }}
         }});
@@ -4101,7 +4637,7 @@ function initChartsLazy() {{
             type: 'doughnut',
             data: {{
                 labels: ['Supported', 'Approaching EOS', 'Extended Support Y1', 'Extended Support Y2', 'Extended Support Y3', 'Out of Support'],
-                datasets: [{{ data: {status_values}, backgroundColor: ['#66bb6a', '#ffa726', '#bbdefb', '#90caf9', '#64b5f6', '#ef5350'] }}]
+                datasets: [{{ data: {status_values}, backgroundColor: ['#66bb6a', '#ffa726', '#bbdefb', '#90caf9', '#64b5f6', '#ef5350'], datalabels: {{ display: false }} }}]
             }},
             options: {{
                 responsive: true,
@@ -4111,17 +4647,14 @@ function initChartsLazy() {{
                         var index = elements[0].index;
                         var statusKey = statusLabelsMap[index];
                         var resources = statusResourcesData[statusKey] || [];
-                        // Apply current page filters (service and account filters)
                         resources = filterResourcesByCurrentFilters(resources);
                         showChartResources(statusDisplayNames[statusKey] + ' Resources', resources, {{ statuses: [statusKey] }});
                     }}
                 }},
                 plugins: {{
-                    tooltip: {{
-                        callbacks: {{
-                            afterBody: function() {{ return 'Click to view resources'; }}
-                        }}
-                    }}
+                    legend: {{ labels: {{ color: textColor, font: {{ size: 12 }} }} }},
+                    tooltip: {{ callbacks: {{ afterBody: function() {{ return 'Click to view resources'; }} }} }},
+                    datalabels: pieDataLabelsConfig
                 }}
             }}
         }});
@@ -4130,7 +4663,7 @@ function initChartsLazy() {{
             type: 'pie',
             data: {{
                 labels: {service_labels},
-                datasets: [{{ data: {service_totals}, backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b', '#38f9d7', '#fa709a', '#fee140', '#30cfd0', '#330867', '#a8edea', '#fed6e3', '#5ee7df'] }}]
+                datasets: [{{ data: {service_totals}, backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b', '#38f9d7', '#fa709a', '#fee140', '#30cfd0', '#330867', '#a8edea', '#fed6e3', '#5ee7df'], datalabels: {{ display: false }} }}]
             }},
             options: {{
                 responsive: true,
@@ -4138,19 +4671,17 @@ function initChartsLazy() {{
                 onClick: function(event, elements) {{
                     if (elements.length > 0) {{
                         var index = elements[0].index;
-                        var service = serviceLabelsArray[index];
+                        var chart = Chart.getChart('servicePieChart');
+                        var service = chart.data.labels[index];
                         var resources = serviceResourcesData[service] || [];
-                        // Apply current page filters (account and status filters)
                         resources = filterResourcesByCurrentFilters(resources);
                         showChartResources('Resources for ' + service, resources, {{ services: [service] }});
                     }}
                 }},
                 plugins: {{
-                    tooltip: {{
-                        callbacks: {{
-                            afterBody: function() {{ return 'Click to view resources'; }}
-                        }}
-                    }}
+                    legend: {{ labels: {{ color: textColor, font: {{ size: 12 }} }} }},
+                    tooltip: {{ callbacks: {{ afterBody: function() {{ return 'Click to view resources'; }} }} }},
+                    datalabels: pieDataLabelsConfig
                 }}
             }}
         }});
@@ -4239,11 +4770,197 @@ window.onclick = function(event) {{
     }}
 }}
 
+// Chart Fullscreen functions
+var fullscreenChart = null;
+var currentFullscreenSourceId = null;
+
+function openChartFullscreen(chartId, title) {{
+    var sourceChart;
+    
+    // Handle timeline chart specially
+    if (chartId === 'timelineChart') {{
+        sourceChart = window.timelineChartInstance;
+    }} else {{
+        sourceChart = Chart.getChart(chartId);
+    }}
+    
+    if (!sourceChart) {{
+        console.error('Source chart not found:', chartId);
+        alert('Chart not found: ' + chartId);
+        return;
+    }}
+    
+    currentFullscreenSourceId = chartId;
+    
+    // Set title
+    document.getElementById('chartFullscreenTitle').textContent = title;
+    
+    // Get the checkbox state from the source chart's checkbox
+    var sourceCheckbox = document.getElementById(chartId + 'Labels');
+    var showLabels = sourceCheckbox ? sourceCheckbox.checked : false;
+    document.getElementById('fullscreenChartLabels').checked = showLabels;
+    
+    // Destroy existing fullscreen chart if any
+    if (fullscreenChart) {{
+        fullscreenChart.destroy();
+        fullscreenChart = null;
+    }}
+    
+    // Show modal AFTER destroying old chart
+    var modal = document.getElementById('chartFullscreenModal');
+    modal.classList.add('active');
+    
+    // Get chart type
+    var chartType = sourceChart.config.type;
+    var isPieChart = (chartType === 'pie' || chartType === 'doughnut');
+    
+    // Build new datasets array by copying data
+    var newDatasets = [];
+    sourceChart.data.datasets.forEach(function(ds) {{
+        var newDs = {{
+            label: ds.label,
+            data: ds.data.slice(),
+            backgroundColor: Array.isArray(ds.backgroundColor) ? ds.backgroundColor.slice() : ds.backgroundColor,
+            borderColor: Array.isArray(ds.borderColor) ? ds.borderColor.slice() : ds.borderColor,
+            borderWidth: ds.borderWidth,
+            datalabels: {{ display: showLabels }}
+        }};
+        newDatasets.push(newDs);
+    }});
+    
+    // Build config from scratch
+    var config = {{
+        type: chartType,
+        data: {{
+            labels: sourceChart.data.labels.slice(),
+            datasets: newDatasets
+        }},
+        options: {{
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {{
+                legend: {{
+                    position: 'top',
+                    labels: {{ font: {{ size: 14 }} }}
+                }},
+                title: {{
+                    display: true,
+                    text: title,
+                    font: {{ size: 18 }}
+                }},
+                datalabels: {{
+                    display: showLabels,
+                    color: isPieChart ? '#fff' : '#333',
+                    font: {{ weight: 'bold', size: isPieChart ? 14 : 12 }},
+                    anchor: 'center',
+                    align: 'center',
+                    formatter: isPieChart ? function(value, context) {{
+                        if (value === 0) return '';
+                        var total = context.chart.data.datasets[0].data.reduce(function(a, b) {{ return a + b; }}, 0);
+                        var percentage = Math.round((value / total) * 100);
+                        return value + ' (' + percentage + '%)';
+                    }} : function(value) {{ return value > 0 ? value : ''; }}
+                }}
+            }}
+        }}
+    }};
+    
+    // Add scales for bar charts
+    if (chartType === 'bar') {{
+        config.options.scales = {{
+            x: {{ 
+                stacked: true,
+                ticks: {{ font: {{ size: 12 }} }}
+            }},
+            y: {{ 
+                stacked: true, 
+                beginAtZero: true,
+                ticks: {{ font: {{ size: 12 }} }}
+            }}
+        }};
+    }}
+    
+    // Create fullscreen chart with a small delay to ensure modal is rendered
+    setTimeout(function() {{
+        try {{
+            var canvas = document.getElementById('fullscreenChart');
+            if (!canvas) {{
+                console.error('Fullscreen canvas not found');
+                return;
+            }}
+            // Get 2D context
+            var ctx = canvas.getContext('2d');
+            fullscreenChart = new Chart(ctx, config);
+            
+            // Force resize after chart is created
+            setTimeout(function() {{
+                if (fullscreenChart) {{
+                    fullscreenChart.resize();
+                }}
+            }}, 50);
+        }} catch (e) {{
+            console.error('Error creating fullscreen chart:', e);
+            alert('Error creating fullscreen chart: ' + e.message);
+        }}
+    }}, 100);
+}}
+
+function closeChartFullscreen() {{
+    var modal = document.getElementById('chartFullscreenModal');
+    modal.classList.remove('active');
+    
+    if (fullscreenChart) {{
+        fullscreenChart.destroy();
+        fullscreenChart = null;
+    }}
+    currentFullscreenSourceId = null;
+}}
+
+function toggleFullscreenChartLabels(show) {{
+    if (!fullscreenChart) return;
+    
+    // Update datalabels display for each dataset
+    fullscreenChart.data.datasets.forEach(function(dataset) {{
+        if (!dataset.datalabels) {{
+            dataset.datalabels = {{}};
+        }}
+        dataset.datalabels.display = show;
+    }});
+    
+    fullscreenChart.update();
+}}
+
+// Close fullscreen modal on Escape key
+document.addEventListener('keydown', function(e) {{
+    if (e.key === 'Escape') {{
+        var modal = document.getElementById('chartFullscreenModal');
+        if (modal && modal.classList.contains('active')) {{
+            closeChartFullscreen();
+        }}
+    }}
+}});
+
+// Resize fullscreen chart when window is resized
+window.addEventListener('resize', function() {{
+    if (fullscreenChart) {{
+        fullscreenChart.resize();
+    }}
+}});
+
 // Initialize with progressive loading
 $(document).ready(function() {{
+    initTheme();  // Initialize theme from localStorage
     initFilters();
     initAccountDropdown();
     updateLoadingStatus('Initializing table...');
+    
+    // Fallback: finish loading after 5 seconds regardless
+    setTimeout(function() {{
+        if (loadingSteps < totalSteps) {{
+            console.log('Loading timeout - forcing completion');
+            finishLoading();
+        }}
+    }}, 5000);
     
     // Initialize DataTable with deferred rendering
     setTimeout(function() {{
@@ -4270,7 +4987,9 @@ $(document).ready(function() {{
             // Timeline chart init
             updateLoadingStatus('Loading timeline...');
             setTimeout(function() {{
-                if (typeof initTimelineChart === 'function') initTimelineChart();
+                if (typeof initTimelineChart === 'function') {{
+                    initTimelineChart();
+                }}
                 stepComplete();
             }}, 50);
         }}, 50);
