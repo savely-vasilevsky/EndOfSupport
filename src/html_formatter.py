@@ -493,6 +493,16 @@ body {
     opacity: 0.9;
 }
 
+.summary-card .percentage {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 4px;
+    background: rgba(255,255,255,0.2);
+    padding: 2px 8px;
+    border-radius: 10px;
+    display: inline-block;
+}
+
 /* Summary card tooltip */
 .summary-card-tooltip {
     position: absolute;
@@ -869,6 +879,63 @@ table.dataTable td {
 
 .dt-button:hover {
     background-color: var(--bg-primary) !important;
+}
+
+/* Filter summary bar styles */
+.filter-summary {
+    background: linear-gradient(135deg, #232f3e 0%, #37475a 100%);
+    color: #ffffff;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
+    font-weight: 500;
+}
+
+.filter-summary .filter-count {
+    font-weight: bold;
+    font-size: 18px;
+    color: #ff9900;
+}
+
+.filter-summary.filtered .filter-count {
+    animation: pulse 1s ease-in-out;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.filter-presets {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.preset-btn {
+    padding: 6px 14px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 16px;
+    color: white;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.preset-btn:hover {
+    background: rgba(255,153,0,0.3);
+    border-color: #ff9900;
+}
+
+.preset-btn.active {
+    background: #ff9900;
+    border-color: #ff9900;
+    color: #232f3e;
+    font-weight: 600;
 }
 
 /* Filter bar styles */
@@ -1424,6 +1491,154 @@ table.dataTable td {
 .version-detail-table tr:hover {
     background: var(--bg-tertiary);
 }
+
+/* Active menu item highlighting */
+#menuBar li.active {
+    background-color: #2074d5;
+}
+
+#menuBar li.active a {
+    color: white;
+}
+
+/* Critical row highlighting */
+.table-row-critical {
+    background-color: rgba(229, 57, 53, 0.1) !important;
+}
+
+.table-row-warning {
+    background-color: rgba(251, 140, 0, 0.1) !important;
+}
+
+/* Column visibility toggle */
+.column-toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 10px 15px;
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+}
+
+.column-toggle-container label {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.column-toggle-btn {
+    padding: 4px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.2s;
+}
+
+.column-toggle-btn:hover {
+    background: #2074d5;
+    color: white;
+}
+
+.column-toggle-btn.hidden-col {
+    opacity: 0.5;
+    text-decoration: line-through;
+}
+
+/* Percentage badge on summary cards */
+.summary-card .percentage {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 4px;
+}
+
+/* Today marker for timeline */
+.today-marker {
+    position: absolute;
+    width: 2px;
+    background: #ff9900;
+    top: 0;
+    bottom: 0;
+    z-index: 10;
+}
+
+.today-marker::after {
+    content: 'TODAY';
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-weight: bold;
+    color: #ff9900;
+    white-space: nowrap;
+}
+
+/* Quick date range buttons */
+.quick-range-btns {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.quick-range-btn {
+    padding: 4px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.2s;
+}
+
+.quick-range-btn:hover {
+    background: #2074d5;
+    color: white;
+    border-color: #2074d5;
+}
+
+.quick-range-btn.active {
+    background: #ff9900;
+    color: white;
+    border-color: #ff9900;
+}
+
+/* Service group with issues indicator */
+.service-group-header.has-issues {
+    border-left: 4px solid #e53935;
+}
+
+.service-group-header.has-issues::before {
+    content: '⚠';
+    margin-right: 8px;
+    color: #e53935;
+}
+
+/* Print styles */
+@media print {
+    .header, #menuBar, .filter-bar, .go-to-top, .collapse-btn, .chart-controls, .filter-summary {
+        display: none !important;
+    }
+    
+    .section {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+    
+    .collapsible-content {
+        display: block !important;
+        max-height: none !important;
+    }
+    
+    body {
+        background: white;
+        color: black;
+    }
+}
 </style>"""
 
     def _generate_header(self, report: Report) -> str:
@@ -1515,7 +1730,16 @@ table.dataTable td {
                 <input type="checkbox" checked><span class="checkmark">✓</span>Out of Support</label>
         '''
         
-        return f"""<div class="filter-bar">
+        return f"""<div class="filter-summary" id="filter-summary">
+    <span>Showing <span class="filter-count" id="visible-count">{report.total_resources}</span> of <span id="total-count">{report.total_resources}</span> resources</span>
+    <div class="filter-presets">
+        <button class="preset-btn" onclick="applyPreset('all')" title="Show all resources">All</button>
+        <button class="preset-btn" onclick="applyPreset('action-required')" title="Show only Approaching EOS and Out of Support">⚠ Action Required</button>
+        <button class="preset-btn" onclick="applyPreset('extended-only')" title="Show only Extended Support resources">Extended Support</button>
+        <button class="preset-btn" onclick="applyPreset('issues-only')" title="Show all non-supported resources">All Issues</button>
+    </div>
+</div>
+<div class="filter-bar">
     <div class="filter-container">
         <div class="filter-group filter-group-dropdown">
             <label>Account</label>
@@ -1560,45 +1784,59 @@ table.dataTable td {
     def _generate_summary_section(self, report: Report) -> str:
         """Generate the summary dashboard section."""
         status_counts = report.total_counts
+        total = report.total_resources
+        
+        # Calculate percentages
+        def pct(count):
+            return f"{round(count / total * 100)}%" if total > 0 else "0%"
+        
+        supported_count = status_counts.get(SupportStatus.SUPPORTED, 0)
+        approaching_count = status_counts.get(SupportStatus.APPROACHING_EOS, 0)
+        ext_y1_count = status_counts.get(SupportStatus.EXTENDED_SUPPORT_YEAR_1, 0)
+        ext_y2_count = status_counts.get(SupportStatus.EXTENDED_SUPPORT_YEAR_2, 0)
+        ext_y3_count = status_counts.get(SupportStatus.EXTENDED_SUPPORT_YEAR_3, 0)
+        oos_count = status_counts.get(SupportStatus.OUT_OF_SUPPORT, 0)
         
         # Calculate total extended support count (sum of all 3 years)
-        extended_total = (
-            status_counts.get(SupportStatus.EXTENDED_SUPPORT_YEAR_1, 0) +
-            status_counts.get(SupportStatus.EXTENDED_SUPPORT_YEAR_2, 0) +
-            status_counts.get(SupportStatus.EXTENDED_SUPPORT_YEAR_3, 0)
-        )
+        extended_total = ext_y1_count + ext_y2_count + ext_y3_count
         
         return f"""<div id="summary-section" class="section">
     <h2>Summary Dashboard</h2>
     <p style="color: #666; margin-bottom: 15px;"><strong>Click on any card to view affected resources in a new tab. Hover to see breakdown by service.</strong></p>
     <div class="summary-cards">
         <div class="summary-card total" onclick="showAllResources()" onmouseenter="showSummaryTooltip(event, 'total')" onmousemove="positionSummaryTooltip(event)" onmouseleave="hideSummaryTooltip()">
-            <div class="count">{report.total_resources}</div>
+            <div class="count">{total}</div>
             <div class="label">Total Resources</div>
         </div>
         <div class="summary-card supported" onclick="showStatusResources('supported')" onmouseenter="showSummaryTooltip(event, 'supported')" onmousemove="positionSummaryTooltip(event)" onmouseleave="hideSummaryTooltip()">
-            <div class="count">{status_counts.get(SupportStatus.SUPPORTED, 0)}</div>
+            <div class="count">{supported_count}</div>
             <div class="label">Supported</div>
+            <div class="percentage">{pct(supported_count)}</div>
         </div>
         <div class="summary-card approaching" onclick="showStatusResources('approaching')" onmouseenter="showSummaryTooltip(event, 'approaching')" onmousemove="positionSummaryTooltip(event)" onmouseleave="hideSummaryTooltip()">
-            <div class="count">{status_counts.get(SupportStatus.APPROACHING_EOS, 0)}</div>
+            <div class="count">{approaching_count}</div>
             <div class="label">Approaching EOS</div>
+            <div class="percentage">{pct(approaching_count)}</div>
         </div>
         <div class="summary-card extended-year-1" onclick="showStatusResources('extended_year_1')" onmouseenter="showSummaryTooltip(event, 'extended_year_1')" onmousemove="positionSummaryTooltip(event)" onmouseleave="hideSummaryTooltip()">
-            <div class="count">{status_counts.get(SupportStatus.EXTENDED_SUPPORT_YEAR_1, 0)}</div>
+            <div class="count">{ext_y1_count}</div>
             <div class="label">Extended Support Y1</div>
+            <div class="percentage">{pct(ext_y1_count)}</div>
         </div>
         <div class="summary-card extended-year-2" onclick="showStatusResources('extended_year_2')" onmouseenter="showSummaryTooltip(event, 'extended_year_2')" onmousemove="positionSummaryTooltip(event)" onmouseleave="hideSummaryTooltip()">
-            <div class="count">{status_counts.get(SupportStatus.EXTENDED_SUPPORT_YEAR_2, 0)}</div>
+            <div class="count">{ext_y2_count}</div>
             <div class="label">Extended Support Y2</div>
+            <div class="percentage">{pct(ext_y2_count)}</div>
         </div>
         <div class="summary-card extended-year-3" onclick="showStatusResources('extended_year_3')" onmouseenter="showSummaryTooltip(event, 'extended_year_3')" onmousemove="positionSummaryTooltip(event)" onmouseleave="hideSummaryTooltip()">
-            <div class="count">{status_counts.get(SupportStatus.EXTENDED_SUPPORT_YEAR_3, 0)}</div>
+            <div class="count">{ext_y3_count}</div>
             <div class="label">Extended Support Y3</div>
+            <div class="percentage">{pct(ext_y3_count)}</div>
         </div>
         <div class="summary-card out-of-support" onclick="showStatusResources('out_of_support')" onmouseenter="showSummaryTooltip(event, 'out_of_support')" onmousemove="positionSummaryTooltip(event)" onmouseleave="hideSummaryTooltip()">
-            <div class="count">{status_counts.get(SupportStatus.OUT_OF_SUPPORT, 0)}</div>
+            <div class="count">{oos_count}</div>
             <div class="label">Out of Support</div>
+            <div class="percentage">{pct(oos_count)}</div>
         </div>
     </div>
 </div>"""
@@ -3615,6 +3853,88 @@ function initFilters() {{
     }});
 }}
 
+// Apply filter presets
+function applyPreset(preset) {{
+    // First, reset all filters
+    document.querySelectorAll('.filter-option').forEach(function(option) {{
+        option.classList.remove('selected');
+        var checkbox = option.querySelector('input');
+        if (checkbox) checkbox.checked = false;
+        var checkmark = option.querySelector('.checkmark');
+        if (checkmark) checkmark.textContent = '';
+    }});
+    
+    // Select all accounts by default
+    selectAllAccounts();
+    
+    // Select all services by default
+    document.querySelectorAll('#service-filters .filter-option').forEach(function(option) {{
+        option.classList.add('selected');
+        var checkbox = option.querySelector('input');
+        if (checkbox) checkbox.checked = true;
+        var checkmark = option.querySelector('.checkmark');
+        if (checkmark) checkmark.textContent = '✓';
+    }});
+    
+    // Apply preset-specific status filters
+    var statusesToSelect = [];
+    switch(preset) {{
+        case 'all':
+            statusesToSelect = ['Supported', 'Approaching EOS', 'Extended Support Y1', 'Extended Support Y2', 'Extended Support Y3', 'Out of Support'];
+            break;
+        case 'action-required':
+            statusesToSelect = ['Approaching EOS', 'Out of Support'];
+            break;
+        case 'extended-only':
+            statusesToSelect = ['Extended Support Y1', 'Extended Support Y2', 'Extended Support Y3'];
+            break;
+        case 'issues-only':
+            statusesToSelect = ['Approaching EOS', 'Extended Support Y1', 'Extended Support Y2', 'Extended Support Y3', 'Out of Support'];
+            break;
+    }}
+    
+    // Select the appropriate status filters
+    document.querySelectorAll('#status-filters .filter-option').forEach(function(option) {{
+        var statusValue = option.dataset.value;
+        if (statusesToSelect.includes(statusValue)) {{
+            option.classList.add('selected');
+            var checkbox = option.querySelector('input');
+            if (checkbox) checkbox.checked = true;
+            var checkmark = option.querySelector('.checkmark');
+            if (checkmark) checkmark.textContent = '✓';
+        }}
+    }});
+    
+    // Apply the filters
+    applyFilters();
+    
+    // Update preset button active state
+    document.querySelectorAll('.preset-btn').forEach(function(btn) {{
+        btn.classList.remove('active');
+    }});
+    event.target.classList.add('active');
+}}
+
+// Update visible count in filter summary
+function updateVisibleCount() {{
+    var table = $('#resourcesDataTable').DataTable();
+    var visibleCount = table.rows({{ search: 'applied' }}).count();
+    var totalCount = table.rows().count();
+    
+    var visibleCountEl = document.getElementById('visible-count');
+    if (visibleCountEl) {{
+        visibleCountEl.textContent = visibleCount;
+    }}
+    
+    // Update percentage display
+    var filterSummary = document.getElementById('filter-summary');
+    if (filterSummary && visibleCount < totalCount) {{
+        filterSummary.classList.add('filtered');
+    }} else if (filterSummary) {{
+        filterSummary.classList.remove('filtered');
+    }}
+}}
+
 function getSelectedFilters() {{
     const services = [];
     const accounts = [];
@@ -3733,6 +4053,9 @@ function applyFilters() {{
     
     // Update summary counts based on visible rows
     updateSummaryCounts(table);
+    
+    // Update visible count in filter summary bar
+    updateVisibleCount();
     
     // Update charts based on filters
     updateChartsWithFilters(filters);
@@ -4158,6 +4481,14 @@ function resetFilters() {{
     
     // Reset all charts to original data
     resetChartsToOriginal();
+    
+    // Reset visible count in filter summary
+    updateVisibleCount();
+    
+    // Reset preset button active state
+    document.querySelectorAll('.preset-btn').forEach(function(btn) {{
+        btn.classList.remove('active');
+    }});
 }}
 
 // Reset all charts to their original unfiltered data
