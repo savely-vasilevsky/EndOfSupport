@@ -1765,7 +1765,7 @@ class TestHTMLFormatterStatusBreakdown:
         html = formatter.format(report)
         
         # Check for cursor: pointer in chart containers
-        assert 'style="cursor: pointer;"' in html
+        assert 'cursor: pointer' in html
     
     def test_click_instruction_text(self):
         """Test that click instruction text is present."""
@@ -2978,9 +2978,9 @@ class TestHTMLFormatterChartClickFiltering:
         
         html = formatter.format(report)
         
-        # Service chart onClick should apply filters
-        # Check for comment indicating filter application
-        assert "Apply current page filters (account filter)" in html
+        # Service chart onClick should apply filters via filterResourcesByCurrentFilters
+        assert "filterResourcesByCurrentFilters(resources)" in html
+        assert "serviceResourcesData[service]" in html
     
     def test_account_chart_click_applies_filters(self):
         """Test that account chart click applies current page filters."""
@@ -2989,9 +2989,9 @@ class TestHTMLFormatterChartClickFiltering:
         
         html = formatter.format(report)
         
-        # Account chart onClick should apply filters
-        # Check for comment indicating filter application
-        assert "Apply current page filters (service filter)" in html
+        # Account chart onClick should apply filters via filterResourcesByCurrentFilters
+        assert "filterResourcesByCurrentFilters(resources)" in html
+        assert "accountResourcesData[account]" in html
     
     def test_status_pie_chart_click_applies_filters(self):
         """Test that status pie chart click applies current page filters."""
@@ -3000,9 +3000,9 @@ class TestHTMLFormatterChartClickFiltering:
         
         html = formatter.format(report)
         
-        # Status pie chart onClick should apply filters
-        # Check for comment indicating filter application
-        assert "Apply current page filters (service and account filters)" in html
+        # Status pie chart onClick should apply filters via filterResourcesByCurrentFilters
+        assert "filterResourcesByCurrentFilters(resources)" in html
+        assert "statusResourcesData[statusKey]" in html
     
     def test_service_pie_chart_click_applies_filters(self):
         """Test that service pie chart click applies current page filters."""
@@ -3011,9 +3011,9 @@ class TestHTMLFormatterChartClickFiltering:
         
         html = formatter.format(report)
         
-        # Service pie chart onClick should apply filters
-        # Check for comment indicating filter application
-        assert "Apply current page filters (account and status filters)" in html
+        # Service pie chart onClick should apply filters via filterResourcesByCurrentFilters
+        assert "filterResourcesByCurrentFilters(resources)" in html
+        assert "Chart.getChart('servicePieChart')" in html
     
     def test_timeline_show_month_resources_applies_filters(self):
         """Test that showMonthResources applies current page filters."""

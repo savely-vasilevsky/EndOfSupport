@@ -1,3 +1,26 @@
+# Release Notes - v2.4.1
+
+## 🎉 What's New in v2.4.1
+
+### Account Filter for Version Details Section
+- **Account filter now applies to Version Details** - When filtering by account, the Version Details by Service section now correctly filters rows to show only versions with resources in the selected accounts
+- **Dynamic count updates** - Summary counts in card headers and content update when filters are applied
+- **Row-level filtering** - Individual version rows are hidden/shown based on account filter
+
+### Resizable Chart Popup Windows
+- **Charts open in separate windows** - Clicking the fullscreen button (⛶) now opens charts in a resizable browser popup window
+- **Aspect ratio maintained** - Charts maintain their aspect ratio (2:1 for bar charts, 1:1 for pie charts) when the window is resized
+- **Theme toggle** - Popup windows include a Dark/Light theme toggle button
+- **Data labels toggle** - Show/hide data labels checkbox available in popup
+
+### Chart Click Handler Fix
+- **Fixed "No resource found" error** - Chart clicks in By Service and By Account sections now correctly identify the clicked element even when filters are applied
+
+### Bug Fixes
+- **Fixed chart label lookup** - Chart onClick handlers now use the chart's current labels instead of static arrays, fixing issues when filters change the displayed data
+
+---
+
 # Release Notes - v2.4.0
 
 ## 🎉 What's New in v2.4.0

@@ -4,7 +4,7 @@
 
 EndOfSupportTool is a Python application that analyzes AWS resource inventory data to identify resources approaching or past their end-of-support dates. It supports multiple input methods (CSV file, AWS API fetch) and generates reports in various formats (Text, CSV, JSON, Excel, HTML).
 
-**Version:** 2.4.0
+**Version:** 2.4.1
 
 ---
 
@@ -478,6 +478,7 @@ pyinstaller EndOfSupportTool_mac.spec
 
 | Version | Key Features |
 |---------|--------------|
+| 2.4.1 | Account filter for Version Details, resizable chart popups with theme toggle |
 | 2.4.0 | Extended support date enrichment from static lookup, EKS support |
 | 2.3.x | Extended support cost estimation, star notation for approaching EOS |
 | 2.2.x | 6-status classification (Y1/Y2/Y3), HTML interactive report |

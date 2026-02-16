@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 try:
     from . import __version__
 except ImportError:
-    __version__ = "2.4.0"
+    __version__ = "2.4.1"
 
 # Handle imports for both package and frozen executable modes
 try:

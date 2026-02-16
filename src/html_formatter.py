@@ -13,7 +13,7 @@ try:
     from . import __version__
 except ImportError:
     from models import Report, Resource, SupportStatus
-    __version__ = "2.4.0"
+    __version__ = "2.4.1"
 
 
 class HTMLFormatter:
@@ -398,90 +398,6 @@ body {
     background: #ff9900;
     color: white;
     border-color: #ff9900;
-}
-
-/* Fullscreen Chart Modal */
-.chart-fullscreen-modal {
-    display: none;
-    position: fixed;
-    z-index: 10001;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: var(--bg-primary);
-    padding: 20px;
-    box-sizing: border-box;
-}
-
-.chart-fullscreen-modal.active {
-    display: flex;
-    flex-direction: column;
-}
-
-.chart-fullscreen-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 20px;
-    background: var(--header-bg);
-    color: white;
-    border-radius: 8px 8px 0 0;
-    margin-bottom: 0;
-}
-
-.chart-fullscreen-header h3 {
-    margin: 0;
-    font-size: 18px;
-}
-
-.chart-fullscreen-controls {
-    display: flex;
-    gap: 15px;
-    align-items: center;
-}
-
-.chart-fullscreen-controls label {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    color: #aab7b8;
-    font-size: 13px;
-    cursor: pointer;
-}
-
-.chart-fullscreen-close {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 28px;
-    cursor: pointer;
-    padding: 0 10px;
-    line-height: 1;
-}
-
-.chart-fullscreen-close:hover {
-    color: #ff9900;
-}
-
-.chart-fullscreen-body {
-    flex: 1;
-    background: var(--bg-secondary);
-    border-radius: 0 0 8px 8px;
-    padding: 20px;
-    position: relative;
-    min-height: 0;
-    overflow: hidden;
-}
-
-.chart-fullscreen-body canvas {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    right: 20px;
-    bottom: 20px;
-    width: calc(100% - 40px) !important;
-    height: calc(100% - 40px) !important;
 }
 
 .section {
@@ -2745,20 +2661,7 @@ table.dataTable td {
         </div>
     </div>
 </div>
-
-<!-- Chart Fullscreen Modal -->
-<div id="chartFullscreenModal" class="chart-fullscreen-modal">
-    <div class="chart-fullscreen-header">
-        <h3 id="chartFullscreenTitle">Chart</h3>
-        <div class="chart-fullscreen-controls">
-            <label><input type="checkbox" id="fullscreenChartLabels" onchange="toggleFullscreenChartLabels(this.checked)"> Show data labels</label>
-            <button class="chart-fullscreen-close" onclick="closeChartFullscreen()">&times;</button>
-        </div>
-    </div>
-    <div class="chart-fullscreen-body">
-        <canvas id="fullscreenChart"></canvas>
-    </div>
-</div>"""
+"""
 
     def _generate_scripts(self, report: Report) -> str:
         """Generate JavaScript for interactivity and charts."""
@@ -4773,6 +4676,7 @@ window.onclick = function(event) {{
 // Chart Fullscreen functions
 var fullscreenChart = null;
 var currentFullscreenSourceId = null;
+var chartPopupWindow = null;
 
 function openChartFullscreen(chartId, title) {{
     var sourceChart;
@@ -4790,162 +4694,211 @@ function openChartFullscreen(chartId, title) {{
         return;
     }}
     
-    currentFullscreenSourceId = chartId;
-    
-    // Set title
-    document.getElementById('chartFullscreenTitle').textContent = title;
-    
     // Get the checkbox state from the source chart's checkbox
     var sourceCheckbox = document.getElementById(chartId + 'Labels');
     var showLabels = sourceCheckbox ? sourceCheckbox.checked : false;
-    document.getElementById('fullscreenChartLabels').checked = showLabels;
     
-    // Destroy existing fullscreen chart if any
-    if (fullscreenChart) {{
-        fullscreenChart.destroy();
-        fullscreenChart = null;
-    }}
-    
-    // Show modal AFTER destroying old chart
-    var modal = document.getElementById('chartFullscreenModal');
-    modal.classList.add('active');
-    
-    // Get chart type
+    // Get chart type and data
     var chartType = sourceChart.config.type;
     var isPieChart = (chartType === 'pie' || chartType === 'doughnut');
     
-    // Build new datasets array by copying data
-    var newDatasets = [];
+    // Build datasets JSON
+    var datasetsJson = [];
     sourceChart.data.datasets.forEach(function(ds) {{
-        var newDs = {{
+        datasetsJson.push({{
             label: ds.label,
             data: ds.data.slice(),
             backgroundColor: Array.isArray(ds.backgroundColor) ? ds.backgroundColor.slice() : ds.backgroundColor,
             borderColor: Array.isArray(ds.borderColor) ? ds.borderColor.slice() : ds.borderColor,
-            borderWidth: ds.borderWidth,
-            datalabels: {{ display: showLabels }}
-        }};
-        newDatasets.push(newDs);
+            borderWidth: ds.borderWidth
+        }});
     }});
     
-    // Build config from scratch
-    var config = {{
-        type: chartType,
-        data: {{
-            labels: sourceChart.data.labels.slice(),
-            datasets: newDatasets
-        }},
-        options: {{
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {{
-                legend: {{
-                    position: 'top',
-                    labels: {{ font: {{ size: 14 }} }}
-                }},
-                title: {{
-                    display: true,
-                    text: title,
-                    font: {{ size: 18 }}
-                }},
-                datalabels: {{
-                    display: showLabels,
-                    color: isPieChart ? '#fff' : '#333',
-                    font: {{ weight: 'bold', size: isPieChart ? 14 : 12 }},
-                    anchor: 'center',
-                    align: 'center',
-                    formatter: isPieChart ? function(value, context) {{
-                        if (value === 0) return '';
-                        var total = context.chart.data.datasets[0].data.reduce(function(a, b) {{ return a + b; }}, 0);
-                        var percentage = Math.round((value / total) * 100);
-                        return value + ' (' + percentage + '%)';
-                    }} : function(value) {{ return value > 0 ? value : ''; }}
-                }}
-            }}
-        }}
-    }};
+    // Calculate window size (80% of screen, maintaining aspect ratio)
+    var screenWidth = window.screen.availWidth;
+    var screenHeight = window.screen.availHeight;
+    var winWidth = Math.min(1200, screenWidth * 0.8);
+    var winHeight = Math.min(800, screenHeight * 0.8);
+    var winLeft = (screenWidth - winWidth) / 2;
+    var winTop = (screenHeight - winHeight) / 2;
     
-    // Add scales for bar charts
-    if (chartType === 'bar') {{
-        config.options.scales = {{
-            x: {{ 
-                stacked: true,
-                ticks: {{ font: {{ size: 12 }} }}
-            }},
-            y: {{ 
-                stacked: true, 
-                beginAtZero: true,
-                ticks: {{ font: {{ size: 12 }} }}
-            }}
-        }};
+    // Open new window
+    var popupWindow = window.open('', 'ChartPopup_' + chartId, 
+        'width=' + winWidth + ',height=' + winHeight + ',left=' + winLeft + ',top=' + winTop + ',resizable=yes,scrollbars=no');
+    
+    if (!popupWindow) {{
+        alert('Popup blocked. Please allow popups for this site.');
+        return;
     }}
     
-    // Create fullscreen chart with a small delay to ensure modal is rendered
-    setTimeout(function() {{
-        try {{
-            var canvas = document.getElementById('fullscreenChart');
-            if (!canvas) {{
-                console.error('Fullscreen canvas not found');
-                return;
-            }}
-            // Get 2D context
-            var ctx = canvas.getContext('2d');
-            fullscreenChart = new Chart(ctx, config);
-            
-            // Force resize after chart is created
-            setTimeout(function() {{
-                if (fullscreenChart) {{
-                    fullscreenChart.resize();
-                }}
-            }}, 50);
-        }} catch (e) {{
-            console.error('Error creating fullscreen chart:', e);
-            alert('Error creating fullscreen chart: ' + e.message);
-        }}
-    }}, 100);
+    chartPopupWindow = popupWindow;
+    
+    // Get current theme from parent window
+    var currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    
+    // Build HTML content for popup
+    var html = '<!DOCTYPE html><html data-theme="' + currentTheme + '"><head>';
+    html += '<meta charset="UTF-8">';
+    html += '<title>' + title + '</title>';
+    html += '<script src="https://cdn.jsdelivr.net/npm/chart.js"><\\/script>';
+    html += '<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"><\\/script>';
+    html += '<style>';
+    html += ':root {{ --bg-primary: #f5f5f5; --bg-secondary: #ffffff; --text-primary: #16191f; --text-secondary: #545b64; --header-bg: #232f3e; --border-color: #e0e0e0; --chart-grid: rgba(0,0,0,0.1); --chart-text: #666; }}';
+    html += '[data-theme="dark"] {{ --bg-primary: #1a1a2e; --bg-secondary: #16213e; --text-primary: #e8e8e8; --text-secondary: #aab7b8; --header-bg: #0f3460; --border-color: #3a3a5c; --chart-grid: rgba(255,255,255,0.1); --chart-text: #aab7b8; }}';
+    html += 'body {{ margin: 0; padding: 20px; font-family: "Segoe UI", Arial, sans-serif; background: var(--bg-primary); color: var(--text-primary); height: calc(100vh - 40px); display: flex; flex-direction: column; transition: background 0.3s, color 0.3s; }}';
+    html += '.header {{ display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: var(--header-bg); color: white; border-radius: 8px; margin-bottom: 15px; flex-shrink: 0; }}';
+    html += '.header h2 {{ margin: 0; font-size: 18px; }}';
+    html += '.controls {{ display: flex; gap: 15px; align-items: center; }}';
+    html += '.controls label {{ color: #aab7b8; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 5px; }}';
+    html += '.theme-btn {{ background: none; border: 1px solid #aab7b8; color: #aab7b8; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 5px; }}';
+    html += '.theme-btn:hover {{ background: rgba(255,255,255,0.1); }}';
+    html += '.chart-wrapper {{ flex: 1; display: flex; justify-content: center; align-items: center; background: var(--bg-secondary); border-radius: 8px; padding: 20px; min-height: 0; transition: background 0.3s; }}';
+    html += '.chart-container {{ width: 100%; height: 100%; position: relative; }}';
+    html += 'canvas {{ max-width: 100%; max-height: 100%; }}';
+    html += '</style>';
+    html += '</head><body>';
+    html += '<div class="header">';
+    html += '<h2>' + title + '</h2>';
+    html += '<div class="controls">';
+    html += '<label><input type="checkbox" id="showLabels" ' + (showLabels ? 'checked' : '') + ' onchange="toggleLabels(this.checked)"> Show data labels</label>';
+    html += '<button class="theme-btn" onclick="toggleTheme()" id="themeBtn"><span id="themeIcon">🌙</span> <span id="themeText">Dark</span></button>';
+    html += '</div>';
+    html += '</div>';
+    html += '<div class="chart-wrapper">';
+    html += '<div class="chart-container"><canvas id="popupChart"></canvas></div>';
+    html += '</div>';
+    html += '<script>';
+    html += 'Chart.register(ChartDataLabels);';
+    html += 'var chartType = "' + chartType + '";';
+    html += 'var isPieChart = ' + isPieChart + ';';
+    html += 'var showLabels = ' + showLabels + ';';
+    html += 'var chartLabels = ' + JSON.stringify(sourceChart.data.labels) + ';';
+    html += 'var chartDatasets = ' + JSON.stringify(datasetsJson) + ';';
+    html += 'var popupChart = null;';
+    html += 'var aspectRatio = ' + (isPieChart ? '1' : '2') + ';';
+    html += 'var isDarkTheme = document.documentElement.getAttribute("data-theme") === "dark";';
+    html += '';
+    html += 'function updateThemeButton() {{';
+    html += '  var icon = document.getElementById("themeIcon");';
+    html += '  var text = document.getElementById("themeText");';
+    html += '  if (isDarkTheme) {{';
+    html += '    icon.textContent = "☀️";';
+    html += '    text.textContent = "Light";';
+    html += '  }} else {{';
+    html += '    icon.textContent = "🌙";';
+    html += '    text.textContent = "Dark";';
+    html += '  }}';
+    html += '}}';
+    html += '';
+    html += 'function toggleTheme() {{';
+    html += '  isDarkTheme = !isDarkTheme;';
+    html += '  document.documentElement.setAttribute("data-theme", isDarkTheme ? "dark" : "light");';
+    html += '  updateThemeButton();';
+    html += '  createChart();';
+    html += '}}';
+    html += '';
+    html += 'function getChartColors() {{';
+    html += '  var style = getComputedStyle(document.documentElement);';
+    html += '  return {{';
+    html += '    gridColor: style.getPropertyValue("--chart-grid").trim() || "rgba(0,0,0,0.1)",';
+    html += '    textColor: style.getPropertyValue("--chart-text").trim() || "#666"';
+    html += '  }};';
+    html += '}}';
+    html += '';
+    html += 'function createChart() {{';
+    html += '  var canvas = document.getElementById("popupChart");';
+    html += '  var container = canvas.parentElement;';
+    html += '  var wrapper = container.parentElement;';
+    html += '  var availWidth = wrapper.clientWidth - 40;';
+    html += '  var availHeight = wrapper.clientHeight - 40;';
+    html += '  var chartWidth, chartHeight;';
+    html += '  if (availWidth / aspectRatio <= availHeight) {{';
+    html += '    chartWidth = availWidth;';
+    html += '    chartHeight = availWidth / aspectRatio;';
+    html += '  }} else {{';
+    html += '    chartHeight = availHeight;';
+    html += '    chartWidth = availHeight * aspectRatio;';
+    html += '  }}';
+    html += '  container.style.width = chartWidth + "px";';
+    html += '  container.style.height = chartHeight + "px";';
+    html += '  canvas.width = chartWidth;';
+    html += '  canvas.height = chartHeight;';
+    html += '  var colors = getChartColors();';
+    html += '  chartDatasets.forEach(function(ds) {{ ds.datalabels = {{ display: showLabels }}; }});';
+    html += '  var config = {{';
+    html += '    type: chartType,';
+    html += '    data: {{ labels: chartLabels, datasets: chartDatasets }},';
+    html += '    options: {{';
+    html += '      responsive: false,';
+    html += '      maintainAspectRatio: true,';
+    html += '      plugins: {{';
+    html += '        legend: {{ position: "top", labels: {{ color: colors.textColor, font: {{ size: 14 }} }} }},';
+    html += '        datalabels: {{';
+    html += '          display: showLabels,';
+    html += '          color: isPieChart ? "#fff" : colors.textColor,';
+    html += '          font: {{ weight: "bold", size: isPieChart ? 14 : 12 }},';
+    html += '          anchor: "center",';
+    html += '          align: "center",';
+    html += '          formatter: isPieChart ? function(value, context) {{';
+    html += '            if (value === 0) return "";';
+    html += '            var total = context.chart.data.datasets[0].data.reduce(function(a, b) {{ return a + b; }}, 0);';
+    html += '            var percentage = Math.round((value / total) * 100);';
+    html += '            return value + " (" + percentage + "%)";';
+    html += '          }} : function(value) {{ return value > 0 ? value : ""; }}';
+    html += '        }}';
+    html += '      }}';
+    html += '    }}';
+    html += '  }};';
+    html += '  if (chartType === "bar") {{';
+    html += '    config.options.scales = {{';
+    html += '      x: {{ stacked: true, grid: {{ color: colors.gridColor }}, ticks: {{ color: colors.textColor, font: {{ size: 12 }} }} }},';
+    html += '      y: {{ stacked: true, beginAtZero: true, grid: {{ color: colors.gridColor }}, ticks: {{ color: colors.textColor, font: {{ size: 12 }} }} }}';
+    html += '    }};';
+    html += '  }}';
+    html += '  if (popupChart) {{ popupChart.destroy(); }}';
+    html += '  popupChart = new Chart(canvas, config);';
+    html += '}}';
+    html += '';
+    html += 'function toggleLabels(show) {{';
+    html += '  showLabels = show;';
+    html += '  if (popupChart) {{';
+    html += '    popupChart.data.datasets.forEach(function(ds) {{';
+    html += '      if (!ds.datalabels) ds.datalabels = {{}};';
+    html += '      ds.datalabels.display = show;';
+    html += '    }});';
+    html += '    popupChart.update();';
+    html += '  }}';
+    html += '}}';
+    html += '';
+    html += 'var resizeTimeout;';
+    html += 'window.addEventListener("resize", function() {{';
+    html += '  clearTimeout(resizeTimeout);';
+    html += '  resizeTimeout = setTimeout(createChart, 100);';
+    html += '}});';
+    html += '';
+    html += 'window.addEventListener("load", function() {{';
+    html += '  updateThemeButton();';
+    html += '  setTimeout(createChart, 100);';
+    html += '}});';
+    html += '<\\/script>';
+    html += '</body></html>';
+    
+    popupWindow.document.write(html);
+    popupWindow.document.close();
 }}
 
+// closeChartFullscreen kept for backward compatibility but not used with popup approach
 function closeChartFullscreen() {{
-    var modal = document.getElementById('chartFullscreenModal');
-    modal.classList.remove('active');
-    
-    if (fullscreenChart) {{
-        fullscreenChart.destroy();
-        fullscreenChart = null;
+    if (chartPopupWindow && !chartPopupWindow.closed) {{
+        chartPopupWindow.close();
     }}
-    currentFullscreenSourceId = null;
+    chartPopupWindow = null;
 }}
 
+// Legacy functions kept for compatibility - not used with popup approach
 function toggleFullscreenChartLabels(show) {{
-    if (!fullscreenChart) return;
-    
-    // Update datalabels display for each dataset
-    fullscreenChart.data.datasets.forEach(function(dataset) {{
-        if (!dataset.datalabels) {{
-            dataset.datalabels = {{}};
-        }}
-        dataset.datalabels.display = show;
-    }});
-    
-    fullscreenChart.update();
+    // No longer used - popup window handles its own labels
 }}
-
-// Close fullscreen modal on Escape key
-document.addEventListener('keydown', function(e) {{
-    if (e.key === 'Escape') {{
-        var modal = document.getElementById('chartFullscreenModal');
-        if (modal && modal.classList.contains('active')) {{
-            closeChartFullscreen();
-        }}
-    }}
-}});
-
-// Resize fullscreen chart when window is resized
-window.addEventListener('resize', function() {{
-    if (fullscreenChart) {{
-        fullscreenChart.resize();
-    }}
-}});
 
 // Initialize with progressive loading
 $(document).ready(function() {{
