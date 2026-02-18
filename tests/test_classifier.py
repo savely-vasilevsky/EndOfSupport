@@ -176,6 +176,40 @@ class TestResourceClassifierBasic:
         assert status == SupportStatus.EXTENDED_SUPPORT_YEAR_1, (
             f"Resource with extended_support_start in past should be EXTENDED_SUPPORT_YEAR_1, got {status}"
         )
+    
+    def test_classify_approaching_eos_with_future_extended_support(self):
+        """Test classification when EOS is approaching and extended support starts after EOS.
+        
+        EKS clusters with:
+        - End-of-Support: 22-Mar-26 (future, within 90 days)
+        - Extended Support Start: 23-Mar-26 (future, after EOS)
+        Should be APPROACHING_EOS, not SUPPORTED.
+        """
+        classifier = ResourceClassifier(days_threshold=90)
+        
+        # Scenario: EKS Kubernetes 1.32
+        # - End of Support: Mar-22-26 (future, 32 days away)
+        # - Extended Support Start: Mar-23-26 (future)
+        # - Should be APPROACHING_EOS
+        resource = _create_resource(
+            service="EKS",
+            engine="Kubernetes",
+            version="1.32",
+            end_of_support=date(2026, 3, 22),  # Future date, within threshold
+            end_of_support_raw="22-Mar-26",
+            extended_support_start=date(2026, 3, 23),  # Future date, after EOS
+            extended_support_year1_start=date(2026, 3, 23),
+            extended_support_end=date(2027, 3, 22),
+            insights="32 days to end-of-support."
+        )
+        
+        # Use a reference date of Feb 18, 2026 (32 days before EOS)
+        reference_date = date(2026, 2, 18)
+        status = classifier.classify(resource, reference_date=reference_date)
+        
+        assert status == SupportStatus.APPROACHING_EOS, (
+            f"EKS cluster with EOS in 32 days should be APPROACHING_EOS, got {status}"
+        )
 
 
 class TestResourceClassifierProperties:

@@ -161,15 +161,25 @@ class ResourceClassifier:
         """Check if resource is before extended support period starts.
         
         If extended support start date is defined and in the future,
-        the resource is still in standard support (SUPPORTED status).
+        AND the end_of_support date is in the past, the resource is in the
+        "gap" period between standard support ending and extended support starting.
+        This is still considered SUPPORTED status.
+        
+        Note: If end_of_support is in the future (approaching), we should NOT
+        return True here - let the APPROACHING_EOS check handle it instead.
         
         Args:
             resource: The Resource to check.
             today: Reference date for comparison.
             
         Returns:
-            True if extended support start is in the future.
+            True if in the gap between EOS (past) and extended support start (future).
         """
+        # Only applies if end_of_support is in the past
+        # If end_of_support is in the future, let APPROACHING_EOS check handle it
+        if resource.end_of_support is not None and resource.end_of_support >= today:
+            return False
+        
         # Check extended_support_start (general start date)
         if resource.extended_support_start is not None:
             if resource.extended_support_start > today:
