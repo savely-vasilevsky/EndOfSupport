@@ -126,23 +126,29 @@ class ResourceClassifier:
             resource.status = SupportStatus.EXTENDED_SUPPORT_YEAR_1
             return SupportStatus.EXTENDED_SUPPORT_YEAR_1
         
-        # 6. Check if Insights contains "Out of support" (only if not in extended support)
+        # 6. Check if Extended Support Start Date is in the future - resource is still SUPPORTED
+        # This handles the case where end_of_support is past but extended support hasn't started yet
+        if self._is_before_extended_support(resource, today):
+            resource.status = SupportStatus.SUPPORTED
+            return SupportStatus.SUPPORTED
+        
+        # 7. Check if Insights contains "Out of support" (only if not in extended support)
         if self._insights_indicate_out_of_support(resource.insights):
             resource.status = SupportStatus.OUT_OF_SUPPORT
             return SupportStatus.OUT_OF_SUPPORT
         
-        # 7. Check if no extended support dates AND End-of-Support date is in the past
+        # 8. Check if no extended support dates AND End-of-Support date is in the past
         if not self._has_extended_support_dates(resource):
             if resource.end_of_support is not None and resource.end_of_support < today:
                 resource.status = SupportStatus.OUT_OF_SUPPORT
                 return SupportStatus.OUT_OF_SUPPORT
         
-        # 8. Check if End-of-Support date is within threshold
+        # 9. Check if End-of-Support date is within threshold
         if self._is_approaching_eos(resource, today):
             resource.status = SupportStatus.APPROACHING_EOS
             return SupportStatus.APPROACHING_EOS
         
-        # 9. Check if Insights indicate supported status
+        # 10. Check if Insights indicate supported status
         if self._insights_indicate_supported(resource.insights):
             resource.status = SupportStatus.SUPPORTED
             return SupportStatus.SUPPORTED
@@ -150,6 +156,31 @@ class ResourceClassifier:
         # Default: SUPPORTED
         resource.status = SupportStatus.SUPPORTED
         return SupportStatus.SUPPORTED
+    
+    def _is_before_extended_support(self, resource: Resource, today: date) -> bool:
+        """Check if resource is before extended support period starts.
+        
+        If extended support start date is defined and in the future,
+        the resource is still in standard support (SUPPORTED status).
+        
+        Args:
+            resource: The Resource to check.
+            today: Reference date for comparison.
+            
+        Returns:
+            True if extended support start is in the future.
+        """
+        # Check extended_support_start (general start date)
+        if resource.extended_support_start is not None:
+            if resource.extended_support_start > today:
+                return True
+        
+        # Check extended_support_year1_start as fallback
+        if resource.extended_support_year1_start is not None:
+            if resource.extended_support_year1_start > today:
+                return True
+        
+        return False
     
     def _insights_indicate_out_of_support(self, insights: str) -> bool:
         """Check if insights text indicates out of support status.

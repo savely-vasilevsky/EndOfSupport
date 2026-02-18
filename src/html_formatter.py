@@ -562,7 +562,7 @@ body {
     height: 24px;
     border-radius: 4px;
     overflow: visible;
-    background: #f0f0f0;
+    background: var(--bg-tertiary);
     font-size: 10px;
     min-width: 250px;
 }
@@ -616,8 +616,8 @@ body {
 }
 
 .lifecycle-segment.no-data {
-    background: #e0e0e0;
-    color: #666;
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
     opacity: 1;
 }
 
@@ -730,13 +730,13 @@ table.dataTable tbody tr:hover {
 .footer {
     text-align: center;
     padding: 20px;
-    color: #aab7b8;
+    color: var(--text-muted);
     font-size: 12px;
 }
 
 .service-group {
     margin-bottom: 15px;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
 }
 
@@ -777,17 +777,17 @@ table.dataTable tbody tr:hover {
 }
 
 .table-wrapper::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: var(--bg-tertiary);
     border-radius: 4px;
 }
 
 .table-wrapper::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
+    background: var(--text-muted);
     border-radius: 4px;
 }
 
 .table-wrapper::-webkit-scrollbar-thumb:hover {
-    background: #a1a1a1;
+    background: var(--text-secondary);
 }
 
 /* DataTables horizontal scroll styling */
@@ -806,17 +806,17 @@ table.dataTable tbody tr:hover {
 }
 
 .dataTables_scrollBody::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: var(--bg-tertiary);
     border-radius: 4px;
 }
 
 .dataTables_scrollBody::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
+    background: var(--text-muted);
     border-radius: 4px;
 }
 
 .dataTables_scrollBody::-webkit-scrollbar-thumb:hover {
-    background: #a1a1a1;
+    background: var(--text-secondary);
 }
 
 /* Ensure table columns don't collapse */
@@ -977,7 +977,7 @@ table.dataTable td {
     display: inline-flex;
     align-items: center;
     padding: 6px 12px;
-    background-color: #e8f4fd;
+    background-color: var(--bg-tertiary);
     border: 2px solid #2074d5;
     border-radius: 16px;
     cursor: pointer;
@@ -985,10 +985,11 @@ table.dataTable td {
     transition: all 0.2s;
     user-select: none;
     -webkit-user-select: none;
+    color: var(--text-primary);
 }
 
 .filter-bar .filter-option:hover {
-    background-color: #d0e8fc;
+    background-color: var(--bg-primary);
     transform: scale(1.02);
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
@@ -1033,13 +1034,13 @@ table.dataTable td {
 }
 
 .filter-bar .reset-btn {
-    background-color: #f5f5f5;
-    color: #545b64;
-    border: 1px solid #ccc;
+    background-color: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
 }
 
 .filter-bar .reset-btn:hover {
-    background-color: #e0e0e0;
+    background-color: var(--bg-primary);
 }
 
 .filter-bar .filter-option.status-supported.selected {
@@ -1086,7 +1087,7 @@ table.dataTable td {
     align-items: center;
     justify-content: space-between;
     padding: 8px 12px;
-    background: white;
+    background: var(--bg-secondary);
     border: 2px solid #2074d5;
     border-radius: 6px;
     cursor: pointer;
@@ -1095,13 +1096,13 @@ table.dataTable td {
 }
 
 .dropdown-trigger:hover {
-    background: #f5f9ff;
+    background: var(--bg-tertiary);
     border-color: #1565c0;
 }
 
 .dropdown-text {
     font-size: 13px;
-    color: #16191f;
+    color: var(--text-primary);
 }
 
 .dropdown-arrow {
@@ -1120,8 +1121,8 @@ table.dataTable td {
     top: 100%;
     left: 0;
     right: 0;
-    background: white;
-    border: 1px solid #ddd;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
     border-radius: 6px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     z-index: 1000;
@@ -1136,15 +1137,17 @@ table.dataTable td {
 
 .dropdown-search {
     padding: 8px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .dropdown-search input {
     width: 100%;
     padding: 8px 10px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     font-size: 13px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
 }
 
 .dropdown-search input:focus {
@@ -1156,17 +1159,18 @@ table.dataTable td {
     display: flex;
     gap: 8px;
     padding: 8px;
-    border-bottom: 1px solid #eee;
-    background: #f9f9f9;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
 }
 
 .dropdown-actions button {
     flex: 1;
     padding: 6px 10px;
     font-size: 12px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
-    background: white;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -1188,15 +1192,16 @@ table.dataTable td {
     padding: 10px 12px;
     cursor: pointer;
     transition: background 0.15s;
-    border-bottom: 1px solid #f5f5f5;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
 }
 
 .dropdown-item:hover {
-    background: #f5f9ff;
+    background: var(--bg-tertiary);
 }
 
 .dropdown-item.selected {
-    background: #e8f4fd;
+    background: var(--bg-tertiary);
 }
 
 .dropdown-item .checkbox {
@@ -1266,15 +1271,16 @@ table.dataTable td {
 
 .version-details-controls button {
     padding: 8px 16px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
-    background: #f5f5f5;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
     cursor: pointer;
     font-size: 13px;
 }
 
 .version-details-controls button:hover {
-    background: #e0e0e0;
+    background: var(--bg-primary);
 }
 
 .version-detail-card {
@@ -1323,7 +1329,7 @@ table.dataTable td {
 }
 
 .aws-docs-link:hover {
-    background: #d1e8f7;
+    background: var(--bg-primary);
     text-decoration: underline;
 }
 
@@ -1331,6 +1337,7 @@ table.dataTable td {
     display: flex;
     gap: 10px;
     align-items: center;
+    color: var(--text-muted);
 }
 
 .version-detail-header .stat-badge {
@@ -1381,12 +1388,12 @@ table.dataTable td {
 .version-detail-summary .summary-item .count {
     font-size: 16px;
     font-weight: bold;
-    color: #232f3e;
+    color: var(--text-primary);
 }
 
 .version-detail-summary .summary-item .label {
     font-size: 10px;
-    color: #666;
+    color: var(--text-muted);
 }
 
 /* EKS Insights Link */
@@ -1400,7 +1407,7 @@ table.dataTable td {
     gap: 4px;
     padding: 2px 8px;
     border-radius: 4px;
-    background: #e3f2fd;
+    background: var(--bg-tertiary);
     margin-left: 8px;
 }
 
@@ -1802,7 +1809,7 @@ table.dataTable td {
         
         return f"""<div id="summary-section" class="section">
     <h2>Summary Dashboard</h2>
-    <p style="color: #666; margin-bottom: 15px;"><strong>Click on any card to view affected resources in a new tab. Hover to see breakdown by service.</strong></p>
+    <p style="color: var(--text-muted); margin-bottom: 15px;"><strong>Click on any card to view affected resources in a new tab. Hover to see breakdown by service.</strong></p>
     <div class="summary-cards">
         <div class="summary-card total" onclick="showAllResources()" onmouseenter="showSummaryTooltip(event, 'total')" onmousemove="positionSummaryTooltip(event)" onmouseleave="hideSummaryTooltip()">
             <div class="count">{total}</div>
@@ -2307,7 +2314,7 @@ table.dataTable td {
             """)
         
         timeline_list = '\n'.join(timeline_list_html) if timeline_list_html else '<p>No timeline data available.</p>'
-        more_text = f'<p style="color: #666; font-style: italic;">Showing {len(timeline_list_html)} of {len(timeline_items)} unique engine-version combinations</p>' if len(timeline_items) > 100 else ''
+        more_text = f'<p style="color: var(--text-muted); font-style: italic;">Showing {len(timeline_list_html)} of {len(timeline_items)} unique engine-version combinations</p>' if len(timeline_items) > 100 else ''
         
         # Get min and max dates for the date range inputs
         # Default: 6 months before current date to 6 months after
@@ -2757,7 +2764,7 @@ table.dataTable td {
                                 f'<a class="insights-link" onclick="showEKSInsights(\'{safe_arn}\', \'{safe_region}\')" title="View upgrade insights for {safe_name}">🔍 {safe_name}</a>'
                             )
                         if len(cluster_info) > 3:
-                            insights_links.append(f'<span style="color: #666; font-size: 11px;">+{len(cluster_info) - 3} more</span>')
+                            insights_links.append(f'<span style="color: var(--text-muted); font-size: 11px;">+{len(cluster_info) - 3} more</span>')
                         insights_links_html = '<div style="margin-top: 4px;">' + ' '.join(insights_links) + '</div>'
                 
                 version_rows.append(f"""
@@ -2799,7 +2806,7 @@ table.dataTable td {
                 <div class="version-detail-header" onclick="toggleVersionDetailCard('{anchor_id}')">
                     <h3>{self._escape_html(display_name)}{docs_link_html}</h3>
                     <div class="stats">
-                        <span style="color: #666; margin-right: 10px;">{total_resources} resources, {len(versions_data)} versions</span>
+                        <span style="margin-right: 10px;">{total_resources} resources, {len(versions_data)} versions</span>
                         {status_badges_html}
                         <span class="expand-icon">▼</span>
                     </div>

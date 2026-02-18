@@ -114,6 +114,68 @@ class TestResourceClassifierBasic:
         classifier.classify(resource, reference_date=today)
         
         assert resource.days_to_eos == 100
+    
+    def test_classify_supported_when_extended_support_start_in_future(self):
+        """Test classification when extended support start date is in the future.
+        
+        Even if end_of_support is in the past, if extended_support_start is in
+        the future, the resource should be classified as SUPPORTED because
+        extended support hasn't started yet.
+        """
+        classifier = ResourceClassifier()
+        today = date.today()
+        
+        # Scenario: Aurora PostgreSQL 15.7
+        # - End of Support: Nov-25 (past)
+        # - Extended Support Start: Mar-28 (future)
+        # - Should be SUPPORTED, not OUT_OF_SUPPORT
+        resource = _create_resource(
+            service="RDS",
+            engine="aurora-postgresql",
+            version="15.7",
+            end_of_support=date(2025, 11, 30),  # Past date
+            end_of_support_raw="Nov-25",
+            extended_support_start=date(2028, 3, 1),  # Future date
+            extended_support_year1_start=date(2028, 3, 1),
+            extended_support_year2_start=date(2030, 3, 1),
+            extended_support_end=date(2031, 2, 28),
+            insights="Out of support."  # Even with this, should be SUPPORTED
+        )
+        
+        # Use a reference date of Feb 2026 (after end_of_support but before extended_support_start)
+        reference_date = date(2026, 2, 18)
+        status = classifier.classify(resource, reference_date=reference_date)
+        
+        assert status == SupportStatus.SUPPORTED, (
+            f"Resource with extended_support_start in future should be SUPPORTED, got {status}"
+        )
+    
+    def test_classify_extended_year1_when_extended_support_started(self):
+        """Test classification when extended support has started.
+        
+        If extended_support_start is in the past, the resource should be
+        in Extended Support Year 1.
+        """
+        classifier = ResourceClassifier()
+        
+        resource = _create_resource(
+            service="RDS",
+            engine="aurora-postgresql",
+            version="15.7",
+            end_of_support=date(2025, 11, 30),
+            extended_support_start=date(2028, 3, 1),
+            extended_support_year1_start=date(2028, 3, 1),
+            extended_support_year2_start=date(2030, 3, 1),
+            extended_support_end=date(2031, 2, 28),
+        )
+        
+        # Use a reference date of Apr 2028 (after extended_support_start)
+        reference_date = date(2028, 4, 1)
+        status = classifier.classify(resource, reference_date=reference_date)
+        
+        assert status == SupportStatus.EXTENDED_SUPPORT_YEAR_1, (
+            f"Resource with extended_support_start in past should be EXTENDED_SUPPORT_YEAR_1, got {status}"
+        )
 
 
 class TestResourceClassifierProperties:
