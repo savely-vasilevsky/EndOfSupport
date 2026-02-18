@@ -39,7 +39,7 @@ except ImportError:
         EngineGroup,
         VersionGroup,
     )
-    __version__ = "2.4.1"
+    __version__ = "2.4.2"
 
 # Optional Excel support
 try:
