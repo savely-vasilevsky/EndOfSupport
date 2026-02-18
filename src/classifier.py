@@ -51,6 +51,10 @@ class ResourceClassifier:
         This allows resources loaded from CSV (which may not have extended support
         dates populated) to be correctly classified based on the static lookup table.
         
+        Important: Only enriches if the lookup table's standard_support_end matches
+        the resource's end_of_support date (within a reasonable tolerance), to avoid
+        applying incorrect dates when the CSV has different EOS dates.
+        
         Args:
             resource: The Resource object to enrich.
         """
@@ -70,6 +74,15 @@ class ResourceClassifier:
         dates = get_extended_support_dates(engine, version)
         if dates is None:
             return
+        
+        # Only enrich if the lookup's standard_support_end matches the resource's end_of_support
+        # This prevents applying incorrect extended support dates when the CSV has different EOS dates
+        if dates.standard_support_end is not None and resource.end_of_support is not None:
+            # Allow up to 7 days tolerance for date matching
+            days_diff = abs((dates.standard_support_end - resource.end_of_support).days)
+            if days_diff > 7:
+                # Dates don't match - don't enrich with potentially incorrect data
+                return
         
         # Enrich the resource with lookup dates
         resource.extended_support_start = dates.extended_support_start
