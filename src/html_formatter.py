@@ -13,7 +13,7 @@ try:
     from . import __version__
 except ImportError:
     from models import Report, Resource, SupportStatus
-    __version__ = "2.4.2"
+    __version__ = "2.4.3"
 
 
 class HTMLFormatter:
