@@ -210,6 +210,40 @@ class TestResourceClassifierBasic:
         assert status == SupportStatus.APPROACHING_EOS, (
             f"EKS cluster with EOS in 32 days should be APPROACHING_EOS, got {status}"
         )
+    
+    def test_classify_supported_when_extended_support_far_future(self):
+        """Test classification when extended support start is years away.
+        
+        RDS postgres with:
+        - End-of-Support: 2026-05-01 (72 days away)
+        - Extended Support Start: 2029-03-01 (years away)
+        Should be SUPPORTED because extended support start is beyond 90-day threshold.
+        """
+        classifier = ResourceClassifier(days_threshold=90)
+        
+        # Scenario: RDS postgres 16.8
+        # - End of Support: May-01-26 (72 days away)
+        # - Extended Support Start: Mar-01-29 (years away)
+        # - Should be SUPPORTED (not APPROACHING_EOS)
+        resource = _create_resource(
+            service="RDS",
+            engine="postgres",
+            version="16.8",
+            end_of_support=date(2026, 5, 1),  # 72 days away
+            end_of_support_raw="2026-05-01",
+            extended_support_start=date(2029, 3, 1),  # Years away
+            extended_support_year1_start=date(2029, 3, 1),
+            extended_support_end=date(2032, 2, 29),
+            insights="72 days to end-of-support."
+        )
+        
+        # Use a reference date of Feb 18, 2026
+        reference_date = date(2026, 2, 18)
+        status = classifier.classify(resource, reference_date=reference_date)
+        
+        assert status == SupportStatus.SUPPORTED, (
+            f"RDS postgres with extended support start years away should be SUPPORTED, got {status}"
+        )
 
 
 class TestResourceClassifierProperties:

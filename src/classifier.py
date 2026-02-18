@@ -167,34 +167,31 @@ class ResourceClassifier:
     def _is_before_extended_support(self, resource: Resource, today: date) -> bool:
         """Check if resource is before extended support period starts.
         
-        If extended support start date is defined and in the future,
-        AND the end_of_support date is in the past, the resource is in the
-        "gap" period between standard support ending and extended support starting.
-        This is still considered SUPPORTED status.
+        If extended support start date is defined and in the future (beyond threshold),
+        the resource is still in standard support (SUPPORTED status).
         
-        Note: If end_of_support is in the future (approaching), we should NOT
-        return True here - let the APPROACHING_EOS check handle it instead.
+        This handles resources where:
+        - Extended support start is years away (e.g., 2028, 2029)
+        - End-of-support may be past or future, but extended support hasn't started
         
         Args:
             resource: The Resource to check.
             today: Reference date for comparison.
             
         Returns:
-            True if in the gap between EOS (past) and extended support start (future).
+            True if extended support start is in the future (beyond threshold).
         """
-        # Only applies if end_of_support is in the past
-        # If end_of_support is in the future, let APPROACHING_EOS check handle it
-        if resource.end_of_support is not None and resource.end_of_support >= today:
-            return False
-        
         # Check extended_support_start (general start date)
         if resource.extended_support_start is not None:
-            if resource.extended_support_start > today:
+            days_until = (resource.extended_support_start - today).days
+            # If extended support start is in the future and beyond threshold, resource is SUPPORTED
+            if days_until > self.days_threshold:
                 return True
         
         # Check extended_support_year1_start as fallback
         if resource.extended_support_year1_start is not None:
-            if resource.extended_support_year1_start > today:
+            days_until = (resource.extended_support_year1_start - today).days
+            if days_until > self.days_threshold:
                 return True
         
         return False
@@ -368,10 +365,13 @@ class ResourceClassifier:
     def _is_approaching_eos(self, resource: Resource, today: date) -> bool:
         """Check if resource is approaching end-of-support.
         
-        A resource is approaching EOS if:
-        - End-of-Support date is set
-        - End-of-Support date is in the future
-        - End-of-Support date is within days_threshold days
+        The date used for the threshold check depends on whether extended support
+        dates are populated:
+        - If Extended Support Start Date IS populated: use it for the threshold
+        - If Extended Support Start Date is NOT populated: use End-of-Support date
+        
+        A resource is approaching EOS if the relevant date is in the future
+        and within days_threshold days.
         
         Args:
             resource: The Resource to check.
@@ -380,13 +380,24 @@ class ResourceClassifier:
         Returns:
             True if resource is approaching end-of-support.
         """
-        if resource.end_of_support is None:
+        # Determine which date to use for the threshold check
+        # Priority: extended_support_start > extended_support_year1_start > end_of_support
+        threshold_date = None
+        
+        if resource.extended_support_start is not None:
+            threshold_date = resource.extended_support_start
+        elif resource.extended_support_year1_start is not None:
+            threshold_date = resource.extended_support_year1_start
+        elif resource.end_of_support is not None:
+            threshold_date = resource.end_of_support
+        
+        if threshold_date is None:
             return False
         
-        days_until_eos = (resource.end_of_support - today).days
+        days_until = (threshold_date - today).days
         
         # Must be in the future and within threshold
-        return 0 < days_until_eos <= self.days_threshold
+        return 0 < days_until <= self.days_threshold
     
     def _insights_indicate_supported(self, insights: str) -> bool:
         """Check if insights text indicates supported status.
