@@ -1,11 +1,12 @@
 # AWS End-of-Support Tool
 
-A CLI and GUI tool to analyze AWS resource inventory CSV files and generate support status reports with real Excel PivotTables.
+A CLI and GUI tool to analyze AWS resource inventory CSV files and generate support status reports with real Excel PivotTables and AI-powered recommendations.
 
 ## Features
 
 - **Support Status Classification**: Classifies resources into 6 statuses: Supported, Approaching End-of-Support, Extended Support Y1/Y2/Y3, or Out of Support
 - **Extended Support Year Detection**: Automatically calculates Year 1, Year 2, and Year 3 of extended support based on dates
+- **AI-Powered Recommendations**: Generate intelligent upgrade recommendations using Amazon Bedrock (Claude) - only aggregated data is sent, no customer identifiers
 - **Hierarchical Grouping**: Groups resources by Account → Service → Engine → Version
 - **Multiple Output Formats**: Text, CSV, JSON, Excel, and HTML
 - **Cross-Platform PivotTable**: Real Excel PivotTables on Windows, Mac, and Linux
@@ -82,6 +83,30 @@ python -m src.main inventory.csv --account prod-account --service Lambda
 # Custom days threshold (default: 90)
 python -m src.main inventory.csv --days-threshold 60
 ```
+
+## AI-Powered Recommendations
+
+The tool can generate intelligent upgrade recommendations using Amazon Bedrock (Claude AI).
+
+### Features
+- **Privacy-First**: Only aggregated statistics are sent to the AI (counts by service/engine/version)
+- **No Customer Data**: Account IDs, resource names, and ARNs are never transmitted
+- **Smart Recommendations**: Provides specific upgrade paths (e.g., "upgrade PostgreSQL 15 to 16")
+- **Priority Timeline**: Recommendations are prioritized by urgency based on EOS dates
+
+### How to Enable
+1. In the GUI, go to Step 2 (Output Options)
+2. Check "Generate AI-powered recommendation summary"
+3. Select your Bedrock region (us-east-1, us-west-2, eu-west-1, ap-northeast-1)
+4. Generate the report
+
+### Requirements
+- AWS credentials with `bedrock:InvokeModel` permission
+- Claude 3 Sonnet model enabled in your Bedrock region
+
+### Output
+- **HTML Reports**: Recommendations appear as the last section with a "Recommendations" menu link
+- **Excel Reports**: Recommendations appear in a dedicated "Recommendations" sheet
 
 ## Excel PivotTable Support
 

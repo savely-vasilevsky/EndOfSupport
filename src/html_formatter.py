@@ -13,7 +13,7 @@ try:
     from . import __version__
 except ImportError:
     from models import Report, Resource, SupportStatus
-    __version__ = "2.4.4"
+    __version__ = "2.5.0"
 
 
 class HTMLFormatter:
@@ -120,31 +120,35 @@ class HTMLFormatter:
         },
     }
 
-    def format(self, report: Report) -> str:
+    def format(self, report: Report, ai_summary: str = None) -> str:
         """Format the report as an HTML string.
         
         Args:
             report: Report object to format.
+            ai_summary: Optional AI-generated recommendation summary.
             
         Returns:
             Complete HTML document as a string.
         """
-        return self._generate_html(report)
+        return self._generate_html(report, ai_summary=ai_summary)
 
-    def format_to_file(self, report: Report, filepath: str) -> None:
+    def format_to_file(self, report: Report, filepath: str, ai_summary: str = None) -> None:
         """Write the HTML report to a file.
         
         Args:
             report: Report object to format.
             filepath: Path to write the HTML file.
+            ai_summary: Optional AI-generated recommendation summary.
         """
-        html_content = self.format(report)
+        html_content = self.format(report, ai_summary=ai_summary)
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(html_content)
 
-    def _generate_html(self, report: Report, include_version_details: bool = True) -> str:
+    def _generate_html(self, report: Report, include_version_details: bool = True, ai_summary: str = None) -> str:
         """Generate the complete HTML document."""
         version_details_section = self._generate_version_details_section(report) if include_version_details else ""
+        ai_summary_section = self._generate_ai_summary_section(ai_summary) if ai_summary else ""
+        include_ai_summary = bool(ai_summary)
         return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -157,7 +161,7 @@ class HTMLFormatter:
 </head>
 <body>
     {self._generate_header(report)}
-    {self._generate_menu(include_version_details)}
+    {self._generate_menu(include_version_details, include_ai_summary)}
     {self._generate_filter_bar(report)}
     <div class="container">
         {self._generate_summary_section(report)}
@@ -166,6 +170,7 @@ class HTMLFormatter:
         {self._generate_timeline_section(report)}
         {self._generate_by_service_section(report)}
         {version_details_section}
+        {ai_summary_section}
     </div>
     {self._generate_footer()}
     <!-- Load scripts at end for faster initial render -->
@@ -1672,9 +1677,10 @@ table.dataTable td {
     </div>
 </div>"""
 
-    def _generate_menu(self, include_version_details: bool = True) -> str:
+    def _generate_menu(self, include_version_details: bool = True, include_ai_summary: bool = False) -> str:
         """Generate the navigation menu."""
         version_details_link = '<li><a href="#version-details-section" onclick="scrollToSection(event)">Version Details</a></li>' if include_version_details else ""
+        ai_summary_link = '<li><a href="#ai-recommendations" onclick="scrollToSection(event)" style="color: #4472C4;">Recommendations</a></li>' if include_ai_summary else ""
         return f"""<ul id="menuBar">
     <li><a href="#summary-section" onclick="scrollToSection(event)">Summary</a></li>
     <li><a href="#status-breakdown" onclick="scrollToSection(event)">Status Breakdown</a></li>
@@ -1682,6 +1688,7 @@ table.dataTable td {
     <li><a href="#timeline-section" onclick="scrollToSection(event)">Timeline</a></li>
     <li><a href="#by-service-section" onclick="scrollToSection(event)">By Service</a></li>
     {version_details_link}
+    {ai_summary_link}
     <li><a href="#" onclick="showReportHelp(event)" style="color: #ff9900;">Help</a></li>
 </ul>
 <button class="go-to-top" onclick="window.scrollTo({{top: 0, behavior: 'smooth'}})">↑</button>"""
@@ -2882,6 +2889,82 @@ table.dataTable td {
             <button onclick="collapseAllVersionDetails()">Collapse All</button>
         </div>
         {cards_html_str if cards_html else '<p>No version details available.</p>'}
+    </div>
+</div>"""
+
+    def _generate_ai_summary_section(self, ai_summary: str) -> str:
+        """Generate the AI recommendation summary section.
+        
+        Args:
+            ai_summary: AI-generated recommendation summary text.
+            
+        Returns:
+            HTML string for the AI summary section.
+        """
+        if not ai_summary:
+            return ""
+        
+        # Convert plain text to HTML (preserve line breaks and basic formatting)
+        # Escape HTML entities first
+        import html
+        escaped_summary = html.escape(ai_summary)
+        
+        # Convert markdown-style formatting to HTML
+        lines = escaped_summary.split('\n')
+        html_lines = []
+        in_list = False
+        
+        for line in lines:
+            stripped = line.strip()
+            
+            # Handle headers (lines starting with numbers followed by period or colon)
+            if stripped and (stripped[0].isdigit() and ('.' in stripped[:3] or ':' in stripped[:20])):
+                if in_list:
+                    html_lines.append('</ul>')
+                    in_list = False
+                html_lines.append(f'<h4 style="margin-top: 15px; color: var(--text-primary);">{stripped}</h4>')
+            # Handle bullet points
+            elif stripped.startswith('- ') or stripped.startswith('• ') or stripped.startswith('* '):
+                if not in_list:
+                    html_lines.append('<ul style="margin-left: 20px;">')
+                    in_list = True
+                html_lines.append(f'<li>{stripped[2:]}</li>')
+            # Handle empty lines
+            elif not stripped:
+                if in_list:
+                    html_lines.append('</ul>')
+                    in_list = False
+                html_lines.append('<br>')
+            # Regular text
+            else:
+                if in_list:
+                    html_lines.append('</ul>')
+                    in_list = False
+                html_lines.append(f'<p style="margin: 5px 0;">{stripped}</p>')
+        
+        if in_list:
+            html_lines.append('</ul>')
+        
+        formatted_summary = '\n'.join(html_lines)
+        
+        return f"""<div class="section" id="ai-recommendations">
+    <h2>
+        <span class="section-icon">💡</span> Recommendations powered by AI
+        <button class="collapse-btn" onclick="toggleSection('ai-recommendations-content')">−</button>
+    </h2>
+    <div id="ai-recommendations-content" class="collapsible-content">
+        <div class="ai-summary-container" style="background: linear-gradient(135deg, #f8f9ff 0%, #e8f4f8 100%); border-radius: 8px; padding: 20px; border-left: 4px solid #4472C4;">
+            <div class="ai-summary-header" style="display: flex; align-items: center; margin-bottom: 15px;">
+                <span style="font-size: 24px; margin-right: 10px;">🤖</span>
+                <span style="font-weight: bold; color: #4472C4;">Generated by Amazon Bedrock (Claude)</span>
+            </div>
+            <div class="ai-summary-content" style="line-height: 1.6; color: var(--text-primary);">
+                {formatted_summary}
+            </div>
+            <div class="ai-summary-footer" style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 0.85em; color: var(--text-muted);">
+                <em>Note: This summary was generated using aggregated data only. No customer-identifiable information was sent to the AI model.</em>
+            </div>
+        </div>
     </div>
 </div>"""
 

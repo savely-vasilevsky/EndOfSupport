@@ -9,9 +9,10 @@
 5. [Understanding Support Status](#understanding-support-status)
 6. [Output Formats](#output-formats)
 7. [Excel Reports & Pivot Tables](#excel-reports--pivot-tables)
-8. [Filtering Options](#filtering-options)
-9. [Troubleshooting](#troubleshooting)
-10. [FAQ](#faq)
+8. [AI-Powered Recommendations](#ai-powered-recommendations)
+9. [Filtering Options](#filtering-options)
+10. [Troubleshooting](#troubleshooting)
+11. [FAQ](#faq)
 
 ---
 
@@ -475,6 +476,81 @@ On Mac/Linux (without Excel COM):
 
 ---
 
+## AI-Powered Recommendations
+
+The tool can generate intelligent upgrade recommendations using Amazon Bedrock (Claude AI).
+
+### Overview
+
+The AI Recommendations feature analyzes your end-of-support data and provides:
+- Prioritized action items based on urgency
+- Specific upgrade paths for each service/version
+- Timeline recommendations for planning
+
+### Privacy & Security
+
+**Your data is protected:**
+- Only aggregated statistics are sent to the AI (counts by service/engine/version)
+- No customer-identifiable information is transmitted:
+  - ❌ Account IDs
+  - ❌ Resource names
+  - ❌ ARNs
+  - ❌ Region information
+- All processing happens through Amazon Bedrock in your AWS account
+
+### How to Enable
+
+1. In the GUI, go to **Step 2** (Output Options)
+2. Find the **AI Recommendation Summary** section
+3. Check **"Generate AI-powered recommendation summary"**
+4. Select your **Bedrock Region** (us-east-1, us-west-2, eu-west-1, ap-northeast-1)
+5. Generate the report
+
+### Requirements
+
+- AWS credentials configured (via AWS CLI, environment variables, or IAM role)
+- IAM permissions: `bedrock:InvokeModel`
+- Claude 3 Sonnet model enabled in your Bedrock region
+
+### Output Location
+
+- **HTML Reports**: Recommendations appear as the last section, accessible via the "Recommendations" menu link
+- **Excel Reports**: Recommendations appear in a dedicated "Recommendations" sheet
+
+### Sample Output
+
+```
+Overview
+This report identifies 45 resources requiring attention across multiple AWS services.
+
+Summary Statistics
+- Total Resources: 150
+- Out of Support: 12
+- Approaching EOS: 23
+- Extended Support: 10
+
+Critical Issues
+
+RDS/Aurora:
+- 8 PostgreSQL 15 databases approaching EOS (May 2026)
+- 4 Aurora MySQL 8.0 clusters in Extended Support Y1
+
+EKS:
+- 3 Kubernetes 1.32 clusters approaching EOS (March 2026)
+
+Recommended Actions
+1. Upgrade PostgreSQL 15 databases to PostgreSQL 16 or 17
+2. Plan EKS cluster upgrades to Kubernetes 1.33+
+3. Migrate Aurora MySQL 8.0 to 8.4 LTS
+
+Priority Timeline
+- Immediate: Address 12 out-of-support resources
+- Next 30 days: Plan EKS 1.32 upgrades (EOS: March 2026)
+- Next 90 days: Schedule PostgreSQL upgrades
+```
+
+---
+
 ## Filtering Options
 
 ### Status Filters
@@ -574,4 +650,4 @@ A: Extended Support means AWS still provides updates but may charge extra. Out o
 
 ---
 
-*Last updated: February 16, 2026 - Version 2.4.1*
+*Last updated: February 19, 2026 - Version 2.5.0*

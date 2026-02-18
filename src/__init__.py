@@ -1,6 +1,6 @@
 """EndOfSupportTool - AWS resource support status analyzer."""
 
-__version__ = "2.4.4"
+__version__ = "2.5.0"
 
 from .models import (
     SupportStatus,
@@ -15,6 +15,7 @@ from .models import (
 from .parser import CSVParser, CSVParseError, DateParseError
 from .classifier import ResourceClassifier
 from .generator import ReportGenerator
+from .ai_summary import AISummaryGenerator, generate_ai_summary
 
 __all__ = [
     'SupportStatus',
@@ -30,4 +31,6 @@ __all__ = [
     'DateParseError',
     'ResourceClassifier',
     'ReportGenerator',
+    'AISummaryGenerator',
+    'generate_ai_summary',
 ]

@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 try:
     from . import __version__
 except ImportError:
-    __version__ = "2.4.4"
+    __version__ = "2.5.0"
 
 # Handle imports for both package and frozen executable modes
 try:
@@ -93,6 +93,11 @@ class EndOfSupportGUI:
         self.pivot_per_account = tk.BooleanVar(value=False)
         self.include_timeline = tk.BooleanVar(value=True)
         self.include_version_details = tk.BooleanVar(value=False)
+        
+        # AI Summary options
+        self.generate_ai_summary = tk.BooleanVar(value=False)
+        self.ai_summary_region = tk.StringVar(value="us-east-1")
+        self.ai_summary_profile = tk.StringVar()  # Use same profile as fetch or default
         
         # Fetched resources (stored after fetch)
         self.fetched_resources = None
@@ -282,9 +287,36 @@ class EndOfSupportGUI:
         
         self.excel_options_frame.grid_remove()
         
+        # AI Summary section
+        self.ai_summary_frame = ttk.LabelFrame(self.step2_frame, text="AI Recommendation Summary (Amazon Bedrock)", padding="5")
+        self.ai_summary_frame.grid(row=2, column=0, sticky="ew", pady=(0, 10))
+        
+        self.ai_summary_checkbox = ttk.Checkbutton(
+            self.ai_summary_frame, 
+            text="Generate AI-powered recommendation summary",
+            variable=self.generate_ai_summary
+        )
+        self.ai_summary_checkbox.grid(row=0, column=0, columnspan=3, sticky="w")
+        
+        ttk.Label(self.ai_summary_frame, text="Bedrock Region:").grid(row=1, column=0, sticky="w", padx=(20, 5))
+        self.ai_region_combo = ttk.Combobox(
+            self.ai_summary_frame, 
+            textvariable=self.ai_summary_region,
+            values=["us-east-1", "us-west-2", "eu-west-1", "ap-northeast-1"],
+            width=15,
+            state="readonly"
+        )
+        self.ai_region_combo.grid(row=1, column=1, sticky="w")
+        
+        ttk.Label(
+            self.ai_summary_frame, 
+            text="(Requires AWS credentials with Bedrock access. Only aggregated data is sent - no customer identifiers.)",
+            foreground="gray"
+        ).grid(row=2, column=0, columnspan=3, sticky="w", padx=(20, 0))
+        
         # Filters section
         filter_frame = ttk.LabelFrame(self.step2_frame, text="Filters", padding="5")
-        filter_frame.grid(row=2, column=0, sticky="ew", pady=(0, 10))
+        filter_frame.grid(row=3, column=0, sticky="ew", pady=(0, 10))
         
         ttk.Label(filter_frame, text="Status Filters (leave unchecked for all):").grid(row=0, column=0, columnspan=6, sticky="w")
         
@@ -605,6 +637,9 @@ class EndOfSupportGUI:
         self.pivot_per_account.set(False)
         self.include_timeline.set(True)
         self.include_version_details.set(False)
+        self.generate_ai_summary.set(False)
+        self.ai_summary_region.set("us-east-1")
+        self.ai_summary_profile.set("")
         self.pivot_method_combo.configure(state="readonly")
         self.pivot_per_account_checkbox.configure(state="normal")
         self._update_pivot_method_info()
@@ -684,6 +719,11 @@ class EndOfSupportGUI:
                 status_filters=[s.value for s in status_filters] if status_filters else None,
             )
             
+            # Generate AI summary first if requested (so it can be included in reports)
+            ai_summary_text = None
+            if self.generate_ai_summary.get():
+                ai_summary_text = self._generate_ai_summary(report, output_path)
+            
             self._update_status("Formatting report...")
             if fmt == "excel":
                 formatter = ExcelFormatter()
@@ -699,7 +739,8 @@ class EndOfSupportGUI:
                     pivot_method=pivot_method,
                     pivot_per_account=pivot_per_account,
                     include_timeline=include_timeline,
-                    include_version_details=include_version_details
+                    include_version_details=include_version_details,
+                    ai_summary=ai_summary_text
                 )
                 
                 output_text = f"Excel report saved to: {output_path}\n\n"
@@ -714,12 +755,24 @@ class EndOfSupportGUI:
                     except Exception as e:
                         output_text += f"Could not verify file: {e}\n\n"
                 output_text += self._get_summary(report)
+                if ai_summary_text:
+                    output_text += "\n\n" + "=" * 50 + "\nAI RECOMMENDATION SUMMARY\n" + "=" * 50 + "\n" + ai_summary_text
+            elif fmt == "html":
+                try:
+                    from .html_formatter import HTMLFormatter
+                except ImportError:
+                    from html_formatter import HTMLFormatter
+                formatter = HTMLFormatter()
+                output_text = formatter.format(report, ai_summary=ai_summary_text)
+                
+                if output_path:
+                    with open(output_path, 'w', encoding='utf-8') as f:
+                        f.write(output_text)
             else:
                 formatters = {
                     "text": TextFormatter(),
                     "csv": CSVFormatter(),
                     "json": JSONFormatter(),
-                    "html": HTMLFormatter(),
                 }
                 formatter = formatters[fmt]
                 output_text = formatter.format(report)
@@ -727,7 +780,11 @@ class EndOfSupportGUI:
                 if output_path:
                     with open(output_path, 'w', encoding='utf-8') as f:
                         f.write(output_text)
-                        
+                
+                # Append AI summary to text output
+                if ai_summary_text:
+                    output_text = output_text + "\n\n" + "=" * 50 + "\nAI RECOMMENDATION SUMMARY\n" + "=" * 50 + "\n" + ai_summary_text
+            
             self._show_results(output_text, report, output_path)
             
         except CSVParseError as e:
@@ -760,6 +817,61 @@ class EndOfSupportGUI:
         if os.path.exists(template_path):
             return f"Pivot Table: Created from template (will refresh when opened in Excel){mode_suffix}"
         return f"Pivot Table: Styled summary (template not found for real pivot){mode_suffix}"
+    
+    def _generate_ai_summary(self, report, output_path: str) -> Optional[str]:
+        """Generate AI-powered recommendation summary using Amazon Bedrock.
+        
+        Returns the AI summary text, or None if generation fails.
+        """
+        try:
+            self._update_status("Generating AI recommendation summary...")
+            self._append_result("\n\nGenerating AI recommendation summary...\n")
+            
+            # Import AI summary module
+            try:
+                from .ai_summary import AISummaryGenerator
+            except ImportError:
+                from ai_summary import AISummaryGenerator
+            
+            # Get profile from fetch settings if available
+            profile = self.aws_profile.get().strip() or None
+            region = self.ai_summary_region.get()
+            
+            generator = AISummaryGenerator(
+                region_name=region,
+                profile_name=profile
+            )
+            
+        # Generate summary (only aggregated data sent to AI, no resource details)
+            summary = generator.generate_summary(
+                report,
+                include_resource_details=False
+            )
+            
+            # Save AI summary to separate file
+            if output_path:
+                summary_path = os.path.splitext(output_path)[0] + "_ai_summary.txt"
+                with open(summary_path, 'w', encoding='utf-8') as f:
+                    f.write(summary)
+                self._append_result(f"AI summary saved to: {summary_path}\n")
+            
+            return summary
+            
+        except ImportError as e:
+            error_msg = f"AI summary requires boto3: {e}"
+            logger.warning(error_msg)
+            self._append_result(f"\n⚠ {error_msg}\n")
+            return None
+        except PermissionError as e:
+            error_msg = f"AI summary access error: {e}"
+            logger.warning(error_msg)
+            self._append_result(f"\n⚠ {error_msg}\n")
+            return None
+        except Exception as e:
+            error_msg = f"AI summary generation failed: {e}"
+            logger.warning(error_msg, exc_info=True)
+            self._append_result(f"\n⚠ {error_msg}\n")
+            return None
         
     def _update_status(self, message: str):
         """Update status bar from background thread."""
@@ -834,6 +946,7 @@ Step 1 - Data Source:
 Step 2 - Output Options:
   • Choose output format (HTML, Excel, Text, CSV, JSON)
   • Configure filters and options
+  • Enable AI-powered recommendations (optional)
   • Generate the report
 
 AWS FETCH OPTIONS:
@@ -841,6 +954,12 @@ AWS FETCH OPTIONS:
   • Regions: Comma-separated list or empty for all regions
   • Workers: Number of parallel fetch threads
   • Include Costs: Calculate extended support cost estimates
+
+AI RECOMMENDATIONS (Amazon Bedrock):
+  • Generates intelligent upgrade recommendations
+  • Only aggregated data sent (no customer identifiers)
+  • Requires AWS credentials with bedrock:InvokeModel permission
+  • Appears as last section in HTML or separate sheet in Excel
 
 SERVICES FETCHED:
   Lambda, EKS, RDS, Aurora, DocumentDB, Neptune,
